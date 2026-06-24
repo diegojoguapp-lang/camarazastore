@@ -13,6 +13,8 @@ import { Redes } from './pages/Redes'
 import { AdminDashboard } from './pages/admin/AdminDashboard'
 import { ProductList } from './pages/admin/ProductList'
 import { ProductForm } from './pages/admin/ProductForm'
+import { HelpVideosAdmin } from './pages/admin/HelpVideosAdmin'
+import { SocialLinksAdmin } from './pages/admin/SocialLinksAdmin'
 
 function Public({ children }) {
   return <Layout>{children}</Layout>
@@ -38,6 +40,8 @@ export default function App() {
         <Route path="/admin/productos" element={<Admin><ProductList /></Admin>} />
         <Route path="/admin/productos/nuevo" element={<Admin><ProductForm /></Admin>} />
         <Route path="/admin/productos/:id/editar" element={<Admin><ProductForm /></Admin>} />
+        <Route path="/admin/videos" element={<Admin><HelpVideosAdmin /></Admin>} />
+        <Route path="/admin/redes" element={<Admin><SocialLinksAdmin /></Admin>} />
         <Route path="*" element={<Public><div className="page"><div className="container"><h1>Página no encontrada</h1></div></div></Public>} />
       </Routes>
     </BrowserRouter>

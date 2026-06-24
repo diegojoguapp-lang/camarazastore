@@ -7,9 +7,9 @@ export function Home() {
   const links = [
     { label: 'Ver catálogo', to: '/catalogo', icon: ShoppingBag, primary: true },
     { label: 'Videos de ayuda', to: '/ayuda', icon: HelpCircle },
-    { label: 'Reglas para revendedores', to: '/reglas', icon: BookOpen },
     { label: 'Contactar por WhatsApp', href: `https://wa.me/${whatsappNumber}?text=${message}`, icon: MessageCircle },
-    { label: 'Redes sociales', to: '/redes', icon: Instagram }
+    { label: 'Redes sociales', to: '/redes', icon: Instagram },
+    { label: 'Reglas para revendedores', to: '/reglas', icon: BookOpen, quiet: true }
   ]
 
   return (
@@ -17,11 +17,11 @@ export function Home() {
       <section className="link-home-card">
         <h1>RE-VENTA CAMARAZA STORE</h1>
         <div className="link-button-list">
-          {links.map(({ label, to, href, icon: Icon, primary }) => (
+          {links.map(({ label, to, href, icon: Icon, primary, quiet }) => (
             href ? (
               <a
                 key={label}
-                className={`link-button ${primary ? 'link-button-primary' : ''}`}
+                className={`link-button ${primary ? 'link-button-primary' : ''} ${quiet ? 'link-button-quiet' : ''}`}
                 href={href}
                 target="_blank"
                 rel="noreferrer"
@@ -32,7 +32,7 @@ export function Home() {
             ) : (
               <Link
                 key={label}
-                className={`link-button ${primary ? 'link-button-primary' : ''}`}
+                className={`link-button ${primary ? 'link-button-primary' : ''} ${quiet ? 'link-button-quiet' : ''}`}
                 to={to}
               >
                 <Icon size={20} />

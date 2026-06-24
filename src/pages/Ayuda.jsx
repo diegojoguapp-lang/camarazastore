@@ -1,47 +1,17 @@
+import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PlayCircle } from 'lucide-react'
-
-const videos = [
-  {
-    title: 'Cómo funciona Re-venta Camaraza Store',
-    duration: '4 min',
-    url: 'https://www.youtube.com/',
-    thumb: '/placeholder.svg'
-  },
-  {
-    title: 'Cómo publicar productos en estados de WhatsApp',
-    duration: '6 min',
-    url: 'https://www.youtube.com/',
-    thumb: '/placeholder.svg'
-  },
-  {
-    title: 'Cómo vender en Facebook Marketplace',
-    duration: '7 min',
-    url: 'https://www.youtube.com/',
-    thumb: '/placeholder.svg'
-  },
-  {
-    title: 'Cómo pasar una venta por WhatsApp',
-    duration: '3 min',
-    url: 'https://www.youtube.com/',
-    thumb: '/placeholder.svg'
-  },
-  {
-    title: 'Cómo se pagan las comisiones',
-    duration: '3 min',
-    url: 'https://www.youtube.com/',
-    thumb: '/placeholder.svg'
-  },
-  {
-    title: 'Qué hacer si el cliente pregunta por garantía',
-    duration: '5 min',
-    url: 'https://www.youtube.com/',
-    thumb: '/placeholder.svg'
-  }
-]
+import { getHelpVideos } from '../lib/api'
+import { getDisplayImageUrl, imageFallback } from '../lib/utils'
 
 export function Ayuda() {
   const navigate = useNavigate()
+  const [videos, setVideos] = useState([])
+
+  useEffect(() => {
+    getHelpVideos().then(setVideos)
+  }, [])
+
   const goBack = () => {
     if (window.history.length > 1) navigate(-1)
     else navigate('/')
@@ -61,13 +31,13 @@ export function Ayuda() {
           {videos.map((video) => (
             <Link
               className="course-video-card"
-              key={video.title}
+              key={video.id || video.url}
               to={video.url}
               target="_blank"
               rel="noreferrer"
             >
               <div className="course-thumb">
-                <img src={video.thumb} alt="" />
+                <img src={getDisplayImageUrl(video.thumbnail_url, { width: 640, height: 360 })} alt="" width="640" height="360" loading="lazy" decoding="async" onError={imageFallback} />
                 <span><PlayCircle size={34} /></span>
               </div>
               <h3>{video.title}</h3>

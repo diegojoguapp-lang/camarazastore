@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { calculateProfit, formatGs, imageFallback, publicStatusLabel } from '../lib/utils'
+import { calculateProfit, formatGs, getDisplayImageUrl, imageFallback, publicStatusLabel } from '../lib/utils'
 
 export function ProductCard({ product }) {
   const profit = calculateProfit(product)
@@ -7,7 +7,16 @@ export function ProductCard({ product }) {
   return (
     <article className="product-card marketplace-card simple-product-card">
       <Link className="marketplace-image-link" to={`/producto/${product.slug}`} aria-label={`Ver ${product.name}`}>
-        <img src={product.main_image_url || '/placeholder.svg'} alt={product.name} className="product-image" onError={imageFallback} />
+        <img
+          src={getDisplayImageUrl(product.main_image_url, { width: 520, height: 520 })}
+          alt={product.name}
+          className="product-image"
+          width="520"
+          height="520"
+          loading="lazy"
+          decoding="async"
+          onError={imageFallback}
+        />
         <span className={`status-pill status-${product.public_stock_status || 'consultar_stock'}`}>
           {publicStatusLabel(product.public_stock_status)}
         </span>

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Copy, Download } from 'lucide-react'
 import { getProductBySlug } from '../lib/api'
-import { calculateProfit, copyToClipboard, formatGs, imageFallback, publicStatusLabel } from '../lib/utils'
+import { calculateProfit, copyToClipboard, formatGs, getDisplayImageUrl, imageFallback, publicStatusLabel } from '../lib/utils'
 
 const fallbackFaqs = [
   {
@@ -18,6 +18,14 @@ const fallbackFaqs = [
 function normalizeFaqs(product) {
   if (Array.isArray(product?.faqs)) return product.faqs
   if (Array.isArray(product?.faq_items)) return product.faq_items
+  if (typeof product?.reseller_group_text === 'string') {
+    try {
+      const parsed = JSON.parse(product.reseller_group_text)
+      if (Array.isArray(parsed)) return parsed
+    } catch {
+      // Older products can have plain reseller text here.
+    }
+  }
   if (typeof product?.faq_items === 'string') {
     try {
       const parsed = JSON.parse(product.faq_items)
@@ -58,8 +66,14 @@ export function ProductDetail() {
 
   const gallery = [product.main_image_url, ...images.map((image) => image.image_url)].filter(Boolean)
   const profit = calculateProfit(product)
-  const descriptionToCopy = `${product.name}\n\n${product.long_description || product.short_description || ''}\n\nPrecio: ${formatGs(product.suggested_price)}\nEntrega: ${product.delivery_time || 'Consultar disponibilidad'}`
+  const mainDescription = product.long_description || product.short_description || ''
   const materialLink = product.drive_link?.trim()
+  const quickDetails = [
+    product.delivery_included ? 'Delivery incluido' : 'No incluye delivery',
+    product.warranty ? `Garantía: ${product.warranty}` : 'Garantía de 48 horas',
+    'Consultar stock',
+    product.delivery_time ? `Tiempo de entrega: ${product.delivery_time}` : 'Tiempo de entrega: 24 horas'
+  ]
 
   return (
     <div className="page product-sale-page simple-detail-page">
@@ -70,10 +84,31 @@ export function ProductDetail() {
         </Link>
 
         <div className="product-sale-media">
-          <img src={product.main_image_url || '/placeholder.svg'} alt={product.name} className="detail-main-image" onError={imageFallback} />
+          <img
+            src={getDisplayImageUrl(product.main_image_url, { width: 900, height: 900 })}
+            alt={product.name}
+            className="detail-main-image"
+            width="900"
+            height="900"
+            loading="eager"
+            decoding="async"
+            fetchPriority="high"
+            onError={imageFallback}
+          />
           {gallery.length > 1 && (
             <div className="thumb-row">
-              {gallery.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`${product.name} ${index + 1}`} onError={imageFallback} />)}
+              {gallery.map((url, index) => (
+                <img
+                  key={`${url}-${index}`}
+                  src={getDisplayImageUrl(url, { width: 220, height: 220 })}
+                  alt={`${product.name} ${index + 1}`}
+                  width="220"
+                  height="220"
+                  loading="lazy"
+                  decoding="async"
+                  onError={imageFallback}
+                />
+              ))}
             </div>
           )}
         </div>
@@ -84,12 +119,12 @@ export function ProductDetail() {
             {publicStatusLabel(product.public_stock_status)}
           </span>
 
-          <div className="sale-price-list">
-            <div>
+          <div className="sale-price-list product-price-stack">
+            <div className="suggested-price-box">
               <span>Precio sugerido</span>
               <strong>{formatGs(product.suggested_price)}</strong>
             </div>
-            <div>
+            <div className="wholesale-price-box">
               <span>Precio mayorista</span>
               <strong>{formatGs(product.wholesale_price)}</strong>
             </div>
@@ -113,11 +148,29 @@ export function ProductDetail() {
                 Descargar imágenes y videos
               </button>
             )}
-            <button className="secondary-button big full" type="button" onClick={() => handleCopy('Descripción copiada', descriptionToCopy)}>
+            <button className="secondary-button big full" type="button" onClick={() => handleCopy('Título copiado', product.name)}>
+              <Copy size={18} />
+              Copiar título
+            </button>
+            <button className="secondary-button big full" type="button" onClick={() => handleCopy('Descripción copiada', mainDescription)}>
               <Copy size={18} />
               Copiar descripción
             </button>
           </div>
+
+          <section className="quick-details">
+            <h2>Detalles rápidos</h2>
+            <div>
+              {quickDetails.map((detail) => <span key={detail}>{detail}</span>)}
+            </div>
+          </section>
+
+          {mainDescription && (
+            <section className="product-description-block">
+              <h2>Descripción</h2>
+              <p>{mainDescription}</p>
+            </section>
+          )}
 
           <section className="faq-section">
             <h2>Preguntas frecuentes</h2>

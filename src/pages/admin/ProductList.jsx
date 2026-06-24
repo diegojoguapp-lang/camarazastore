@@ -80,7 +80,7 @@ export function ProductList() {
                 <tr key={product.id}>
                   <td>
                     <div className="table-product">
-                      <img src={product.main_image_url || '/placeholder.svg'} alt={product.name} onError={imageFallback} />
+                      <img src={product.main_image_url || '/placeholder.svg'} alt={product.name} width="52" height="52" loading="lazy" decoding="async" onError={imageFallback} />
                       <div>
                         <strong>{product.name}</strong>
                         <span>{product.brand} {product.model}</span>

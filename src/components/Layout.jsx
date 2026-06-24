@@ -52,6 +52,8 @@ export function AdminLayout({ children }) {
     ['/admin', 'Dashboard'],
     ['/admin/productos', 'Productos'],
     ['/admin/productos/nuevo', 'Agregar producto'],
+    ['/admin/videos', 'Videos'],
+    ['/admin/redes', 'Redes'],
     ['/catalogo', 'Ver catálogo']
   ]
 

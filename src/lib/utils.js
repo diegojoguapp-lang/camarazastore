@@ -62,6 +62,44 @@ export function imageFallback(event) {
   event.currentTarget.src = '/placeholder.svg'
 }
 
+export function isGoogleDriveUrl(url) {
+  return /(^https?:\/\/)?(drive|docs)\.google\.com/i.test(String(url || ''))
+}
+
+export function isLikelyImageUrl(url) {
+  if (!url) return false
+  if (String(url).startsWith('/')) return true
+  if (isGoogleDriveUrl(url)) return false
+  try {
+    const parsed = new URL(url)
+    return ['http:', 'https:'].includes(parsed.protocol)
+  } catch {
+    return false
+  }
+}
+
+export function getDisplayImageUrl(url, { width = 640, height = 640 } = {}) {
+  if (!isLikelyImageUrl(url)) return '/placeholder.svg'
+  if (String(url).startsWith('/')) return url
+
+  try {
+    const parsed = new URL(url)
+    const publicMarker = '/storage/v1/object/public/'
+    if (parsed.pathname.includes(publicMarker)) {
+      parsed.pathname = parsed.pathname.replace(publicMarker, '/storage/v1/render/image/public/')
+      parsed.searchParams.set('width', String(width))
+      parsed.searchParams.set('height', String(height))
+      parsed.searchParams.set('resize', 'cover')
+      parsed.searchParams.set('quality', '72')
+      return parsed.toString()
+    }
+  } catch {
+    return '/placeholder.svg'
+  }
+
+  return url
+}
+
 export async function copyToClipboard(text) {
   if (!text) return false
   if (navigator.clipboard?.writeText) {

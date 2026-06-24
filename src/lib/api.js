@@ -1,11 +1,27 @@
 import { supabase, isSupabaseConfigured } from './supabase'
-import { demoProduct, slugify } from './utils'
+import { demoProduct, isLikelyImageUrl, slugify } from './utils'
 
 const BUCKET = 'product-images'
+const PRODUCT_LIST_FIELDS = 'id,name,slug,category,internal_status,public_stock_status,wholesale_price,suggested_price,main_image_url,created_at'
+const defaultHelpVideos = [
+  { id: 'demo-1', title: 'CÃ³mo funciona Re-venta Camaraza Store', url: 'https://www.youtube.com/', duration: '4 min', thumbnail_url: '/placeholder.svg', is_visible: true, sort_order: 0 },
+  { id: 'demo-2', title: 'CÃ³mo publicar productos en estados de WhatsApp', url: 'https://www.youtube.com/', duration: '6 min', thumbnail_url: '/placeholder.svg', is_visible: true, sort_order: 1 },
+  { id: 'demo-3', title: 'CÃ³mo vender en Facebook Marketplace', url: 'https://www.youtube.com/', duration: '7 min', thumbnail_url: '/placeholder.svg', is_visible: true, sort_order: 2 }
+]
+
+const defaultSocialLinks = {
+  instagram: '',
+  whatsapp: '',
+  tiktok: '',
+  facebook: ''
+}
 
 export async function getProducts({ includeHidden = false } = {}) {
   if (!isSupabaseConfigured) return [demoProduct]
-  let query = supabase.from('products').select('*').order('created_at', { ascending: false })
+  let query = supabase
+    .from('products')
+    .select(includeHidden ? '*' : PRODUCT_LIST_FIELDS)
+    .order('created_at', { ascending: false })
   if (!includeHidden) query = query.eq('internal_status', 'active')
   const { data, error } = await query
   if (error) throw error
@@ -65,7 +81,7 @@ export async function createProduct(payload, imageFiles = []) {
   const mainImage = imageFiles.main ? await uploadImage(imageFiles.main, 'main') : payload.main_image_url
   const productPayload = {
     ...payload,
-    main_image_url: mainImage || payload.main_image_url || null,
+    main_image_url: isLikelyImageUrl(mainImage) ? mainImage : null,
     slug: payload.slug || slugify(payload.name),
     updated_at: new Date().toISOString()
   }
@@ -88,7 +104,7 @@ export async function updateProduct(id, payload, imageFiles = [], imagesToDelete
   const mainImage = imageFiles.main ? await uploadImage(imageFiles.main, 'main') : payload.main_image_url
   const productPayload = {
     ...payload,
-    main_image_url: mainImage || payload.main_image_url || null,
+    main_image_url: isLikelyImageUrl(mainImage) ? mainImage : null,
     slug: payload.slug || slugify(payload.name),
     updated_at: new Date().toISOString()
   }
@@ -125,5 +141,65 @@ export async function updateProductStatus(id, status) {
 export async function deleteProduct(id) {
   if (!isSupabaseConfigured) throw new Error('Supabase no estÃ¡ configurado.')
   const { error } = await supabase.from('products').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function getHelpVideos({ includeHidden = false } = {}) {
+  if (!isSupabaseConfigured) return defaultHelpVideos
+  const { data, error } = await supabase
+    .from('help_videos')
+    .select('*')
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: false })
+  if (error) {
+    console.warn('No se pudieron cargar videos administrables:', error.message)
+    return defaultHelpVideos
+  }
+  return (data || []).filter((video) => includeHidden || video.is_visible !== false)
+}
+
+export async function saveHelpVideo(payload) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  const clean = {
+    title: payload.title?.trim(),
+    url: payload.url?.trim(),
+    duration: payload.duration?.trim() || null,
+    thumbnail_url: payload.thumbnail_url?.trim() || null,
+    is_visible: payload.is_visible !== false,
+    sort_order: Number(payload.sort_order || 0),
+    updated_at: new Date().toISOString()
+  }
+  if (!clean.title || !clean.url) throw new Error('Título y URL son obligatorios.')
+  const query = payload.id
+    ? supabase.from('help_videos').update(clean).eq('id', payload.id)
+    : supabase.from('help_videos').insert(clean)
+  const { error } = await query
+  if (error) throw error
+}
+
+export async function deleteHelpVideo(id) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  const { error } = await supabase.from('help_videos').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function getSocialLinks() {
+  if (!isSupabaseConfigured) return defaultSocialLinks
+  const { data, error } = await supabase.from('social_links').select('network,url')
+  if (error) {
+    console.warn('No se pudieron cargar redes administrables:', error.message)
+    return defaultSocialLinks
+  }
+  return (data || []).reduce((acc, row) => ({ ...acc, [row.network]: row.url || '' }), defaultSocialLinks)
+}
+
+export async function saveSocialLinks(links) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  const rows = Object.entries(links).map(([network, url]) => ({
+    network,
+    url: url?.trim() || '',
+    updated_at: new Date().toISOString()
+  }))
+  const { error } = await supabase.from('social_links').upsert(rows, { onConflict: 'network' })
   if (error) throw error
 }

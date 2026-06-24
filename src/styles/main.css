@@ -10,7 +10,7 @@
   --whatsapp: #25d366;
   --danger: #b42318;
   --success: #027a48;
-  --shadow: 0 18px 50px rgba(29, 26, 22, 0.08);
+  --shadow: 0 10px 28px rgba(29, 26, 22, 0.07);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 * { box-sizing: border-box; }
@@ -41,7 +41,7 @@ p { color: var(--muted); line-height: 1.65; }
 .small-lead { font-size: 17px; }
 .hero-actions, .card-actions, .button-stack { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
 .primary-button, .secondary-button { border: 0; border-radius: 14px; padding: 12px 16px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; font-weight: 800; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease; }
-.primary-button { background: var(--dark); color: white; box-shadow: 0 12px 30px rgba(17,17,17,.16); }
+.primary-button { background: var(--dark); color: white; box-shadow: 0 8px 20px rgba(17,17,17,.12); }
 .secondary-button { background: var(--surface); color: var(--text); border: 1px solid var(--line); }
 .primary-button:hover, .secondary-button:hover { transform: translateY(-1px); }
 .big { padding: 15px 20px; }
@@ -159,10 +159,11 @@ p { color: var(--muted); line-height: 1.65; }
 .link-home-card { width: min(430px, 100%); display: grid; gap: 28px; }
 .link-home-card h1 { margin: 0; text-align: center; font-size: clamp(34px, 10vw, 48px); line-height: 1.02; letter-spacing: 0; font-weight: 800; }
 .link-button-list { display: grid; gap: 13px; }
-.link-button { min-height: 62px; display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); color: var(--text); box-shadow: 0 10px 28px rgba(29, 26, 22, 0.06); font-size: 16px; font-weight: 650; }
+.link-button { min-height: 62px; display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); color: var(--text); box-shadow: 0 6px 18px rgba(29, 26, 22, 0.05); font-size: 16px; font-weight: 650; }
 .link-button svg { color: var(--muted); flex: none; }
 .link-button-primary { background: var(--success); color: white; border-color: var(--success); box-shadow: 0 14px 34px rgba(2, 122, 72, 0.22); }
 .link-button-primary svg { color: white; }
+.link-button-quiet { min-height: 54px; opacity: .82; box-shadow: none; }
 .catalog-page { padding-top: 18px; }
 .catalog-topbar { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; margin-bottom: 16px; }
 .catalog-search { min-height: 46px; border-radius: 14px; }
@@ -178,7 +179,7 @@ p { color: var(--muted); line-height: 1.65; }
 .filter-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 4px; }
 .compact-notice { margin-top: 0; }
 .marketplace-grid { gap: 14px; }
-.marketplace-card { border-radius: 16px; box-shadow: 0 8px 28px rgba(29, 26, 22, 0.07); }
+.marketplace-card { border-radius: 16px; box-shadow: 0 6px 18px rgba(29, 26, 22, 0.06); }
 .marketplace-image-link { position: relative; display: block; aspect-ratio: 1 / 1; background: #f2eee5; overflow: hidden; }
 .best-seller-pill { position: absolute; right: 10px; top: 10px; border-radius: 999px; padding: 7px 10px; background: var(--dark); color: white; font-size: 12px; font-weight: 800; }
 .marketplace-card-body { padding: 12px; display: grid; gap: 10px; }
@@ -202,6 +203,11 @@ p { color: var(--muted); line-height: 1.65; }
 .sale-price-list div:not(.profit-highlight) { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: #fbf7ee; }
 .sale-price-list span { color: var(--muted); font-size: 13px; }
 .sale-price-list strong { color: var(--text); font-size: 17px; }
+.product-price-stack { gap: 10px; }
+.suggested-price-box { background: white !important; border-color: #d8c7a7 !important; }
+.suggested-price-box span { color: var(--text); font-weight: 850; }
+.suggested-price-box strong { font-size: 28px; }
+.wholesale-price-box strong { font-size: 19px; }
 .sale-action-list { display: grid; gap: 10px; }
 .two-actions-only { margin-top: 2px; }
 .product-sale-info .primary-button { background: var(--success); box-shadow: 0 12px 30px rgba(2, 122, 72, .18); }
@@ -218,12 +224,17 @@ p { color: var(--muted); line-height: 1.65; }
 .help-page .simple-page-head p { margin: 0; font-size: 16px; }
 .course-video-list { display: grid; gap: 22px; }
 .course-video-card { display: grid; gap: 10px; }
-.course-thumb { position: relative; overflow: hidden; border-radius: 18px; border: 1px solid var(--line); background: #f2eee5; box-shadow: 0 8px 28px rgba(29, 26, 22, 0.07); }
+.course-thumb { position: relative; overflow: hidden; border-radius: 18px; border: 1px solid var(--line); background: #f2eee5; box-shadow: 0 6px 18px rgba(29, 26, 22, 0.06); }
 .course-thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
 .course-thumb span { position: absolute; inset: 0; display: grid; place-items: center; color: white; background: rgba(17,17,17,.18); }
 .course-video-card h3 { margin: 0; font-size: 18px; line-height: 1.25; letter-spacing: 0; }
 .course-video-card p { margin: 0; font-size: 13px; line-height: 1.2; }
 .faq-section { display: grid; gap: 12px; margin-top: 2px; }
+.quick-details, .product-description-block { display: grid; gap: 10px; }
+.quick-details h2, .product-description-block h2 { margin: 0; font-size: 22px; letter-spacing: 0; }
+.quick-details div { display: flex; flex-wrap: wrap; gap: 8px; }
+.quick-details span { border: 1px solid var(--line); background: white; border-radius: 999px; padding: 8px 11px; color: var(--text); font-size: 13px; font-weight: 750; }
+.product-description-block p { margin: 0; white-space: pre-line; }
 .faq-section h2 { margin: 0; font-size: 24px; letter-spacing: 0; }
 .faq-list { display: grid; gap: 10px; }
 .faq-item { display: grid; gap: 8px; padding: 14px; border: 1px solid var(--line); border-radius: 16px; background: white; }
@@ -232,6 +243,10 @@ p { color: var(--muted); line-height: 1.65; }
 .faq-item .secondary-button { width: fit-content; min-height: 40px; border-radius: 12px; }
 .centered-panel { text-align: center; display: grid; gap: 14px; justify-items: center; }
 .centered-panel p { margin-top: 0; }
+.admin-simple-form, .faq-admin-list { display: grid; gap: 14px; }
+.form-actions-row { display: flex; flex-wrap: wrap; gap: 10px; }
+.admin-content-list { margin-top: 18px; padding: 12px; }
+.faq-admin-row { border: 1px solid var(--line); border-radius: 16px; padding: 14px; background: white; display: grid; gap: 10px; }
 @media (max-width: 940px) {
   .hero, .two-columns, .product-detail, .filters { grid-template-columns: 1fr; }
   .product-sale-layout { grid-template-columns: 1fr; }
