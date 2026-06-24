@@ -21,12 +21,12 @@ export function calculateProfit(product) {
 
 export function publicStatusLabel(status) {
   const labels = {
-    disponible: 'Disponible',
-    consultar_stock: 'Disponible',
-    ultimas_unidades: 'Últimas unidades',
+    disponible: '🟢 Hay stock',
+    consultar_stock: '🟢 Hay stock',
+    ultimas_unidades: '🟢 Hay stock',
     agotado: 'Sin stock'
   }
-  return labels[status] || 'Disponible'
+  return labels[status] || '🟢 Hay stock'
 }
 
 export function internalStatusLabel(status) {

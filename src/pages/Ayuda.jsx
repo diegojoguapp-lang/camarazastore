@@ -1,58 +1,74 @@
+import { Link, useNavigate } from 'react-router-dom'
 import { PlayCircle } from 'lucide-react'
 
 const videos = [
   {
     title: 'Cómo funciona Re-venta Camaraza Store',
+    duration: '4 min',
     url: 'https://www.youtube.com/',
     thumb: '/placeholder.svg'
   },
   {
     title: 'Cómo publicar productos en estados de WhatsApp',
+    duration: '6 min',
     url: 'https://www.youtube.com/',
     thumb: '/placeholder.svg'
   },
   {
     title: 'Cómo vender en Facebook Marketplace',
+    duration: '7 min',
     url: 'https://www.youtube.com/',
     thumb: '/placeholder.svg'
   },
   {
     title: 'Cómo pasar una venta por WhatsApp',
+    duration: '3 min',
     url: 'https://www.youtube.com/',
     thumb: '/placeholder.svg'
   },
   {
     title: 'Cómo se pagan las comisiones',
+    duration: '3 min',
     url: 'https://www.youtube.com/',
     thumb: '/placeholder.svg'
   },
   {
     title: 'Qué hacer si el cliente pregunta por garantía',
+    duration: '5 min',
     url: 'https://www.youtube.com/',
     thumb: '/placeholder.svg'
   }
 ]
 
 export function Ayuda() {
+  const navigate = useNavigate()
+
   return (
-    <div className="page">
-      <section className="container">
+    <div className="page help-page">
+      <section className="container narrow">
+        <button className="back-link plain-back" type="button" onClick={() => navigate(-1)}>
+          ← Volver
+        </button>
         <div className="simple-page-head">
-          <p className="eyebrow">Aprendé a vender</p>
           <h1>Videos de ayuda</h1>
+          <p>Aprendé a vender paso a paso.</p>
         </div>
-        <div className="video-list">
+        <div className="course-video-list">
           {videos.map((video) => (
-            <article className="video-card" key={video.title}>
-              <img src={video.thumb} alt="" />
-              <div>
-                <h3>{video.title}</h3>
-                <a className="secondary-button" href={video.url} target="_blank" rel="noreferrer">
-                  <PlayCircle size={17} />
-                  Ver video
-                </a>
+            <Link
+              className="course-video-card"
+              key={video.title}
+              to={video.url}
+              target="_blank"
+              rel="noreferrer"
+            >
+              <div className="course-thumb">
+                <img src={video.thumb} alt="" />
+                <span><PlayCircle size={34} /></span>
               </div>
-            </article>
+              <h3>{video.title}</h3>
+              {video.duration && <p>{video.duration}</p>}
+            </Link>
           ))}
         </div>
       </section>

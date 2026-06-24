@@ -1,17 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { ArrowUpDown, Search } from 'lucide-react'
+import { Filter, Search, X } from 'lucide-react'
 import { ProductCard } from '../components/ProductCard'
 import { getProducts } from '../lib/api'
-import { calculateProfit, isBestSeller, isSoldOut, publicStatusLabel } from '../lib/utils'
+import { calculateProfit, isSoldOut } from '../lib/utils'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 const sortOptions = [
   ['recent', 'Más recientes'],
   ['profit_desc', 'Mayor ganancia'],
-  ['suggested_asc', 'Menor precio sugerido'],
-  ['suggested_desc', 'Mayor precio sugerido'],
-  ['best_sellers', 'Más vendidos'],
-  ['available_first', 'Disponibles primero']
+  ['suggested_asc', 'Menor precio'],
+  ['suggested_desc', 'Mayor precio']
 ]
 
 export function Catalogo() {
@@ -22,6 +20,10 @@ export function Catalogo() {
   const [category, setCategory] = useState('all')
   const [status, setStatus] = useState('all')
   const [sort, setSort] = useState('recent')
+  const [draftCategory, setDraftCategory] = useState('all')
+  const [draftStatus, setDraftStatus] = useState('all')
+  const [draftSort, setDraftSort] = useState('recent')
+  const [filtersOpen, setFiltersOpen] = useState(false)
 
   useEffect(() => {
     getProducts()
@@ -32,51 +34,62 @@ export function Catalogo() {
 
   const categories = useMemo(() => ['all', ...new Set(products.map((product) => product.category).filter(Boolean))], [products])
 
+  const openFilters = () => {
+    setDraftCategory(category)
+    setDraftStatus(status)
+    setDraftSort(sort)
+    setFiltersOpen(true)
+  }
+
+  const applyFilters = () => {
+    setCategory(draftCategory)
+    setStatus(draftStatus)
+    setSort(draftSort)
+    setFiltersOpen(false)
+  }
+
+  const clearFilters = () => {
+    setDraftCategory('all')
+    setDraftStatus('all')
+    setDraftSort('recent')
+    setCategory('all')
+    setStatus('all')
+    setSort('recent')
+    setFiltersOpen(false)
+  }
+
   const filtered = useMemo(() => {
     const normalizedSearch = search.toLowerCase()
     const visibleProducts = products.filter((product) => {
       const q = `${product.name} ${product.brand} ${product.model} ${product.category}`.toLowerCase()
+      const stockMatch =
+        status === 'all' ||
+        (status === 'available' && !isSoldOut(product)) ||
+        (status === 'sold_out' && isSoldOut(product))
+
       return q.includes(normalizedSearch) &&
         (category === 'all' || product.category === category) &&
-        (status === 'all' || product.public_stock_status === status)
+        stockMatch
     })
 
     return [...visibleProducts].sort((a, b) => {
       if (sort === 'profit_desc') return calculateProfit(b) - calculateProfit(a)
       if (sort === 'suggested_asc') return Number(a.suggested_price || 0) - Number(b.suggested_price || 0)
       if (sort === 'suggested_desc') return Number(b.suggested_price || 0) - Number(a.suggested_price || 0)
-      if (sort === 'best_sellers') return Number(isBestSeller(b)) - Number(isBestSeller(a))
-      if (sort === 'available_first') return Number(isSoldOut(a)) - Number(isSoldOut(b))
       return new Date(b.created_at || 0) - new Date(a.created_at || 0)
     })
   }, [products, search, category, status, sort])
 
   return (
     <div className="page catalog-page">
-      <section className="container marketplace-toolbar">
-        <label className="search-box marketplace-search">
-          <Search size={18} />
-          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar producto..." />
+      <section className="container catalog-topbar">
+        <label className="search-box catalog-search">
+          <Search size={17} />
+          <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar..." />
         </label>
-        <label className="sort-box">
-          <ArrowUpDown size={17} />
-          <select value={sort} onChange={(event) => setSort(event.target.value)}>
-            {sortOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
-          </select>
-        </label>
-      </section>
-
-      <section className="container compact-filters">
-        <select value={category} onChange={(event) => setCategory(event.target.value)}>
-          <option value="all">Todas las categorías</option>
-          {categories.filter((item) => item !== 'all').map((item) => <option key={item} value={item}>{item}</option>)}
-        </select>
-        <select value={status} onChange={(event) => setStatus(event.target.value)}>
-          <option value="all">Todos los estados</option>
-          {['disponible', 'consultar_stock', 'ultimas_unidades', 'agotado'].map((item) => (
-            <option key={item} value={item}>{publicStatusLabel(item)}</option>
-          ))}
-        </select>
+        <button className="filter-trigger" type="button" onClick={openFilters} aria-label="Abrir filtros">
+          <Filter size={18} />
+        </button>
       </section>
 
       <section className="container">
@@ -88,6 +101,48 @@ export function Catalogo() {
           {filtered.map((product) => <ProductCard key={product.id} product={product} />)}
         </div>
       </section>
+
+      {filtersOpen && (
+        <div className="filter-overlay" role="dialog" aria-modal="true" aria-label="Filtros del catálogo">
+          <button className="filter-backdrop" type="button" onClick={() => setFiltersOpen(false)} aria-label="Cerrar filtros" />
+          <div className="filter-drawer">
+            <div className="filter-drawer-head">
+              <h2>Filtros</h2>
+              <button className="icon-button" type="button" onClick={() => setFiltersOpen(false)} aria-label="Cerrar filtros">
+                <X size={19} />
+              </button>
+            </div>
+
+            <label>Ordenar por
+              <select value={draftSort} onChange={(event) => setDraftSort(event.target.value)}>
+                {sortOptions.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+              </select>
+            </label>
+
+            <label>Estado
+              <select value={draftStatus} onChange={(event) => setDraftStatus(event.target.value)}>
+                <option value="all">Todos</option>
+                <option value="available">Hay stock</option>
+                <option value="sold_out">Sin stock</option>
+              </select>
+            </label>
+
+            {categories.length > 1 && (
+              <label>Categoría
+                <select value={draftCategory} onChange={(event) => setDraftCategory(event.target.value)}>
+                  <option value="all">Todas</option>
+                  {categories.filter((item) => item !== 'all').map((item) => <option key={item} value={item}>{item}</option>)}
+                </select>
+              </label>
+            )}
+
+            <div className="filter-actions">
+              <button className="secondary-button big" type="button" onClick={clearFilters}>Limpiar</button>
+              <button className="primary-button big" type="button" onClick={applyFilters}>Aplicar</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
