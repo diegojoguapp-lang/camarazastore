@@ -4,6 +4,14 @@ import { PlayCircle } from 'lucide-react'
 import { getHelpVideos } from '../lib/api'
 import { getDisplayImageUrl, imageFallback } from '../lib/utils'
 
+function formatDuration(duration) {
+  const value = String(duration || '').trim()
+  if (!value) return ''
+  if (/^\d+$/.test(value)) return `${value} min`
+  if (/^\d+\s*(m|min|minutos?)$/i.test(value)) return value.replace(/\s*m$/i, ' min')
+  return value
+}
+
 export function Ayuda() {
   const navigate = useNavigate()
   const [videos, setVideos] = useState([])
@@ -28,22 +36,25 @@ export function Ayuda() {
           <p>Aprendé a vender paso a paso.</p>
         </div>
         <div className="course-video-list">
-          {videos.map((video) => (
-            <Link
-              className="course-video-card"
-              key={video.id || video.video_url}
-              to={video.video_url}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <div className="course-thumb">
-                <img src={getDisplayImageUrl(video.thumbnail_url, { width: 640, height: 360 })} alt="" width="640" height="360" loading="lazy" decoding="async" onError={imageFallback} />
-                <span><PlayCircle size={34} /></span>
-              </div>
-              <h3>{video.title}</h3>
-              {video.duration && <p>{video.duration}</p>}
-            </Link>
-          ))}
+          {videos.map((video) => {
+            const duration = formatDuration(video.duration)
+            return (
+              <Link
+                className="course-video-card"
+                key={video.id || video.video_url}
+                to={video.video_url}
+                target="_blank"
+                rel="noreferrer"
+              >
+                <div className="course-thumb">
+                  <img src={getDisplayImageUrl(video.thumbnail_url, { width: 640, height: 360 })} alt="" width="640" height="360" loading="lazy" decoding="async" onError={imageFallback} />
+                  {duration && <em>{duration}</em>}
+                  <span><PlayCircle size={34} /></span>
+                </div>
+                <h3>{video.title}</h3>
+              </Link>
+            )
+          })}
           {!videos.length && <div className="empty-state">Todavía no hay videos disponibles.</div>}
         </div>
       </section>

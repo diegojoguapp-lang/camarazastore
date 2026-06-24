@@ -95,9 +95,9 @@ p { color: var(--muted); line-height: 1.65; }
 .profit { color: var(--success); }
 .product-detail { display: grid; grid-template-columns: 0.95fr 1.05fr; gap: 28px; align-items: start; }
 .gallery-panel, .detail-info { background: var(--surface); border: 1px solid var(--line); border-radius: 28px; padding: 20px; box-shadow: var(--shadow); }
-.detail-main-image { width: 100%; border-radius: 22px; aspect-ratio: 1; object-fit: cover; background: #f2eee5; }
+.detail-main-image { width: 100%; max-height: min(68vh, 560px); border-radius: 22px; aspect-ratio: 4 / 3; object-fit: contain; object-position: center; background: #f2eee5; }
 .thumb-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 12px 0; }
-.thumb-row img { border-radius: 12px; aspect-ratio: 1; object-fit: cover; border: 1px solid var(--line); }
+.thumb-row img { width: 100%; border-radius: 12px; aspect-ratio: 1; object-fit: contain; object-position: center; border: 1px solid var(--line); background: #f2eee5; }
 .detail-info h1 { font-size: clamp(32px, 5vw, 54px); }
 .detail-prices { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 24px 0; }
 .detail-prices div { background: #fbf7ee; border: 1px solid var(--line); border-radius: 18px; padding: 16px; display: grid; gap: 6px; }
@@ -203,6 +203,12 @@ p { color: var(--muted); line-height: 1.65; }
 .sale-price-list div:not(.profit-highlight) { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; padding: 13px; border: 1px solid var(--line); border-radius: 14px; background: #fbf7ee; }
 .sale-price-list span { color: var(--muted); font-size: 13px; }
 .sale-price-list strong { color: var(--text); font-size: 17px; }
+.sale-price-list .profit-highlight span,
+.sale-price-list .profit-highlight strong,
+.profit-highlight span,
+.profit-highlight strong,
+.profit-badge span,
+.profit-badge strong { color: #ffffff !important; opacity: 1; }
 .product-price-stack { gap: 10px; }
 .suggested-price-box { background: white !important; border-color: #d8c7a7 !important; }
 .suggested-price-box span { color: var(--text); font-weight: 850; }
@@ -224,9 +230,10 @@ p { color: var(--muted); line-height: 1.65; }
 .help-page .simple-page-head p { margin: 0; font-size: 16px; }
 .course-video-list { display: grid; gap: 22px; }
 .course-video-card { display: grid; gap: 10px; }
-.course-thumb { position: relative; overflow: hidden; border-radius: 18px; border: 1px solid var(--line); background: #f2eee5; box-shadow: 0 6px 18px rgba(29, 26, 22, 0.06); }
-.course-thumb img { width: 100%; aspect-ratio: 16 / 9; object-fit: cover; }
+.course-thumb { position: relative; overflow: hidden; aspect-ratio: 16 / 9; border-radius: 18px; border: 1px solid var(--line); background: #f2eee5; box-shadow: 0 6px 18px rgba(29, 26, 22, 0.06); }
+.course-thumb img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
 .course-thumb span { position: absolute; inset: 0; display: grid; place-items: center; color: white; background: rgba(17,17,17,.18); }
+.course-thumb em { position: absolute; right: 10px; bottom: 10px; z-index: 1; border-radius: 8px; padding: 4px 7px; background: rgba(17,17,17,.78); color: white; font-size: 12px; line-height: 1; font-style: normal; font-weight: 850; }
 .course-video-card h3 { margin: 0; font-size: 18px; line-height: 1.25; letter-spacing: 0; }
 .course-video-card p { margin: 0; font-size: 13px; line-height: 1.2; }
 .faq-section { display: grid; gap: 12px; margin-top: 2px; }
@@ -271,6 +278,7 @@ p { color: var(--muted); line-height: 1.65; }
   .marketplace-card { border-radius: 14px; }
   .marketplace-card-body { padding: 11px; }
   .product-sale-media, .product-sale-info { border-radius: 18px; padding: 12px; }
+  .detail-main-image { max-height: 420px; }
   .page { padding: 20px 0 34px; }
   .catalog-page { padding-top: 10px; }
   .plain-back { margin-bottom: 10px; }

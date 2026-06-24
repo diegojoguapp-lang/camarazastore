@@ -85,11 +85,11 @@ export function ProductDetail() {
 
         <div className="product-sale-media">
           <img
-            src={getDisplayImageUrl(product.main_image_url, { width: 900, height: 900 })}
+            src={getDisplayImageUrl(product.main_image_url, { width: 900, height: 700, resize: 'contain' })}
             alt={product.name}
             className="detail-main-image"
             width="900"
-            height="900"
+            height="700"
             loading="eager"
             decoding="async"
             fetchPriority="high"
@@ -100,7 +100,7 @@ export function ProductDetail() {
               {gallery.map((url, index) => (
                 <img
                   key={`${url}-${index}`}
-                  src={getDisplayImageUrl(url, { width: 220, height: 220 })}
+                  src={getDisplayImageUrl(url, { width: 220, height: 220, resize: 'contain' })}
                   alt={`${product.name} ${index + 1}`}
                   width="220"
                   height="220"

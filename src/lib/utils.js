@@ -78,7 +78,7 @@ export function isLikelyImageUrl(url) {
   }
 }
 
-export function getDisplayImageUrl(url, { width = 640, height = 640 } = {}) {
+export function getDisplayImageUrl(url, { width = 640, height = 640, resize = 'cover' } = {}) {
   if (!isLikelyImageUrl(url)) return '/placeholder.svg'
   if (String(url).startsWith('/')) return url
 
@@ -89,7 +89,7 @@ export function getDisplayImageUrl(url, { width = 640, height = 640 } = {}) {
       parsed.pathname = parsed.pathname.replace(publicMarker, '/storage/v1/render/image/public/')
       parsed.searchParams.set('width', String(width))
       parsed.searchParams.set('height', String(height))
-      parsed.searchParams.set('resize', 'cover')
+      parsed.searchParams.set('resize', resize)
       parsed.searchParams.set('quality', '72')
       return parsed.toString()
     }
