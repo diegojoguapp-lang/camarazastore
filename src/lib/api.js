@@ -56,6 +56,7 @@ export async function uploadImage(file, folder = 'products') {
   })
   if (error) throw error
   const { data } = supabase.storage.from(BUCKET).getPublicUrl(filePath)
+  if (!data?.publicUrl) throw new Error('No se pudo generar la URL pública de la imagen.')
   return data.publicUrl
 }
 
@@ -112,11 +113,17 @@ export async function updateProduct(id, payload, imageFiles = [], imagesToDelete
 export async function updateProductStatus(id, status) {
   if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
   const payload = {
-    internal_status: status,
+    internal_status: status === 'sold_out' ? 'active' : status,
     public_stock_status: status === 'sold_out' ? 'agotado' : undefined,
     updated_at: new Date().toISOString()
   }
   Object.keys(payload).forEach((key) => payload[key] === undefined && delete payload[key])
   const { error } = await supabase.from('products').update(payload).eq('id', id)
+  if (error) throw error
+}
+
+export async function deleteProduct(id) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  const { error } = await supabase.from('products').delete().eq('id', id)
   if (error) throw error
 }

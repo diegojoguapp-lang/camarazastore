@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Copy, Download } from 'lucide-react'
 import { getProductBySlug } from '../lib/api'
-import { calculateProfit, copyToClipboard, formatGs, publicStatusLabel } from '../lib/utils'
+import { calculateProfit, copyToClipboard, formatGs, imageFallback, publicStatusLabel } from '../lib/utils'
 
 const fallbackFaqs = [
   {
@@ -59,6 +59,7 @@ export function ProductDetail() {
   const gallery = [product.main_image_url, ...images.map((image) => image.image_url)].filter(Boolean)
   const profit = calculateProfit(product)
   const descriptionToCopy = `${product.name}\n\n${product.long_description || product.short_description || ''}\n\nPrecio: ${formatGs(product.suggested_price)}\nEntrega: ${product.delivery_time || 'Consultar disponibilidad'}`
+  const materialLink = product.drive_link?.trim()
 
   return (
     <div className="page product-sale-page simple-detail-page">
@@ -69,10 +70,10 @@ export function ProductDetail() {
         </Link>
 
         <div className="product-sale-media">
-          <img src={product.main_image_url || '/placeholder.svg'} alt={product.name} className="detail-main-image" />
+          <img src={product.main_image_url || '/placeholder.svg'} alt={product.name} className="detail-main-image" onError={imageFallback} />
           {gallery.length > 1 && (
             <div className="thumb-row">
-              {gallery.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`${product.name} ${index + 1}`} />)}
+              {gallery.map((url, index) => <img key={`${url}-${index}`} src={url} alt={`${product.name} ${index + 1}`} onError={imageFallback} />)}
             </div>
           )}
         </div>
@@ -93,7 +94,7 @@ export function ProductDetail() {
               <strong>{formatGs(product.wholesale_price)}</strong>
             </div>
             <div className="profit-highlight">
-              <span>Ganancia posible</span>
+              <span>Posible ganancia</span>
               <strong>{formatGs(profit)}</strong>
             </div>
           </div>
@@ -101,13 +102,13 @@ export function ProductDetail() {
           {product.short_description && <p className="lead small-lead">{product.short_description}</p>}
 
           <div className="sale-action-list two-actions-only">
-            {product.drive_link ? (
-              <a className="primary-button big full" href={product.drive_link} target="_blank" rel="noreferrer">
+            {materialLink ? (
+              <a className="primary-button big full" href={materialLink} target="_blank" rel="noreferrer">
                 <Download size={18} />
                 Descargar imágenes y videos
               </a>
             ) : (
-              <button className="primary-button big full" type="button" disabled>
+              <button className="primary-button big full" type="button" disabled title="Este producto todavía no tiene link de materiales.">
                 <Download size={18} />
                 Descargar imágenes y videos
               </button>

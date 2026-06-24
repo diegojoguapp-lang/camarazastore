@@ -136,6 +136,9 @@ p { color: var(--muted); line-height: 1.65; }
 .table-product span { display: block; color: var(--muted); font-size: 13px; }
 .table-actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .table-actions button, .icon-link { border: 1px solid var(--line); background: white; border-radius: 10px; padding: 8px 10px; display: inline-flex; cursor: pointer; }
+.ordered-actions { align-items: center; }
+.danger-action { color: var(--danger); border-color: #f2b8b5 !important; gap: 5px; align-items: center; }
+.danger-action:hover { background: #fff2f0; }
 .admin-status { background: #fbf7ee; border: 1px solid var(--line); border-radius: 999px; padding: 6px 10px; font-weight: 800; font-size: 12px; }
 .product-form { display: grid; gap: 18px; }
 .form-section { padding: 22px; }
@@ -186,7 +189,7 @@ p { color: var(--muted); line-height: 1.65; }
 .profit-card-focus strong { color: var(--success); font-size: 22px; line-height: 1.1; }
 .suggested-reference { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.35; }
 .profit-badge, .profit-highlight { background: var(--success); color: white; border-radius: 14px; padding: 12px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-.profit-badge span, .profit-highlight span { color: rgba(255,255,255,.84); font-size: 12px; }
+.profit-badge span, .profit-highlight span { color: #ffffff; font-size: 12px; font-weight: 850; }
 .profit-badge strong, .profit-highlight strong { color: white; font-size: 17px; }
 .card-view-button { min-height: 44px; border-radius: 12px; font-weight: 750; }
 .product-sale-layout { display: grid; grid-template-columns: 0.9fr 1.1fr; gap: 24px; align-items: start; }
@@ -240,9 +243,12 @@ p { color: var(--muted); line-height: 1.65; }
   .admin-menu { display: grid; }
 }
 @media (max-width: 720px) {
-  .topbar { padding: 0 16px; }
+  .topbar { min-height: 56px; padding: 0 12px; }
+  .brand { gap: 8px; font-size: 14px; }
+  .brand-mark { width: 32px; height: 32px; border-radius: 11px; font-size: 11px; }
+  .icon-button { width: 38px; height: 38px; border-radius: 11px; }
   .menu-button { display: grid; }
-  .nav { position: fixed; top: 74px; left: 16px; right: 16px; background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 12px; display: none; flex-direction: column; align-items: stretch; box-shadow: var(--shadow); }
+  .nav { position: fixed; top: 60px; left: 12px; right: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: 18px; padding: 10px; display: none; flex-direction: column; align-items: stretch; box-shadow: var(--shadow); }
   .nav-open { display: flex; }
   .hero { min-height: auto; padding-top: 24px; }
   .section-grid, .product-grid, .detail-prices, .form-grid { grid-template-columns: 1fr; }
@@ -250,7 +256,9 @@ p { color: var(--muted); line-height: 1.65; }
   .marketplace-card { border-radius: 14px; }
   .marketplace-card-body { padding: 11px; }
   .product-sale-media, .product-sale-info { border-radius: 18px; padding: 12px; }
-  .page { padding: 34px 0; }
+  .page { padding: 20px 0 34px; }
+  .catalog-page { padding-top: 10px; }
+  .plain-back { margin-bottom: 10px; }
   .footer { flex-direction: column; align-items: flex-start; padding: 24px 16px; }
   .admin-main { padding: 18px; }
   .admin-head { flex-direction: column; align-items: flex-start; }

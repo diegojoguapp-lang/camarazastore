@@ -8,9 +8,9 @@ export function Layout({ children }) {
   const nav = [
     ['/', 'Inicio'],
     ['/reventa', 'Cómo funciona'],
-    ['/catalogo', 'Catálogo'],
-    ['/login', 'Admin']
+    ['/catalogo', 'Catálogo']
   ]
+
   return (
     <div className="site-shell">
       <header className="topbar">
@@ -35,7 +35,7 @@ export function Layout({ children }) {
           <strong>Camaraza Store</strong>
           <p>Catálogo de reventa. Consultar stock antes de vender.</p>
         </div>
-        <Link to="/reventa">Reglas para revendedores</Link>
+        <Link to="/reglas">Reglas para revendedores</Link>
       </footer>
     </div>
   )
@@ -54,6 +54,7 @@ export function AdminLayout({ children }) {
     ['/admin/productos/nuevo', 'Agregar producto'],
     ['/catalogo', 'Ver catálogo']
   ]
+
   return (
     <div className="admin-shell">
       <aside className={`admin-sidebar ${open ? 'admin-sidebar-open' : ''}`}>

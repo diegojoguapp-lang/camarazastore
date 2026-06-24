@@ -2,7 +2,7 @@ export const whatsappNumber = import.meta.env.VITE_WHATSAPP_NUMBER || '595XXXXXX
 
 export function formatGs(value) {
   const number = Number(value || 0)
-  return `${new Intl.NumberFormat('es-PY').format(number)} Gs`
+  return `${new Intl.NumberFormat('es-PY').format(number)} Gs.`
 }
 
 export function slugify(text) {
@@ -57,6 +57,11 @@ export function buildWhatsappUrl(product) {
   return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
 }
 
+export function imageFallback(event) {
+  event.currentTarget.onerror = null
+  event.currentTarget.src = '/placeholder.svg'
+}
+
 export async function copyToClipboard(text) {
   if (!text) return false
   if (navigator.clipboard?.writeText) {
@@ -97,7 +102,7 @@ export const demoProduct = {
   long_description: 'Producto nuevo en caja. Cuenta con carga USB, batería de litio, motor potente de 11.000 RPM y cuchilla ajustable Zero Gap. Ideal para cortes, retoques, barba y uso diario.',
   whatsapp_status_text: 'Disponible máquina profesional para cortar pelo. Ideal para barbería o uso personal. Precio: 145.000 Gs. Consultar disponibilidad.',
   marketplace_text: 'Máquina profesional para cortar pelo Ecopower EP-2811. Producto nuevo en caja, carga USB, batería de litio, motor potente y cuchilla ajustable. Ideal para barbería o uso personal. Entrega disponible. Consultar stock.',
-  reseller_group_text: 'PRODUCTO DISPONIBLE PARA REVENTA\n\nProducto: Máquina profesional para cortar pelo Ecopower EP-2811\nPrecio mayorista: 85.000 Gs\nPrecio sugerido: 145.000 Gs\nPosible ganancia: 60.000 Gs\nDelivery no incluido. Consultar stock antes de vender.',
+  reseller_group_text: 'PRODUCTO DISPONIBLE PARA REVENTA\n\nProducto: Máquina profesional para cortar pelo Ecopower EP-2811\nPrecio mayorista: 85.000 Gs.\nPrecio sugerido: 145.000 Gs.\nPosible ganancia: 60.000 Gs.\nDelivery no incluido. Consultar stock antes de vender.',
   drive_link: 'https://drive.google.com/',
   video_url: '',
   main_image_url: '/demo-ecopower.png',

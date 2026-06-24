@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Filter, Search, X } from 'lucide-react'
 import { ProductCard } from '../components/ProductCard'
 import { getProducts } from '../lib/api'
@@ -13,6 +14,7 @@ const sortOptions = [
 ]
 
 export function Catalogo() {
+  const navigate = useNavigate()
   const [products, setProducts] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -33,6 +35,11 @@ export function Catalogo() {
   }, [])
 
   const categories = useMemo(() => ['all', ...new Set(products.map((product) => product.category).filter(Boolean))], [products])
+
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1)
+    else navigate('/')
+  }
 
   const openFilters = () => {
     setDraftCategory(category)
@@ -82,6 +89,10 @@ export function Catalogo() {
 
   return (
     <div className="page catalog-page">
+      <section className="container">
+        <button className="back-link plain-back" type="button" onClick={goBack}>← Volver</button>
+      </section>
+
       <section className="container catalog-topbar">
         <label className="search-box catalog-search">
           <Search size={17} />

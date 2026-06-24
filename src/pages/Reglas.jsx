@@ -1,4 +1,4 @@
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { CheckCircle2 } from 'lucide-react'
 
 const rules = [
@@ -18,9 +18,16 @@ const rules = [
 ]
 
 export function Reglas() {
+  const navigate = useNavigate()
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1)
+    else navigate('/')
+  }
+
   return (
     <div className="page">
       <section className="container narrow">
+        <button className="back-link plain-back" type="button" onClick={goBack}>← Volver</button>
         <div className="simple-page-head">
           <p className="eyebrow">Camaraza Store</p>
           <h1>Reglas para revendedores</h1>

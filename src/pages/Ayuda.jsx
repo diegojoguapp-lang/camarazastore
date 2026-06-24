@@ -42,11 +42,15 @@ const videos = [
 
 export function Ayuda() {
   const navigate = useNavigate()
+  const goBack = () => {
+    if (window.history.length > 1) navigate(-1)
+    else navigate('/')
+  }
 
   return (
     <div className="page help-page">
       <section className="container narrow">
-        <button className="back-link plain-back" type="button" onClick={() => navigate(-1)}>
+        <button className="back-link plain-back" type="button" onClick={goBack}>
           ← Volver
         </button>
         <div className="simple-page-head">

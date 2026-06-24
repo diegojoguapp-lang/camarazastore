@@ -1,12 +1,11 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, Download, HelpCircle, Instagram, MessageCircle, ShoppingBag } from 'lucide-react'
+import { BookOpen, HelpCircle, Instagram, MessageCircle, ShoppingBag } from 'lucide-react'
 import { whatsappNumber } from '../lib/utils'
 
 export function Home() {
   const message = encodeURIComponent('Hola, quiero información para ser revendedor de Camaraza Store.')
   const links = [
     { label: 'Ver catálogo', to: '/catalogo', icon: ShoppingBag, primary: true },
-    { label: 'Descargar materiales', to: '/materiales', icon: Download },
     { label: 'Videos de ayuda', to: '/ayuda', icon: HelpCircle },
     { label: 'Reglas para revendedores', to: '/reglas', icon: BookOpen },
     { label: 'Contactar por WhatsApp', href: `https://wa.me/${whatsappNumber}?text=${message}`, icon: MessageCircle },
