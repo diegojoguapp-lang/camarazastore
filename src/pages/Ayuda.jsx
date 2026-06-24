@@ -31,8 +31,8 @@ export function Ayuda() {
           {videos.map((video) => (
             <Link
               className="course-video-card"
-              key={video.id || video.url}
-              to={video.url}
+              key={video.id || video.video_url}
+              to={video.video_url}
               target="_blank"
               rel="noreferrer"
             >
@@ -44,6 +44,7 @@ export function Ayuda() {
               {video.duration && <p>{video.duration}</p>}
             </Link>
           ))}
+          {!videos.length && <div className="empty-state">Todavía no hay videos disponibles.</div>}
         </div>
       </section>
     </div>

@@ -3,11 +3,7 @@ import { demoProduct, isLikelyImageUrl, slugify } from './utils'
 
 const BUCKET = 'product-images'
 const PRODUCT_LIST_FIELDS = 'id,name,slug,category,internal_status,public_stock_status,wholesale_price,suggested_price,main_image_url,created_at'
-const defaultHelpVideos = [
-  { id: 'demo-1', title: 'CÃ³mo funciona Re-venta Camaraza Store', url: 'https://www.youtube.com/', duration: '4 min', thumbnail_url: '/placeholder.svg', is_visible: true, sort_order: 0 },
-  { id: 'demo-2', title: 'CÃ³mo publicar productos en estados de WhatsApp', url: 'https://www.youtube.com/', duration: '6 min', thumbnail_url: '/placeholder.svg', is_visible: true, sort_order: 1 },
-  { id: 'demo-3', title: 'CÃ³mo vender en Facebook Marketplace', url: 'https://www.youtube.com/', duration: '7 min', thumbnail_url: '/placeholder.svg', is_visible: true, sort_order: 2 }
-]
+const defaultHelpVideos = []
 
 const defaultSocialLinks = {
   instagram: '',
@@ -162,14 +158,14 @@ export async function saveHelpVideo(payload) {
   if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
   const clean = {
     title: payload.title?.trim(),
-    url: payload.url?.trim(),
+    video_url: payload.video_url?.trim(),
     duration: payload.duration?.trim() || null,
     thumbnail_url: payload.thumbnail_url?.trim() || null,
     is_visible: payload.is_visible !== false,
     sort_order: Number(payload.sort_order || 0),
     updated_at: new Date().toISOString()
   }
-  if (!clean.title || !clean.url) throw new Error('Título y URL son obligatorios.')
+  if (!clean.title || !clean.video_url) throw new Error('Título y URL son obligatorios.')
   const query = payload.id
     ? supabase.from('help_videos').update(clean).eq('id', payload.id)
     : supabase.from('help_videos').insert(clean)

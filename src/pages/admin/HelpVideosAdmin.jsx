@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { deleteHelpVideo, getHelpVideos, saveHelpVideo } from '../../lib/api'
 
-const empty = { title: '', url: '', duration: '', thumbnail_url: '', sort_order: 0, is_visible: true }
+const empty = { title: '', video_url: '', duration: '', thumbnail_url: '', sort_order: 0, is_visible: true }
 
 export function HelpVideosAdmin() {
   const [videos, setVideos] = useState([])
@@ -31,9 +31,11 @@ export function HelpVideosAdmin() {
   }
 
   const remove = async (video) => {
+    if (!video.id) return
     if (!window.confirm('¿Seguro que querés eliminar este video?')) return
     try {
       setError('')
+      setMessage('')
       await deleteHelpVideo(video.id)
       setMessage('Video eliminado correctamente')
       load()
@@ -52,7 +54,7 @@ export function HelpVideosAdmin() {
         <h2>{form.id ? 'Editar video' : 'Nuevo video'}</h2>
         <div className="form-grid">
           <label>Título<input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} required /></label>
-          <label>URL del video<input value={form.url} onChange={(e) => setForm({ ...form, url: e.target.value })} required /></label>
+          <label>URL del video<input value={form.video_url} onChange={(e) => setForm({ ...form, video_url: e.target.value })} required /></label>
           <label>Duración<input value={form.duration || ''} onChange={(e) => setForm({ ...form, duration: e.target.value })} placeholder="Ej: 4 min" /></label>
           <label>Miniatura<input value={form.thumbnail_url || ''} onChange={(e) => setForm({ ...form, thumbnail_url: e.target.value })} placeholder="URL de imagen" /></label>
           <label>Orden<input type="number" value={form.sort_order || 0} onChange={(e) => setForm({ ...form, sort_order: e.target.value })} /></label>
@@ -66,7 +68,7 @@ export function HelpVideosAdmin() {
 
       <div className="table-wrap admin-content-list">
         {videos.map((video) => (
-          <div className="admin-list-row" key={video.id || video.url}>
+          <div className="admin-list-row" key={video.id}>
             <span>{video.title} {!video.is_visible && '(oculto)'}</span>
             <div className="table-actions">
               <button type="button" onClick={() => edit(video)}>Editar</button>
@@ -74,7 +76,7 @@ export function HelpVideosAdmin() {
             </div>
           </div>
         ))}
-        {!videos.length && <div className="empty-state">No hay videos cargados.</div>}
+        {!videos.length && <div className="empty-state">Todavía no hay videos cargados.</div>}
       </div>
     </div>
   )
