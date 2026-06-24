@@ -22,11 +22,11 @@ export function calculateProfit(product) {
 export function publicStatusLabel(status) {
   const labels = {
     disponible: 'Disponible',
-    consultar_stock: 'Consultar stock',
+    consultar_stock: 'Disponible',
     ultimas_unidades: 'Últimas unidades',
-    agotado: 'Agotado'
+    agotado: 'Sin stock'
   }
-  return labels[status] || 'Consultar stock'
+  return labels[status] || 'Disponible'
 }
 
 export function internalStatusLabel(status) {
@@ -38,8 +38,22 @@ export function internalStatusLabel(status) {
   return labels[status] || status
 }
 
+export function isSoldOut(product) {
+  return product?.public_stock_status === 'agotado' || product?.internal_status === 'sold_out'
+}
+
+export function isBestSeller(product) {
+  return Boolean(
+    product?.is_best_seller ||
+    product?.best_seller ||
+    product?.mas_vendido ||
+    product?.featured ||
+    product?.is_featured
+  )
+}
+
 export function buildWhatsappUrl(product) {
-  const message = product?.custom_whatsapp_message?.trim() || `Hola, quiero consultar stock de este producto:\n\nProducto: ${product?.name || ''}\nPrecio mayorista: ${formatGs(product?.wholesale_price)}\nPrecio sugerido: ${formatGs(product?.suggested_price)}\n\nVengo desde el catálogo de Re-venta Camaraza Store.`
+  const message = product?.custom_whatsapp_message?.trim() || `Hola, tengo un cliente interesado.\n\nProducto: ${product?.name || ''}\nPrecio sugerido: ${formatGs(product?.suggested_price)}\nPrecio mayorista: ${formatGs(product?.wholesale_price)}\n\nQuiero consultar stock.`
   return `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`
 }
 
@@ -69,6 +83,7 @@ export const demoProduct = {
   category: 'Barbería',
   internal_status: 'active',
   public_stock_status: 'consultar_stock',
+  is_best_seller: true,
   cost_price: 50000,
   wholesale_price: 85000,
   suggested_price: 145000,
@@ -82,7 +97,7 @@ export const demoProduct = {
   long_description: 'Producto nuevo en caja. Cuenta con carga USB, batería de litio, motor potente de 11.000 RPM y cuchilla ajustable Zero Gap. Ideal para cortes, retoques, barba y uso diario.',
   whatsapp_status_text: 'Disponible máquina profesional para cortar pelo. Ideal para barbería o uso personal. Precio: 145.000 Gs. Consultar disponibilidad.',
   marketplace_text: 'Máquina profesional para cortar pelo Ecopower EP-2811. Producto nuevo en caja, carga USB, batería de litio, motor potente y cuchilla ajustable. Ideal para barbería o uso personal. Entrega disponible. Consultar stock.',
-  reseller_group_text: '📦 PRODUCTO DISPONIBLE PARA REVENTA\n\nProducto: Máquina profesional para cortar pelo Ecopower EP-2811\nPrecio mayorista: 85.000 Gs\nPrecio sugerido: 145.000 Gs\nPosible ganancia: 60.000 Gs\nDelivery no incluido. Consultar stock antes de vender.',
+  reseller_group_text: 'PRODUCTO DISPONIBLE PARA REVENTA\n\nProducto: Máquina profesional para cortar pelo Ecopower EP-2811\nPrecio mayorista: 85.000 Gs\nPrecio sugerido: 145.000 Gs\nPosible ganancia: 60.000 Gs\nDelivery no incluido. Consultar stock antes de vender.',
   drive_link: 'https://drive.google.com/',
   video_url: '',
   main_image_url: '/demo-ecopower.png',

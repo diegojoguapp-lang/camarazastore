@@ -1,6 +1,7 @@
 -- ============================================================
---  CAMARAZA STORE · Esquema completo para Supabase (V1)
---  Pegá todo esto en: Supabase > SQL Editor > New query > Run
+--  CAMARAZA STORE · Esquema legacy para Supabase (V1)
+--  Referencia histórica. Para nuevas instalaciones usá:
+--  supabase/schema.sql
 -- ============================================================
 
 -- ---------- TABLA: products ----------

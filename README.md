@@ -66,11 +66,13 @@ VITE_WHATSAPP_NUMBER=595981123456
 
 1. Crear un proyecto en Supabase.
 2. Ir a **SQL Editor**.
-3. Copiar y ejecutar el archivo:
+3. Copiar y ejecutar el esquema oficial:
 
 ```bash
 supabase/schema.sql
 ```
+
+> Nota: el archivo `supabase.sql` que existe en la raíz queda como referencia legacy. Para nuevas instalaciones usá `supabase/schema.sql`.
 
 4. Ir a **Authentication > Users**.
 5. Crear tu usuario admin con email y contraseña.
