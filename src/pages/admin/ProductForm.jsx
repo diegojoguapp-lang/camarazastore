@@ -9,7 +9,7 @@ const initial = {
   cost_price: 0, wholesale_price: 0, suggested_price: 0, stock_quantity: '',
   delivery_time: '24 horas', delivery_included: false, delivery_note: '',
   warranty: '48 horas por falla de fábrica', return_policy: '',
-  short_description: '', long_description: '', whatsapp_status_text: '', marketplace_text: '',
+  long_description: '', whatsapp_status_text: '', marketplace_text: '',
   reseller_group_text: '', custom_whatsapp_message: '', drive_link: '', video_url: '', main_image_url: '',
   is_featured: false, sort_priority: 0
 }
@@ -119,8 +119,10 @@ export function ProductForm() {
     setError('')
     try {
       const cleanFaqs = faqs.filter((faq) => faq.question.trim() && faq.answer.trim())
+      const productFields = { ...form }
+      delete productFields.short_description
       const payload = {
-        ...form,
+        ...productFields,
         category: null,
         cost_price: Number(form.cost_price || 0),
         wholesale_price: Number(form.wholesale_price || 0),
@@ -220,8 +222,7 @@ export function ProductForm() {
         <section className="form-section">
           <h2>Descripción</h2>
           <div className="form-grid single">
-            <label>Descripción corta<textarea value={form.short_description || ''} onChange={(e) => setField('short_description', e.target.value)} /></label>
-            <label>Descripción<textarea rows="5" value={form.long_description || ''} onChange={(e) => setField('long_description', e.target.value)} /></label>
+            <label>Descripción<textarea className="product-description-input" rows="10" value={form.long_description || ''} onChange={(e) => setField('long_description', e.target.value)} /></label>
           </div>
         </section>
 

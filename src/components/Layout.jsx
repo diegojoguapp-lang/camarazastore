@@ -14,9 +14,8 @@ export function Layout({ children }) {
   return (
     <div className="site-shell">
       <header className="topbar">
-        <Link to="/" className="brand" onClick={() => setOpen(false)}>
-          <span className="brand-mark">CS</span>
-          <span>Camaraza Store</span>
+        <Link to="/" className="brand public-brand" onClick={() => setOpen(false)}>
+          <span className="public-wordmark">Camaraza <em>Store</em></span>
         </Link>
         <button className="icon-button menu-button" onClick={() => setOpen(!open)} aria-label="Abrir menú">
           {open ? <X size={20} /> : <Menu size={20} />}

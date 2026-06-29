@@ -66,7 +66,7 @@ export function ProductDetail() {
 
   const gallery = [product.main_image_url, ...images.map((image) => image.image_url)].filter(Boolean)
   const profit = calculateProfit(product)
-  const mainDescription = product.long_description || product.short_description || ''
+  const mainDescription = product.long_description || ''
   const materialLink = product.drive_link?.trim()
   const quickDetails = [
     product.delivery_included ? 'Delivery incluido' : 'No incluye delivery',
@@ -136,12 +136,12 @@ export function ProductDetail() {
 
           <div className="sale-action-list two-actions-only">
             {materialLink ? (
-              <a className="primary-button big full" href={materialLink} target="_blank" rel="noreferrer">
+              <a className="primary-button big full material-download-button" href={materialLink} target="_blank" rel="noreferrer">
                 <Download size={18} />
                 Descargar imágenes y videos
               </a>
             ) : (
-              <button className="primary-button big full" type="button" disabled title="Este producto todavía no tiene link de materiales.">
+              <button className="primary-button big full material-download-button" type="button" disabled title="Este producto todavía no tiene link de materiales.">
                 <Download size={18} />
                 Descargar imágenes y videos
               </button>
