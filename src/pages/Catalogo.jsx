@@ -7,6 +7,7 @@ import { calculateProfit, isSoldOut } from '../lib/utils'
 import { isSupabaseConfigured } from '../lib/supabase'
 
 const sortOptions = [
+  ['priority', 'Orden recomendado'],
   ['recent', 'Más recientes'],
   ['profit_desc', 'Mayor ganancia'],
   ['suggested_asc', 'Menor precio'],
@@ -21,10 +22,10 @@ export function Catalogo() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('all')
   const [status, setStatus] = useState('all')
-  const [sort, setSort] = useState('recent')
+  const [sort, setSort] = useState('priority')
   const [draftCategory, setDraftCategory] = useState('all')
   const [draftStatus, setDraftStatus] = useState('all')
-  const [draftSort, setDraftSort] = useState('recent')
+  const [draftSort, setDraftSort] = useState('priority')
   const [filtersOpen, setFiltersOpen] = useState(false)
 
   useEffect(() => {
@@ -58,10 +59,10 @@ export function Catalogo() {
   const clearFilters = () => {
     setDraftCategory('all')
     setDraftStatus('all')
-    setDraftSort('recent')
+    setDraftSort('priority')
     setCategory('all')
     setStatus('all')
-    setSort('recent')
+    setSort('priority')
     setFiltersOpen(false)
   }
 
@@ -83,6 +84,10 @@ export function Catalogo() {
       if (sort === 'profit_desc') return calculateProfit(b) - calculateProfit(a)
       if (sort === 'suggested_asc') return Number(a.suggested_price || 0) - Number(b.suggested_price || 0)
       if (sort === 'suggested_desc') return Number(b.suggested_price || 0) - Number(a.suggested_price || 0)
+      if (sort === 'priority') {
+        const priorityDifference = Number(b.sort_priority || 0) - Number(a.sort_priority || 0)
+        if (priorityDifference) return priorityDifference
+      }
       return new Date(b.created_at || 0) - new Date(a.created_at || 0)
     })
   }, [products, search, category, status, sort])

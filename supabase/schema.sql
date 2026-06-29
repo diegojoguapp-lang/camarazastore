@@ -30,6 +30,8 @@ create table if not exists public.products (
   drive_link text,
   video_url text,
   main_image_url text,
+  is_featured boolean not null default false,
+  sort_priority integer not null default 0,
   created_at timestamp with time zone default now(),
   updated_at timestamp with time zone default now()
 );
@@ -37,6 +39,7 @@ create table if not exists public.products (
 create index if not exists products_slug_idx on public.products(slug);
 create index if not exists products_internal_status_idx on public.products(internal_status);
 create index if not exists products_category_idx on public.products(category);
+create index if not exists products_catalog_order_idx on public.products(sort_priority desc, created_at desc);
 
 create table if not exists public.product_images (
   id uuid primary key default gen_random_uuid(),

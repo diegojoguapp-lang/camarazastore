@@ -127,6 +127,8 @@ export const demoProduct = {
   internal_status: 'active',
   public_stock_status: 'consultar_stock',
   is_best_seller: true,
+  is_featured: true,
+  sort_priority: 100,
   cost_price: 50000,
   wholesale_price: 85000,
   suggested_price: 145000,

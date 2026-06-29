@@ -43,7 +43,7 @@ export function ProductList() {
       setMessage('Producto eliminado correctamente.')
       load()
     } catch (err) {
-      setError(err.message)
+      setError(err.message || 'Error al eliminar producto')
     }
   }
 
@@ -71,6 +71,8 @@ export function ProductList() {
                 <th>Mayorista</th>
                 <th>Sugerido</th>
                 <th>Posible ganancia</th>
+                <th>Destacado</th>
+                <th>Orden</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
@@ -91,6 +93,8 @@ export function ProductList() {
                   <td>{formatGs(product.wholesale_price)}</td>
                   <td>{formatGs(product.suggested_price)}</td>
                   <td>{formatGs(calculateProfit(product))}</td>
+                  <td>{product.is_featured ? 'Sí' : 'No'}</td>
+                  <td>{Number(product.sort_priority || 0)}</td>
                   <td><span className="admin-status">{product.public_stock_status === 'agotado' ? 'Agotado' : internalStatusLabel(product.internal_status)}</span></td>
                   <td>
                     <div className="table-actions ordered-actions">

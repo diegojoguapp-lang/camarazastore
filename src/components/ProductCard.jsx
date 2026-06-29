@@ -20,6 +20,7 @@ export function ProductCard({ product }) {
         <span className={`status-pill status-${product.public_stock_status || 'consultar_stock'}`}>
           {publicStatusLabel(product.public_stock_status)}
         </span>
+        {product.is_featured && <span className="featured-pill">⭐ Destacado</span>}
       </Link>
 
       <div className="marketplace-card-body">

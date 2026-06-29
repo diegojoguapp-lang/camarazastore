@@ -2,7 +2,7 @@ import { supabase, isSupabaseConfigured } from './supabase'
 import { demoProduct, isLikelyImageUrl, slugify } from './utils'
 
 const BUCKET = 'product-images'
-const PRODUCT_LIST_FIELDS = 'id,name,slug,category,internal_status,public_stock_status,wholesale_price,suggested_price,main_image_url,created_at'
+const PRODUCT_LIST_FIELDS = 'id,name,slug,category,internal_status,public_stock_status,wholesale_price,suggested_price,main_image_url,is_featured,sort_priority,created_at'
 const defaultHelpVideos = []
 
 const defaultSocialLinks = {
@@ -17,6 +17,7 @@ export async function getProducts({ includeHidden = false } = {}) {
   let query = supabase
     .from('products')
     .select(includeHidden ? '*' : PRODUCT_LIST_FIELDS)
+    .order('sort_priority', { ascending: false })
     .order('created_at', { ascending: false })
   if (!includeHidden) query = query.eq('internal_status', 'active')
   const { data, error } = await query
@@ -95,9 +96,16 @@ export async function createProduct(payload, imageFiles = []) {
   return data
 }
 
-export async function updateProduct(id, payload, imageFiles = [], imagesToDelete = []) {
+export async function updateProduct(id, payload, imageFiles = [], imagesToDelete = [], imageReplacements = []) {
   if (!isSupabaseConfigured) throw new Error('Supabase no estÃ¡ configurado.')
-  const mainImage = imageFiles.main ? await uploadImage(imageFiles.main, 'main') : payload.main_image_url
+  let mainImage = payload.main_image_url
+  if (imageFiles.main) {
+    try {
+      mainImage = await uploadImage(imageFiles.main, 'main')
+    } catch {
+      throw new Error('Error al reemplazar imagen')
+    }
+  }
   const productPayload = {
     ...payload,
     main_image_url: isLikelyImageUrl(mainImage) ? mainImage : null,
@@ -109,6 +117,19 @@ export async function updateProduct(id, payload, imageFiles = [], imagesToDelete
   if (imagesToDelete.length) {
     const { error: deleteError } = await supabase.from('product_images').delete().in('id', imagesToDelete)
     if (deleteError) throw deleteError
+  }
+  for (const replacement of imageReplacements) {
+    try {
+      const imageUrl = await uploadImage(replacement.file, 'gallery')
+      const { error: replaceError } = await supabase
+        .from('product_images')
+        .update({ image_url: imageUrl })
+        .eq('id', replacement.id)
+        .eq('product_id', id)
+      if (replaceError) throw replaceError
+    } catch {
+      throw new Error('Error al reemplazar imagen')
+    }
   }
   if (imageFiles.gallery?.length) {
     const rows = []
@@ -155,7 +176,7 @@ export async function getHelpVideos({ includeHidden = false } = {}) {
 }
 
 export async function saveHelpVideo(payload) {
-  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  if (!isSupabaseConfigured) throw new Error('Supabase no estÃ¡ configurado.')
   const clean = {
     title: payload.title?.trim(),
     video_url: payload.video_url?.trim(),
@@ -165,7 +186,7 @@ export async function saveHelpVideo(payload) {
     sort_order: Number(payload.sort_order || 0),
     updated_at: new Date().toISOString()
   }
-  if (!clean.title || !clean.video_url) throw new Error('Título y URL son obligatorios.')
+  if (!clean.title || !clean.video_url) throw new Error('TÃ­tulo y URL son obligatorios.')
   const query = payload.id
     ? supabase.from('help_videos').update(clean).eq('id', payload.id)
     : supabase.from('help_videos').insert(clean)
@@ -174,7 +195,7 @@ export async function saveHelpVideo(payload) {
 }
 
 export async function deleteHelpVideo(id) {
-  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  if (!isSupabaseConfigured) throw new Error('Supabase no estÃ¡ configurado.')
   const { error } = await supabase.from('help_videos').delete().eq('id', id)
   if (error) throw error
 }
@@ -190,7 +211,7 @@ export async function getSocialLinks() {
 }
 
 export async function saveSocialLinks(links) {
-  if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  if (!isSupabaseConfigured) throw new Error('Supabase no estÃ¡ configurado.')
   const rows = Object.entries(links).map(([network, url]) => ({
     network,
     url: url?.trim() || '',

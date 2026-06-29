@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft, Copy, Download } from 'lucide-react'
+import { ArrowLeft, Check, Copy, Download } from 'lucide-react'
 import { getProductBySlug } from '../lib/api'
 import { calculateProfit, copyToClipboard, formatGs, getDisplayImageUrl, imageFallback, publicStatusLabel } from '../lib/utils'
 
@@ -134,8 +134,6 @@ export function ProductDetail() {
             </div>
           </div>
 
-          {product.short_description && <p className="lead small-lead">{product.short_description}</p>}
-
           <div className="sale-action-list two-actions-only">
             {materialLink ? (
               <a className="primary-button big full" href={materialLink} target="_blank" rel="noreferrer">
@@ -161,7 +159,7 @@ export function ProductDetail() {
           <section className="quick-details">
             <h2>Detalles rápidos</h2>
             <div>
-              {quickDetails.map((detail) => <span key={detail}>{detail}</span>)}
+              {quickDetails.map((detail) => <span key={detail}><Check size={15} />{detail}</span>)}
             </div>
           </section>
 
