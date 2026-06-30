@@ -6,34 +6,36 @@ export function ProductCard({ product }) {
 
   return (
     <article className="product-card marketplace-card simple-product-card">
-      <Link className="marketplace-image-link" to={`/producto/${product.slug}`} aria-label={`Ver ${product.name}`}>
-        <img
-          src={getDisplayImageUrl(product.main_image_url, { width: 520, height: 520 })}
-          alt={product.name}
-          className="product-image"
-          width="520"
-          height="520"
-          loading="lazy"
-          decoding="async"
-          onError={imageFallback}
-        />
-        <span className={`status-pill status-${product.public_stock_status || 'consultar_stock'}`}>
-          {publicStatusLabel(product.public_stock_status)}
-        </span>
-        {product.is_featured && <span className="featured-pill">⭐ Destacado</span>}
-      </Link>
-
-      <div className="marketplace-card-body">
-        <h3>{product.name}</h3>
-        <div className="profit-card-focus">
-          <span>Posible ganancia</span>
-          <strong>{formatGs(profit)}</strong>
+      <Link className="marketplace-card-link" to={`/producto/${product.slug}`} aria-label={`Ver ${product.name}`}>
+        <div className="marketplace-image-frame">
+          <img
+            src={getDisplayImageUrl(product.main_image_url, { width: 420, height: 420, resize: 'contain' })}
+            alt={product.name}
+            className="product-image"
+            width="420"
+            height="420"
+            loading="lazy"
+            decoding="async"
+            onError={imageFallback}
+          />
+          <span className={`status-pill status-${product.public_stock_status || 'consultar_stock'}`}>
+            {publicStatusLabel(product.public_stock_status)}
+          </span>
+          {product.is_featured && <span className="featured-pill">⭐ Destacado</span>}
         </div>
-        <p className="suggested-reference">Precio mayorista: {formatGs(product.wholesale_price)}</p>
-        <Link className="primary-button full card-view-button" to={`/producto/${product.slug}`}>
-          Ver producto
-        </Link>
-      </div>
+
+        <div className="marketplace-card-body">
+          <h3>{product.name}</h3>
+          <div className="profit-card-focus">
+            <span>Posible ganancia</span>
+            <strong>{formatGs(profit)}</strong>
+          </div>
+          <div className="card-wholesale-price">
+            <span>Precio mayorista</span>
+            <strong>{formatGs(product.wholesale_price)}</strong>
+          </div>
+        </div>
+      </Link>
     </article>
   )
 }
