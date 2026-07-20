@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, HelpCircle, Instagram, MessageCircle, ShoppingBag } from 'lucide-react'
+import { BookOpen, HelpCircle, Instagram, MessageCircle, ShoppingBag, UserRound } from 'lucide-react'
 import { whatsappNumber } from '../lib/utils'
 
 export function Home() {
@@ -9,6 +9,7 @@ export function Home() {
     { label: 'Videos de ayuda', to: '/ayuda', icon: HelpCircle },
     { label: 'Contactar por WhatsApp', href: `https://wa.me/${whatsappNumber}?text=${message}`, icon: MessageCircle },
     { label: 'Redes sociales', to: '/redes', icon: Instagram },
+    { label: 'Panel del revendedor', description: 'ConsultÃ¡ tus ventas, comisiones y pagos.', to: '/login', icon: UserRound },
     { label: 'Reglas para revendedores', to: '/reglas', icon: BookOpen, quiet: true }
   ]
 
@@ -17,7 +18,7 @@ export function Home() {
       <section className="link-home-card">
         <h1>RE-VENTA CAMARAZA STORE</h1>
         <div className="link-button-list">
-          {links.map(({ label, to, href, icon: Icon, primary, quiet }) => (
+          {links.map(({ label, description, to, href, icon: Icon, primary, quiet }) => (
             href ? (
               <a
                 key={label}
@@ -27,7 +28,10 @@ export function Home() {
                 rel="noreferrer"
               >
                 <Icon size={20} />
-                {label}
+                <span className="link-button-copy">
+                  <strong>{label}</strong>
+                  {description && <small>{description}</small>}
+                </span>
               </a>
             ) : (
               <Link
@@ -36,7 +40,10 @@ export function Home() {
                 to={to}
               >
                 <Icon size={20} />
-                {label}
+                <span className="link-button-copy">
+                  <strong>{label}</strong>
+                  {description && <small>{description}</small>}
+                </span>
               </Link>
             )
           ))}

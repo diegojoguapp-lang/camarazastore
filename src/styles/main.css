@@ -173,8 +173,12 @@ p { color: var(--muted); line-height: 1.65; }
 .link-button-list { display: grid; gap: 13px; }
 .link-button { min-height: 62px; display: flex; align-items: center; justify-content: flex-start; gap: 12px; padding: 16px 18px; border-radius: 18px; background: var(--surface); border: 1px solid var(--line); color: var(--text); box-shadow: 0 6px 18px rgba(29, 26, 22, 0.05); font-size: 16px; font-weight: 650; }
 .link-button svg { color: var(--muted); flex: none; }
+.link-button-copy { display: grid; gap: 3px; line-height: 1.18; }
+.link-button-copy strong { font-size: 16px; font-weight: 750; }
+.link-button-copy small { color: var(--muted); font-size: 12px; font-weight: 650; }
 .link-button-primary { background: var(--success); color: white; border-color: var(--success); box-shadow: 0 14px 34px rgba(2, 122, 72, 0.22); }
 .link-button-primary svg { color: white; }
+.link-button-primary .link-button-copy small { color: rgba(255, 255, 255, .82); }
 .link-button-quiet { min-height: 54px; opacity: .82; box-shadow: none; }
 .catalog-page { min-height: 100%; padding-top: 18px; background: #f0eadf; }
 .catalog-topbar { display: grid; grid-template-columns: minmax(0, 1fr) 48px; gap: 8px; margin-bottom: 16px; }

@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
+import { getCurrentProfile, isActiveAdmin, isActiveReseller, signOut } from '../lib/roles'
 
 export function Login() {
   const navigate = useNavigate()
@@ -18,12 +19,31 @@ export function Login() {
     }
     setLoading(true)
     const { error: loginError } = await supabase.auth.signInWithPassword({ email, password })
-    setLoading(false)
     if (loginError) {
+      setLoading(false)
       setError(loginError.message)
       return
     }
-    navigate('/admin')
+
+    try {
+      const profile = await getCurrentProfile()
+      if (isActiveAdmin(profile)) {
+        navigate('/admin')
+        return
+      }
+      if (isActiveReseller(profile)) {
+        navigate('/panel')
+        return
+      }
+
+      await signOut()
+      setError('Tu usuario no tiene un perfil activo. Contacta al administrador.')
+    } catch {
+      await signOut()
+      setError('No se pudo validar tu perfil. Contacta al administrador.')
+    } finally {
+      setLoading(false)
+    }
   }
 
   return (

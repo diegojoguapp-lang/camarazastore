@@ -1,6 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout, AdminLayout } from './components/Layout'
-import { ProtectedRoute } from './components/ProtectedRoute'
+import { AdminRoute, ResellerRoute } from './components/ProtectedRoute'
 import { Home } from './pages/Home'
 import { Reventa } from './pages/Reventa'
 import { Catalogo } from './pages/Catalogo'
@@ -15,12 +15,16 @@ import { ProductList } from './pages/admin/ProductList'
 import { ProductForm } from './pages/admin/ProductForm'
 import { HelpVideosAdmin } from './pages/admin/HelpVideosAdmin'
 import { SocialLinksAdmin } from './pages/admin/SocialLinksAdmin'
+import { PanelHome } from './pages/panel/PanelHome'
 
 function Public({ children }) {
   return <Layout>{children}</Layout>
 }
 function Admin({ children }) {
-  return <ProtectedRoute><AdminLayout>{children}</AdminLayout></ProtectedRoute>
+  return <AdminRoute><AdminLayout>{children}</AdminLayout></AdminRoute>
+}
+function Panel({ children }) {
+  return <ResellerRoute>{children}</ResellerRoute>
 }
 
 export default function App() {
@@ -36,6 +40,7 @@ export default function App() {
         <Route path="/reglas" element={<Public><Reglas /></Public>} />
         <Route path="/redes" element={<Public><Redes /></Public>} />
         <Route path="/login" element={<Public><Login /></Public>} />
+        <Route path="/panel" element={<Panel><PanelHome /></Panel>} />
         <Route path="/admin" element={<Admin><AdminDashboard /></Admin>} />
         <Route path="/admin/productos" element={<Admin><ProductList /></Admin>} />
         <Route path="/admin/productos/nuevo" element={<Admin><ProductForm /></Admin>} />
