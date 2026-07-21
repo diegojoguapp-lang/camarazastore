@@ -21,7 +21,7 @@ export async function getCurrentProfile() {
 
   const { data, error } = await supabase
     .from('profiles')
-    .select('id,reseller_code,role,full_name,phone,city,is_active')
+    .select('id,reseller_code,role,email,full_name,phone,city,is_active,created_at')
     .eq('id', userId)
     .maybeSingle()
 
@@ -43,4 +43,10 @@ export function isActiveReseller(profile) {
 
 export async function signOut() {
   if (isSupabaseConfigured) await supabase.auth.signOut()
+}
+
+export async function updateCurrentPassword(password) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no estÃ¡ configurado.')
+  const { error } = await supabase.auth.updateUser({ password })
+  if (error) throw error
 }
