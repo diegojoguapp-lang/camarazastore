@@ -122,7 +122,7 @@ export function PanelHome() {
           </label>
 
           <button className="primary-button big full" type="submit" disabled={saving}>
-            {saving ? 'Guardando...' : 'Actualizar contrasena'}
+            {saving ? 'Guardando...' : 'Cambiar contrasena'}
           </button>
         </form>
       </section>

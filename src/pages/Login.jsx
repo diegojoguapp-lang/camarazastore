@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Eye, EyeOff } from 'lucide-react'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { getCurrentProfile, getCurrentSession, isActiveAdmin, isActiveReseller, signOut } from '../lib/roles'
@@ -7,9 +7,11 @@ import { whatsappNumber } from '../lib/utils'
 
 export function Login() {
   const navigate = useNavigate()
+  const location = useLocation()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState(location.state?.message || '')
   const [loading, setLoading] = useState(false)
   const [checking, setChecking] = useState(true)
   const [showPassword, setShowPassword] = useState(false)
@@ -68,6 +70,7 @@ export function Login() {
   const login = async (event) => {
     event.preventDefault()
     setError('')
+    setNotice('')
     if (!isSupabaseConfigured) {
       setError('Primero configura VITE_SUPABASE_URL y VITE_SUPABASE_ANON_KEY en .env')
       return
@@ -111,6 +114,7 @@ export function Login() {
         <p className="eyebrow">Panel privado</p>
         <h1>Iniciar sesion</h1>
         <p>Ingresa con el usuario configurado por Camaraza Store.</p>
+        {notice && <div className="toast">{notice}</div>}
         {error && <div className="error-box">{error}</div>}
 
         <label>
@@ -150,6 +154,7 @@ export function Login() {
           {loading ? 'Ingresando...' : 'Iniciar sesion'}
         </button>
 
+        <Link className="support-link" to="/recuperar-contrasena">Olvidaste tu contrasena?</Link>
         <a className="support-link" href={`https://wa.me/${whatsappNumber}?text=${supportMessage}`} target="_blank" rel="noreferrer">
           No podes ingresar? Contacta con soporte.
         </a>

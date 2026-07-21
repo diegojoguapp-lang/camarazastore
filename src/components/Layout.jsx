@@ -54,6 +54,7 @@ export function AdminLayout({ children }) {
     ['/admin/videos', 'Videos'],
     ['/admin/redes', 'Redes'],
     ['/admin/revendedores', 'Revendedores'],
+    ['/admin/seguridad', 'Seguridad'],
     ['/catalogo', 'Ver catálogo']
   ]
 

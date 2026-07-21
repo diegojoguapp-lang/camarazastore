@@ -6,6 +6,8 @@ import { Reventa } from './pages/Reventa'
 import { Catalogo } from './pages/Catalogo'
 import { ProductDetail } from './pages/ProductDetail'
 import { Login } from './pages/Login'
+import { PasswordRecovery } from './pages/PasswordRecovery'
+import { UpdatePassword } from './pages/UpdatePassword'
 import { Reglas } from './pages/Reglas'
 import { Ayuda } from './pages/Ayuda'
 import { Materiales } from './pages/Materiales'
@@ -16,6 +18,7 @@ import { ProductForm } from './pages/admin/ProductForm'
 import { HelpVideosAdmin } from './pages/admin/HelpVideosAdmin'
 import { SocialLinksAdmin } from './pages/admin/SocialLinksAdmin'
 import { ResellersAdmin } from './pages/admin/ResellersAdmin'
+import { AdminSecurity } from './pages/admin/AdminSecurity'
 import { PanelHome } from './pages/panel/PanelHome'
 
 function Public({ children }) {
@@ -41,6 +44,8 @@ export default function App() {
         <Route path="/reglas" element={<Public><Reglas /></Public>} />
         <Route path="/redes" element={<Public><Redes /></Public>} />
         <Route path="/login" element={<Public><Login /></Public>} />
+        <Route path="/recuperar-contrasena" element={<Public><PasswordRecovery /></Public>} />
+        <Route path="/actualizar-contrasena" element={<Public><UpdatePassword /></Public>} />
         <Route path="/panel" element={<Panel><PanelHome /></Panel>} />
         <Route path="/admin" element={<Admin><AdminDashboard /></Admin>} />
         <Route path="/admin/productos" element={<Admin><ProductList /></Admin>} />
@@ -49,6 +54,7 @@ export default function App() {
         <Route path="/admin/videos" element={<Admin><HelpVideosAdmin /></Admin>} />
         <Route path="/admin/redes" element={<Admin><SocialLinksAdmin /></Admin>} />
         <Route path="/admin/revendedores" element={<Admin><ResellersAdmin /></Admin>} />
+        <Route path="/admin/seguridad" element={<Admin><AdminSecurity /></Admin>} />
         <Route path="*" element={<Public><div className="page"><div className="container"><h1>Página no encontrada</h1></div></div></Public>} />
       </Routes>
     </BrowserRouter>

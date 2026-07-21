@@ -46,7 +46,14 @@ export async function signOut() {
 }
 
 export async function updateCurrentPassword(password) {
-  if (!isSupabaseConfigured) throw new Error('Supabase no estÃ¡ configurado.')
+  if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
   const { error } = await supabase.auth.updateUser({ password })
+  if (error) throw error
+}
+
+export async function requestPasswordRecovery(email) {
+  if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
+  const redirectTo = `${window.location.origin}/actualizar-contrasena`
+  const { error } = await supabase.auth.resetPasswordForEmail(email.trim().toLowerCase(), { redirectTo })
   if (error) throw error
 }
