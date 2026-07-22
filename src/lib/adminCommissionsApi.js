@@ -1,7 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { getCurrentSession } from './roles'
 import { getNextCommissionPayment } from './dateUtils'
-import { calculateNetPaid } from './commissionConstants'
 
 function requireSupabase() {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
@@ -157,63 +156,41 @@ export async function getPaymentItems(paymentId) {
 
 export async function createCommissionPayment({ batchId, resellerId, sales, bankAccount, form }) {
   requireSupabase()
-  const createdBy = await currentUserId()
-  const gross = sales.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0)
   const adjustments = Number(form.adjustments || 0)
   const discounts = Number(form.discounts || 0)
-  const paymentPayload = {
-    batch_id: batchId,
-    reseller_id: resellerId,
-    bank_name_snapshot: bankAccount?.bank_name || '',
-    bank_alias_snapshot: bankAccount?.bank_alias || '',
-    bank_holder_snapshot: bankAccount?.bank_holder || '',
-    bank_document_snapshot: bankAccount?.bank_document || '',
-    gross_commission: gross,
-    adjustments,
-    discounts,
-    net_paid: calculateNetPaid({ gross_commission: gross, adjustments, discounts }),
-    payment_date: form.payment_date || toDateOnly(new Date()),
-    payment_method: form.payment_method?.trim() || null,
-    voucher_url: form.voucher_url?.trim() || null,
-    voucher_number: form.voucher_number?.trim() || null,
-    status: 'pending',
-    created_by: createdBy,
-    notes: form.notes?.trim() || null
-  }
+  const saleIds = sales.map((sale) => sale.id)
 
-  const { data: payment, error: paymentError } = await supabase
-    .from('commission_payments')
-    .insert(paymentPayload)
-    .select('*')
-    .single()
-  if (paymentError) throw paymentError
+  if (!bankAccount) throw new Error('El revendedor no tiene cuenta bancaria cargada.')
 
-  const items = sales.map((sale) => ({
-    payment_id: payment.id,
-    sale_id: sale.id,
-    commission_amount_snapshot: Number(sale.reseller_commission || 0)
-  }))
-  const { error: itemError } = await supabase.from('commission_payment_items').insert(items)
-  if (itemError) throw itemError
+  const { data: paymentId, error: createError } = await supabase.rpc('create_commission_payment', {
+    p_batch_id: batchId,
+    p_reseller_id: resellerId,
+    p_sale_ids: saleIds,
+    p_adjustments: adjustments,
+    p_discounts: discounts,
+    p_notes: form.notes?.trim() || null
+  })
+  if (createError) throw createError
 
-  const { data: paidPayment, error: paidError } = await supabase
-    .from('commission_payments')
-    .update({ status: 'paid' })
-    .eq('id', payment.id)
-    .select('*')
-    .single()
+  const { data: paidPaymentId, error: paidError } = await supabase.rpc('mark_commission_payment_paid', {
+    p_payment_id: paymentId,
+    p_payment_date: form.payment_date || toDateOnly(new Date()),
+    p_payment_method: form.payment_method?.trim() || null,
+    p_voucher_url: form.voucher_url?.trim() || null,
+    p_voucher_number: form.voucher_number?.trim() || null,
+    p_notes: form.notes?.trim() || null
+  })
   if (paidError) throw paidError
-  return paidPayment
+
+  return getCommissionPayment(paidPaymentId)
 }
 
 export async function cancelCommissionPayment(id, notes = '') {
   requireSupabase()
-  const { data, error } = await supabase
-    .from('commission_payments')
-    .update({ status: 'cancelled', notes: notes.trim() || null })
-    .eq('id', id)
-    .select('*')
-    .single()
+  const { data: paymentId, error } = await supabase.rpc('cancel_commission_payment', {
+    p_payment_id: id,
+    p_notes: notes.trim() || null
+  })
   if (error) throw error
-  return data
+  return getCommissionPayment(paymentId)
 }
