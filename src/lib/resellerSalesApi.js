@@ -1,5 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase'
-import { COMMISSION_CONFIRMED_STATUS } from './salesConstants'
+import { COMMISSION_CONFIRMED_STATUS, COMMISSION_ESTIMATED_STATUSES } from './salesConstants'
 import { getCurrentCommissionPeriod, getNextCommissionPayment } from './dateUtils'
 
 const RESELLER_SALES_FIELDS = [
@@ -66,7 +66,8 @@ export async function getMyRecentSales() {
 export async function getMySalesSummary() {
   const { start, endExclusive } = getCurrentCommissionPeriod()
   const nextPayment = getNextCommissionPayment()
-  const [delivered, deliveredWeek, payments] = await Promise.all([
+  const [sales, delivered, deliveredWeek, payments] = await Promise.all([
+    getMySales(),
     getMySales({ status: COMMISSION_CONFIRMED_STATUS }),
     getMySales({
       status: COMMISSION_CONFIRMED_STATUS,
@@ -83,6 +84,9 @@ export async function getMySalesSummary() {
   const pendingEstimated = delivered
     .filter((sale) => sale.commission_paid !== true)
     .reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0)
+  const openEstimated = sales
+    .filter((sale) => COMMISSION_ESTIMATED_STATUSES.includes(sale.status))
+    .reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0)
 
   return {
     periodStart: start,
@@ -90,6 +94,7 @@ export async function getMySalesSummary() {
     nextPaymentDate: nextPayment.date,
     nextPaymentLabel: nextPayment.label,
     nextPaymentHolidayNote: nextPayment.holidayNote,
+    openEstimated,
     pendingEstimated,
     confirmedWeek: deliveredWeek.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0),
     deliveredWeekCount: deliveredWeek.length,

@@ -5,6 +5,11 @@ export function formatGs(value) {
   return `${new Intl.NumberFormat('es-PY').format(number)} Gs.`
 }
 
+export function parseGs(value) {
+  const digits = String(value || '').replace(/\D/g, '')
+  return digits ? Number(digits) : 0
+}
+
 export function slugify(text) {
   return String(text || '')
     .normalize('NFD')

@@ -32,8 +32,9 @@ export async function getCustomerById(id) {
     .from('customers')
     .select(CUSTOMER_FIELDS)
     .eq('id', id)
-    .single()
+    .maybeSingle()
   if (error) throw error
+  if (!data) throw new Error('Cliente no encontrado.')
   return data
 }
 
@@ -66,8 +67,9 @@ export async function createCustomer(payload) {
     notes: payload.notes?.trim() || null,
     requires_advance_payment: Boolean(payload.requires_advance_payment)
   }
-  const { data, error } = await supabase.from('customers').insert(clean).select(CUSTOMER_FIELDS).single()
+  const { data, error } = await supabase.from('customers').insert(clean).select(CUSTOMER_FIELDS).maybeSingle()
   if (error) throw error
+  if (!data?.id) throw new Error('El cliente se guardo, pero Supabase no devolvio el registro. Revisa permisos SELECT/RLS.')
   return data
 }
 
@@ -86,7 +88,8 @@ export async function updateCustomer(id, payload) {
     notes: payload.notes?.trim() || null,
     requires_advance_payment: Boolean(payload.requires_advance_payment)
   }
-  const { data, error } = await supabase.from('customers').update(clean).eq('id', id).select(CUSTOMER_FIELDS).single()
+  const { data, error } = await supabase.from('customers').update(clean).eq('id', id).select(CUSTOMER_FIELDS).maybeSingle()
   if (error) throw error
+  if (!data?.id) throw new Error('No se pudo confirmar el cliente actualizado.')
   return data
 }

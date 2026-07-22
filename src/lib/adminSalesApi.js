@@ -18,8 +18,13 @@ function cleanNumber(value) {
   return Number.isFinite(number) && number >= 0 ? number : 0
 }
 
+function cleanEnum(value, allowed, fallback) {
+  return allowed.includes(value) ? value : fallback
+}
+
 function cleanSalePayload(payload) {
   const totals = calculateSaleTotals(payload)
+  const status = payload.status || 'pending_contact'
   return {
     reseller_id: payload.reseller_id,
     customer_id: payload.customer_id,
@@ -27,25 +32,27 @@ function cleanSalePayload(payload) {
     product_name_snapshot: payload.product_name_snapshot?.trim(),
     product_model_snapshot: payload.product_model_snapshot?.trim() || null,
     quantity: Math.max(Number(payload.quantity || 1), 1),
-    status: payload.status || 'pending_contact',
+    status,
     admin_notes: payload.admin_notes?.trim() || null,
     reseller_visible_notes: payload.reseller_visible_notes?.trim() || null,
     product_sale_price: cleanNumber(payload.product_sale_price),
     product_cost: cleanNumber(payload.product_cost),
     delivery_charged: cleanNumber(payload.delivery_charged),
-    delivery_cost: cleanNumber(payload.delivery_cost),
+    delivery_cost: 0,
     reseller_commission: cleanNumber(payload.reseller_commission),
-    other_costs: cleanNumber(payload.other_costs),
+    other_costs: 0,
     total_collected: totals.total_collected,
     camaraza_net_profit: totals.camaraza_net_profit,
     delivery_city: payload.delivery_city?.trim() || null,
-    delivery_neighborhood: payload.delivery_neighborhood?.trim() || null,
-    delivery_address: payload.delivery_address?.trim() || null,
-    delivery_map_url: payload.delivery_map_url?.trim() || null,
+    delivery_neighborhood: null,
+    delivery_address: null,
+    delivery_map_url: null,
     delivery_reference: payload.delivery_reference?.trim() || null,
     delivery_schedule: payload.delivery_schedule?.trim() || null,
-    payment_method: payload.payment_method?.trim() || null,
-    amount_received: cleanNumber(payload.amount_received)
+    fulfillment_type: cleanEnum(payload.fulfillment_type, ['delivery', 'transportadora'], 'delivery'),
+    payment_method: cleanEnum(payload.payment_method, ['cash', 'transfer', 'card'], 'cash'),
+    payment_timing: cleanEnum(payload.payment_timing, ['on_delivery', 'prepaid'], 'on_delivery'),
+    amount_received: status === 'delivered_paid' ? totals.total_collected : 0
   }
 }
 
@@ -86,8 +93,9 @@ export async function getAdminSaleById(id) {
     .from('sales')
     .select(SALE_SELECT)
     .eq('id', id)
-    .single()
+    .maybeSingle()
   if (error) throw error
+  if (!data) throw new Error('Venta no encontrada o no visible para el admin.')
   return data
 }
 
@@ -112,16 +120,18 @@ export async function createSale(payload) {
     ...cleanSalePayload(payload),
     created_by: createdBy
   }
-  const { data, error } = await supabase.from('sales').insert(clean).select('id').single()
+  const { data, error } = await supabase.from('sales').insert(clean).select('id').maybeSingle()
   if (error) throw error
+  if (!data?.id) throw new Error('La venta se guardo, pero Supabase no devolvio el registro. Revisa permisos SELECT/RLS.')
   return data
 }
 
 export async function updateSale(id, payload) {
   requireSupabase()
   const clean = cleanSalePayload(payload)
-  const { data, error } = await supabase.from('sales').update(clean).eq('id', id).select('id').single()
+  const { data, error } = await supabase.from('sales').update(clean).eq('id', id).select('id').maybeSingle()
   if (error) throw error
+  if (!data?.id) throw new Error('No se pudo confirmar la venta actualizada. Revisa que exista y que el admin pueda leerla.')
   return data
 }
 
@@ -131,9 +141,10 @@ export async function updateSaleStatus(id, status, notes = '') {
     .from('sales')
     .update({ status, updated_at: new Date().toISOString() })
     .eq('id', id)
-    .select('id,status')
-    .single()
+    .select('id,status,delivered_at,paid_at')
+    .maybeSingle()
   if (error) throw error
+  if (!data?.id) throw new Error('No se pudo confirmar el cambio de estado. Revisa que la venta exista y sea visible para el admin.')
 
   if (notes.trim()) {
     await supabase.from('sale_events').insert({

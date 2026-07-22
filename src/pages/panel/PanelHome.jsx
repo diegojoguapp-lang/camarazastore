@@ -65,6 +65,7 @@ export function PanelHome() {
     <div className="page reseller-panel-page">
       <section className="container narrow">
         <div className="reseller-dashboard-grid">
+          <div className="stat-card"><span>Comision estimada</span><strong>{formatGs(summary?.openEstimated)}</strong></div>
           <div className="stat-card"><span>Comision pendiente</span><strong>{formatGs(summary?.pendingEstimated)}</strong></div>
           <div className="stat-card"><span>Comision confirmada semana</span><strong>{formatGs(summary?.confirmedWeek)}</strong></div>
           <div className="stat-card"><span>Ventas entregadas semana</span><strong>{summary?.deliveredWeekCount || 0}</strong></div>

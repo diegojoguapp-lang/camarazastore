@@ -4,7 +4,7 @@ import { ArrowLeft, Pencil } from 'lucide-react'
 import { getAdminSaleById, getSaleEvents, updateSaleStatus } from '../../lib/adminSalesApi'
 import { formatDateTimePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
-import { SALE_STATUSES, saleStatusLabel } from '../../lib/salesConstants'
+import { SALE_STATUSES, fulfillmentTypeLabel, paymentMethodLabel, paymentTimingLabel, saleStatusLabel } from '../../lib/salesConstants'
 
 function DetailItem({ label, value }) {
   return <div><span>{label}</span><strong>{value || '-'}</strong></div>
@@ -91,9 +91,6 @@ export function SaleDetail() {
             <DetailItem label="Nombre" value={sale.customer?.full_name} />
             <DetailItem label="Telefono" value={sale.customer?.phone} />
             <DetailItem label="Ciudad" value={sale.customer?.city} />
-            <DetailItem label="Barrio" value={sale.customer?.neighborhood} />
-            <DetailItem label="Direccion" value={sale.customer?.address} />
-            <DetailItem label="Referencia" value={sale.customer?.reference} />
           </div>
         </section>
 
@@ -112,10 +109,8 @@ export function SaleDetail() {
           <div className="profile-summary">
             <DetailItem label="Precio producto" value={formatGs(sale.product_sale_price)} />
             <DetailItem label="Costo producto" value={formatGs(sale.product_cost)} />
-            <DetailItem label="Delivery cobrado" value={formatGs(sale.delivery_charged)} />
-            <DetailItem label="Costo delivery" value={formatGs(sale.delivery_cost)} />
+            <DetailItem label="Envio cobrado" value={formatGs(sale.delivery_charged)} />
             <DetailItem label="Comision" value={formatGs(sale.reseller_commission)} />
-            <DetailItem label="Otros costos" value={formatGs(sale.other_costs)} />
             <DetailItem label="Total cobrado" value={formatGs(sale.total_collected)} />
             <DetailItem label="Ganancia Camaraza" value={formatGs(sale.camaraza_net_profit)} />
           </div>
@@ -124,11 +119,11 @@ export function SaleDetail() {
         <section className="panel">
           <h2>Entrega y pago</h2>
           <div className="profile-summary">
-            <DetailItem label="Direccion entrega" value={sale.delivery_address} />
+            <DetailItem label="Ciudad" value={sale.delivery_city || sale.customer?.city} />
+            <DetailItem label="Tipo de envio" value={fulfillmentTypeLabel(sale.fulfillment_type)} />
             <DetailItem label="Horario" value={sale.delivery_schedule} />
-            <DetailItem label="Mapa" value={sale.delivery_map_url} />
-            <DetailItem label="Forma de pago" value={sale.payment_method} />
-            <DetailItem label="Monto recibido" value={formatGs(sale.amount_received)} />
+            <DetailItem label="Forma de pago" value={paymentMethodLabel(sale.payment_method)} />
+            <DetailItem label="Momento del pago" value={paymentTimingLabel(sale.payment_timing)} />
             <DetailItem label="Entregado" value={formatDateTimePy(sale.delivered_at)} />
           </div>
         </section>
