@@ -19,7 +19,13 @@ import { HelpVideosAdmin } from './pages/admin/HelpVideosAdmin'
 import { SocialLinksAdmin } from './pages/admin/SocialLinksAdmin'
 import { ResellersAdmin } from './pages/admin/ResellersAdmin'
 import { AdminSecurity } from './pages/admin/AdminSecurity'
+import { SalesAdmin } from './pages/admin/SalesAdmin'
+import { SaleForm } from './pages/admin/SaleForm'
+import { SaleDetail } from './pages/admin/SaleDetail'
+import { CustomersAdmin } from './pages/admin/CustomersAdmin'
+import { CustomerDetail } from './pages/admin/CustomerDetail'
 import { PanelHome } from './pages/panel/PanelHome'
+import { PanelSales } from './pages/panel/PanelSales'
 
 function Public({ children }) {
   return <Layout>{children}</Layout>
@@ -47,10 +53,17 @@ export default function App() {
         <Route path="/recuperar-contrasena" element={<Public><PasswordRecovery /></Public>} />
         <Route path="/actualizar-contrasena" element={<Public><UpdatePassword /></Public>} />
         <Route path="/panel" element={<Panel><PanelHome /></Panel>} />
+        <Route path="/panel/ventas" element={<Panel><PanelSales /></Panel>} />
         <Route path="/admin" element={<Admin><AdminDashboard /></Admin>} />
         <Route path="/admin/productos" element={<Admin><ProductList /></Admin>} />
         <Route path="/admin/productos/nuevo" element={<Admin><ProductForm /></Admin>} />
         <Route path="/admin/productos/:id/editar" element={<Admin><ProductForm /></Admin>} />
+        <Route path="/admin/ventas" element={<Admin><SalesAdmin /></Admin>} />
+        <Route path="/admin/ventas/nueva" element={<Admin><SaleForm /></Admin>} />
+        <Route path="/admin/ventas/:id" element={<Admin><SaleDetail /></Admin>} />
+        <Route path="/admin/ventas/:id/editar" element={<Admin><SaleForm /></Admin>} />
+        <Route path="/admin/clientes" element={<Admin><CustomersAdmin /></Admin>} />
+        <Route path="/admin/clientes/:id" element={<Admin><CustomerDetail /></Admin>} />
         <Route path="/admin/videos" element={<Admin><HelpVideosAdmin /></Admin>} />
         <Route path="/admin/redes" element={<Admin><SocialLinksAdmin /></Admin>} />
         <Route path="/admin/revendedores" element={<Admin><ResellersAdmin /></Admin>} />

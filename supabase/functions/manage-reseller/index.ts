@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { getCorsHeaders, isCorsOriginAllowed } from '../_shared/cors.ts'
 
 type ManagePayload = {
   action?: 'reset-password' | 'set-active'
@@ -9,7 +10,6 @@ type ManagePayload = {
 
 const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? ''
 const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-const allowedOrigin = Deno.env.get('ALLOWED_ORIGIN') ?? '*'
 
 const adminClient = createClient(supabaseUrl, serviceRoleKey, {
   auth: {
@@ -18,34 +18,11 @@ const adminClient = createClient(supabaseUrl, serviceRoleKey, {
   }
 })
 
-function corsHeaders(request: Request) {
-  const origin = request.headers.get('origin') ?? ''
-  const allowed = allowedOrigin.split(',').map((item) => item.trim()).filter(Boolean)
-  const allowOrigin = allowedOrigin === '*'
-    ? '*'
-    : allowed.includes(origin)
-      ? origin
-      : allowed[0] ?? ''
-
-  return {
-    'Access-Control-Allow-Origin': allowOrigin,
-    'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
-    'Access-Control-Allow-Methods': 'POST, OPTIONS',
-    'Vary': 'Origin'
-  }
-}
-
-function isOriginAllowed(request: Request) {
-  const origin = request.headers.get('origin')
-  if (!origin || allowedOrigin === '*') return true
-  return allowedOrigin.split(',').map((item) => item.trim()).includes(origin)
-}
-
 function jsonResponse(request: Request, body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders(request),
+      ...getCorsHeaders(request),
       'Content-Type': 'application/json'
     }
   })
@@ -85,12 +62,12 @@ async function getTargetReseller(userId: string) {
 }
 
 Deno.serve(async (request) => {
-  if (request.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders(request) })
+  if (!isCorsOriginAllowed(request)) {
+    return jsonResponse(request, { error: 'Origen no permitido.' }, 403)
   }
 
-  if (!isOriginAllowed(request)) {
-    return jsonResponse(request, { error: 'Origen no permitido.' }, 403)
+  if (request.method === 'OPTIONS') {
+    return new Response(null, { status: 204, headers: getCorsHeaders(request) })
   }
 
   if (request.method !== 'POST') {
