@@ -24,8 +24,15 @@ import { SaleForm } from './pages/admin/SaleForm'
 import { SaleDetail } from './pages/admin/SaleDetail'
 import { CustomersAdmin } from './pages/admin/CustomersAdmin'
 import { CustomerDetail } from './pages/admin/CustomerDetail'
+import { CommissionsAdmin } from './pages/admin/CommissionsAdmin'
+import { CommissionBatchDetail } from './pages/admin/CommissionBatchDetail'
+import { CommissionPaymentForm } from './pages/admin/CommissionPaymentForm'
+import { CommissionPaymentDetail } from './pages/admin/CommissionPaymentDetail'
 import { PanelHome } from './pages/panel/PanelHome'
 import { PanelSales } from './pages/panel/PanelSales'
+import { BankAccount } from './pages/panel/BankAccount'
+import { PanelPayments } from './pages/panel/PanelPayments'
+import { PanelPaymentDetail } from './pages/panel/PanelPaymentDetail'
 
 function Public({ children }) {
   return <Layout>{children}</Layout>
@@ -54,6 +61,9 @@ export default function App() {
         <Route path="/actualizar-contrasena" element={<Public><UpdatePassword /></Public>} />
         <Route path="/panel" element={<Panel><PanelHome /></Panel>} />
         <Route path="/panel/ventas" element={<Panel><PanelSales /></Panel>} />
+        <Route path="/panel/cuenta-bancaria" element={<Panel><BankAccount /></Panel>} />
+        <Route path="/panel/pagos" element={<Panel><PanelPayments /></Panel>} />
+        <Route path="/panel/pagos/:id" element={<Panel><PanelPaymentDetail /></Panel>} />
         <Route path="/admin" element={<Admin><AdminDashboard /></Admin>} />
         <Route path="/admin/productos" element={<Admin><ProductList /></Admin>} />
         <Route path="/admin/productos/nuevo" element={<Admin><ProductForm /></Admin>} />
@@ -64,6 +74,10 @@ export default function App() {
         <Route path="/admin/ventas/:id/editar" element={<Admin><SaleForm /></Admin>} />
         <Route path="/admin/clientes" element={<Admin><CustomersAdmin /></Admin>} />
         <Route path="/admin/clientes/:id" element={<Admin><CustomerDetail /></Admin>} />
+        <Route path="/admin/comisiones" element={<Admin><CommissionsAdmin /></Admin>} />
+        <Route path="/admin/comisiones/:id" element={<Admin><CommissionBatchDetail /></Admin>} />
+        <Route path="/admin/comisiones/:batchId/pagar/:resellerId" element={<Admin><CommissionPaymentForm /></Admin>} />
+        <Route path="/admin/comisiones/pagos/:id" element={<Admin><CommissionPaymentDetail /></Admin>} />
         <Route path="/admin/videos" element={<Admin><HelpVideosAdmin /></Admin>} />
         <Route path="/admin/redes" element={<Admin><SocialLinksAdmin /></Admin>} />
         <Route path="/admin/revendedores" element={<Admin><ResellersAdmin /></Admin>} />

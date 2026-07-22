@@ -65,18 +65,19 @@ export function PanelHome() {
     <div className="page reseller-panel-page">
       <section className="container narrow">
         <div className="reseller-dashboard-grid">
-          <div className="stat-card"><span>Comision pendiente estimada</span><strong>{formatGs(summary?.pendingEstimated)}</strong></div>
+          <div className="stat-card"><span>Comision pendiente</span><strong>{formatGs(summary?.pendingEstimated)}</strong></div>
           <div className="stat-card"><span>Comision confirmada semana</span><strong>{formatGs(summary?.confirmedWeek)}</strong></div>
           <div className="stat-card"><span>Ventas entregadas semana</span><strong>{summary?.deliveredWeekCount || 0}</strong></div>
           <div className="stat-card"><span>Ventas totales</span><strong>{summary?.deliveredTotalCount || 0}</strong></div>
-          <div className="stat-card"><span>Total historico ganado</span><strong>{formatGs(summary?.historicalEarned)}</strong></div>
-          <div className="stat-card"><span>Proximo pago</span><strong>Lunes</strong><small>10:00 a 17:00</small></div>
+          <div className="stat-card"><span>Comision cobrada</span><strong>{formatGs(summary?.historicalEarned)}</strong></div>
+          <div className="stat-card"><span>Proximo pago</span><strong>{formatDatePy(summary?.nextPaymentDate)}</strong><small>10:00 a 17:00</small></div>
         </div>
 
         <div className="panel reseller-profile-card">
           <p className="eyebrow">Camaraza Store</p>
           <h1>Panel del revendedor</h1>
-          <p>Periodo actual: {formatDatePy(summary?.periodStart)} al {formatDatePy(summary?.periodEnd)}.</p>
+          <p>Periodo: lunes a sabado. {formatDatePy(summary?.periodStart)} al {formatDatePy(summary?.periodEndExclusive ? new Date(summary.periodEndExclusive.getTime() - 1) : null)}.</p>
+          <p>Pago: lunes de 10:00 a 17:00. Domingo no trabajamos.</p>
 
           <div className="profile-summary">
             <div>
@@ -101,6 +102,10 @@ export function PanelHome() {
             <LogOut size={18} />
             Cerrar sesion
           </button>
+          <div className="panel-link-grid">
+            <Link className="secondary-button big full" to="/panel/cuenta-bancaria">Cuenta bancaria</Link>
+            <Link className="secondary-button big full" to="/panel/pagos">Mis pagos</Link>
+          </div>
         </div>
 
         <section className="panel reseller-profile-card">

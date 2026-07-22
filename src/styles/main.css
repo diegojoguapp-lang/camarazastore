@@ -329,6 +329,12 @@ p { color: var(--muted); line-height: 1.65; }
 .reseller-recent-row span { color: var(--muted); font-size: 13px; }
 .reseller-recent-row > div:last-child { justify-items: end; }
 .reseller-sales-filters { display: grid; gap: 12px; margin: 16px 0; }
+.panel-link-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.commission-table { min-width: 980px; }
+.commission-group-list, .commission-items-list { display: grid; gap: 12px; }
+.commission-group-card, .commission-items-list div { border: 1px solid var(--line); border-radius: 16px; background: white; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.commission-group-card h3 { margin: 0 0 4px; font-size: 18px; letter-spacing: 0; }
+.commission-group-card p, .commission-items-list span { margin: 0; color: var(--muted); }
 @media (max-width: 940px) {
   .hero, .two-columns, .product-detail, .filters { grid-template-columns: 1fr; }
   .product-sale-layout { grid-template-columns: 1fr; }
@@ -377,6 +383,7 @@ p { color: var(--muted); line-height: 1.65; }
   .admin-head { flex-direction: column; align-items: flex-start; }
   .reseller-created-card { align-items: stretch; flex-direction: column; }
   .profile-summary { grid-template-columns: 1fr; }
+  .panel-link-grid, .commission-group-card, .commission-items-list div { grid-template-columns: 1fr; display: grid; justify-items: stretch; }
   .hero-card h2 { font-size: 48px; }
 }
 @media (max-width: 330px) {

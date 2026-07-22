@@ -19,7 +19,8 @@ const rules = [
   'Podés vender más caro o más barato.',
   'No cambiar características del producto.',
   'No usar información falsa para vender.',
-  'Los pagos de comisiones se realizan los lunes.',
+  'Periodo de comisiones: lunes a sabado. Domingo no trabajamos.',
+  'Pago: lunes de 10:00 a 17:00. Si el lunes es feriado, se paga el martes en el mismo horario.',
   'La comisión se confirma cuando la venta fue entregada correctamente y no hay reclamo pendiente.',
   'La garantía depende de cada producto.'
 ]

@@ -56,8 +56,8 @@ export function PanelSales() {
           <label>Buscar producto<input value={filters.search} onChange={(e) => setFilter('search', e.target.value)} /></label>
           <div className="form-grid">
             <label>Estado<select value={filters.status} onChange={(e) => setFilter('status', e.target.value)}><option value="">Todos</option>{SALE_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
-            <label>Desde<input type="date" value={filters.date_from} onChange={(e) => setFilter('date_from', e.target.value)} /></label>
-            <label>Hasta<input type="date" value={filters.date_to} onChange={(e) => setFilter('date_to', e.target.value)} /></label>
+            <label>Entrega desde<input type="date" value={filters.date_from} onChange={(e) => setFilter('date_from', e.target.value)} /></label>
+            <label>Entrega hasta<input type="date" value={filters.date_to} onChange={(e) => setFilter('date_to', e.target.value)} /></label>
           </div>
           <button className="primary-button full" type="submit"><Search size={16} /> Buscar</button>
         </form>

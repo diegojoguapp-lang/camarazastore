@@ -322,7 +322,7 @@ supabase/20260721_phase_3_sales_customers.sql
 
 1. Crear venta propia de un revendedor.
 2. Cambiar a `delivered_paid`.
-3. Confirmar que `delivered_at` cae dentro del periodo sabado-viernes.
+3. Confirmar que `delivered_at` cae dentro del periodo lunes-sabado.
 4. Entrar como revendedor.
 5. Abrir `/panel`.
 6. Verificar:
@@ -330,9 +330,11 @@ supabase/20260721_phase_3_sales_customers.sql
    - ventas entregadas semana;
    - total historico ganado.
 
-El helper `getCurrentCommissionPeriod()` calcula el periodo en zona horaria `America/Asuncion`. Inicio sabado 00:00 y fin viernes 23:59:59.
+El helper `getCurrentCommissionPeriod()` calcula el periodo en zona horaria `America/Asuncion`. Inicio lunes 00:00 y cierre domingo 00:00 exclusivo. Domingo no pertenece al periodo porque Camaraza Store no abre.
 
-El fin del periodo se calcula como inicio + 7 dias - 1 milisegundo para evitar ambiguedades con horas UTC.
+Las consultas deben usar `delivered_at >= start` y `delivered_at < endExclusive`. No se usa `created_at` ni `ordered_at` para determinar comisiones semanales.
+
+El helper `getNextCommissionPayment()` calcula el proximo pago visible. Si hoy es domingo, devuelve el lunes inmediato. Si hoy es lunes, devuelve ese lunes para no mezclar el periodo anterior con el nuevo. Si el lunes es feriado, el pago debe hacerse el martes de 10:00 a 17:00, pero no hay calendario automatico de feriados en esta fase.
 
 ## Como verificar privacidad
 

@@ -13,7 +13,8 @@ const rules = [
   'Nosotros contactamos al cliente.',
   'Nosotros coordinamos la entrega.',
   'Nosotros cobramos al cliente.',
-  'Las ventas de sábado a viernes se pagan el lunes siguiente.',
+  'Periodo de comisiones: lunes a sabado. Domingo no trabajamos.',
+  'Pago: lunes de 10:00 a 17:00. Si el lunes es feriado, se paga el martes en el mismo horario.',
   'Si hay devolución o garantía pendiente, la comisión queda en revisión.'
 ]
 

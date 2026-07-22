@@ -1,6 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase'
-import { COMMISSION_ESTIMATED_STATUSES, COMMISSION_CONFIRMED_STATUS } from './salesConstants'
-import { getCurrentCommissionPeriod } from './dateUtils'
+import { COMMISSION_CONFIRMED_STATUS } from './salesConstants'
+import { getCurrentCommissionPeriod, getNextCommissionPayment } from './dateUtils'
 
 const RESELLER_SALES_FIELDS = [
   'id',
@@ -15,6 +15,7 @@ const RESELLER_SALES_FIELDS = [
   'delivery_charged',
   'total_collected',
   'reseller_commission',
+  'commission_paid',
   'ordered_at',
   'delivered_at',
   'created_at',
@@ -28,6 +29,12 @@ function requireSupabase() {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
 }
 
+function nextDateInputDay(value) {
+  const [year, month, day] = String(value).split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day + 1))
+  return date.toISOString().slice(0, 10)
+}
+
 export async function getMySales(filters = {}) {
   requireSupabase()
   let query = supabase
@@ -36,8 +43,10 @@ export async function getMySales(filters = {}) {
     .order('created_at', { ascending: false })
 
   if (filters.status) query = query.eq('status', filters.status)
-  if (filters.date_from) query = query.gte('created_at', `${filters.date_from}T00:00:00`)
-  if (filters.date_to) query = query.lte('created_at', `${filters.date_to}T23:59:59`)
+  if (filters.delivered_from) query = query.gte('delivered_at', filters.delivered_from)
+  if (filters.delivered_before) query = query.lt('delivered_at', filters.delivered_before)
+  if (filters.date_from) query = query.gte('delivered_at', `${filters.date_from}T00:00:00`)
+  if (filters.date_to) query = query.lt('delivered_at', `${nextDateInputDay(filters.date_to)}T00:00:00`)
 
   const { data, error } = await query
   if (error) throw error
@@ -55,27 +64,36 @@ export async function getMyRecentSales() {
 }
 
 export async function getMySalesSummary() {
-  const sales = await getMySales()
-  const { start, end } = getCurrentCommissionPeriod()
+  const { start, endExclusive } = getCurrentCommissionPeriod()
+  const nextPayment = getNextCommissionPayment()
+  const [delivered, deliveredWeek, payments] = await Promise.all([
+    getMySales({ status: COMMISSION_CONFIRMED_STATUS }),
+    getMySales({
+      status: COMMISSION_CONFIRMED_STATUS,
+      delivered_from: start.toISOString(),
+      delivered_before: endExclusive.toISOString()
+    }),
+    supabase
+      .from('commission_payments')
+      .select('net_paid,status')
+      .eq('status', 'paid')
+  ])
+  const paidRows = payments.error ? [] : payments.data || []
 
-  const pendingEstimated = sales
-    .filter((sale) => COMMISSION_ESTIMATED_STATUSES.includes(sale.status))
+  const pendingEstimated = delivered
+    .filter((sale) => sale.commission_paid !== true)
     .reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0)
-
-  const delivered = sales.filter((sale) => sale.status === COMMISSION_CONFIRMED_STATUS)
-  const deliveredWeek = delivered.filter((sale) => {
-    if (!sale.delivered_at) return false
-    const deliveredAt = new Date(sale.delivered_at)
-    return deliveredAt >= start && deliveredAt <= end
-  })
 
   return {
     periodStart: start,
-    periodEnd: end,
+    periodEndExclusive: endExclusive,
+    nextPaymentDate: nextPayment.date,
+    nextPaymentLabel: nextPayment.label,
+    nextPaymentHolidayNote: nextPayment.holidayNote,
     pendingEstimated,
     confirmedWeek: deliveredWeek.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0),
     deliveredWeekCount: deliveredWeek.length,
     deliveredTotalCount: delivered.length,
-    historicalEarned: delivered.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0)
+    historicalEarned: paidRows.reduce((sum, payment) => sum + Number(payment.net_paid || 0), 0)
   }
 }

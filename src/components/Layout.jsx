@@ -50,6 +50,7 @@ export function AdminLayout({ children }) {
   const nav = [
     ['/admin', 'Dashboard'],
     ['/admin/ventas', 'Ventas'],
+    ['/admin/comisiones', 'Comisiones'],
     ['/admin/clientes', 'Clientes'],
     ['/admin/productos', 'Productos'],
     ['/admin/productos/nuevo', 'Agregar producto'],

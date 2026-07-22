@@ -1,4 +1,5 @@
 const pyTimeZone = 'America/Asuncion'
+const dayMs = 24 * 60 * 60 * 1000
 
 function getParts(date) {
   const parts = new Intl.DateTimeFormat('en-CA', {
@@ -23,15 +24,34 @@ function paraguayMidnightUtc(date) {
 export function getCurrentCommissionPeriod(now = new Date()) {
   const todayStart = paraguayMidnightUtc(now)
   const day = todayStart.getUTCDay()
-  const daysSinceSaturday = (day + 1) % 7
+  const daysSinceMonday = day === 0 ? 6 : day - 1
   const start = new Date(todayStart)
-  start.setUTCDate(start.getUTCDate() - daysSinceSaturday)
+  start.setUTCDate(start.getUTCDate() - daysSinceMonday)
 
-  const end = new Date(start)
-  end.setUTCDate(end.getUTCDate() + 7)
-  end.setUTCMilliseconds(end.getUTCMilliseconds() - 1)
+  const endExclusive = new Date(start.getTime() + 6 * dayMs)
 
-  return { start, end }
+  return { start, endExclusive }
+}
+
+export function getNextCommissionPayment(now = new Date()) {
+  const todayStart = paraguayMidnightUtc(now)
+  const day = todayStart.getUTCDay()
+  let paymentDate
+
+  if (day === 0) {
+    paymentDate = new Date(todayStart.getTime() + dayMs)
+  } else if (day === 1) {
+    paymentDate = todayStart
+  } else {
+    const { endExclusive } = getCurrentCommissionPeriod(now)
+    paymentDate = new Date(endExclusive.getTime() + dayMs)
+  }
+
+  return {
+    date: paymentDate,
+    label: 'Pago: lunes de 10:00 a 17:00',
+    holidayNote: 'Si el lunes es feriado, se paga el martes en el mismo horario.'
+  }
 }
 
 export function formatDatePy(value, options = { dateStyle: 'short' }) {
