@@ -1,14 +1,44 @@
-import { useEffect, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, KeyRound, LogOut } from 'lucide-react'
-import { getCurrentProfile, signOut, updateCurrentPassword } from '../../lib/roles'
-import { getMyRecentSales, getMySalesSummary } from '../../lib/resellerSalesApi'
+import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { ArrowRight, Banknote, CheckCircle2, Eye, EyeOff, Grid2X2, KeyRound, PackageCheck, PackageSearch, ShieldCheck, TrendingUp, WalletCards } from 'lucide-react'
+import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
+import { getCurrentProfile, updateCurrentPassword } from '../../lib/roles'
+import { getMyRecentSales, getMySalesSummary, commissionState } from '../../lib/resellerSalesApi'
+import { getMyBankAccount } from '../../lib/resellerCommissionsApi'
 import { formatDatePy } from '../../lib/dateUtils'
-import { formatGs } from '../../lib/utils'
+import { formatGs, whatsappNumber } from '../../lib/utils'
 import { saleStatusLabel } from '../../lib/salesConstants'
 
+const weeklyGoal = 10
+
+function MetricCard({ title, value, note, icon: Icon, featured = false, tone = 'default' }) {
+  return (
+    <article className={`reseller-metric-card ${featured ? 'featured' : ''} tone-${tone}`}>
+      <div className="metric-icon"><Icon size={20} /></div>
+      <span>{title}</span>
+      <strong>{value}</strong>
+      <p>{note}</p>
+    </article>
+  )
+}
+
+function progressMessage(count) {
+  if (count <= 0) return 'Empeza publicando productos hoy.'
+  if (count <= 4) return 'Buen comienzo. Segui publicando.'
+  if (count <= 9) return 'Estas cerca de completar tu meta semanal.'
+  return 'Meta semanal completada.'
+}
+
+function PipelineItem({ label, value }) {
+  return (
+    <div className="pipeline-item">
+      <strong>{value}</strong>
+      <span>{label}</span>
+    </div>
+  )
+}
+
 export function PanelHome() {
-  const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
@@ -18,21 +48,36 @@ export function PanelHome() {
   const [saving, setSaving] = useState(false)
   const [summary, setSummary] = useState(null)
   const [recentSales, setRecentSales] = useState([])
+  const [bankAccount, setBankAccount] = useState(null)
+  const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    Promise.all([getCurrentProfile(), getMySalesSummary(), getMyRecentSales()])
-      .then(([profileData, summaryData, saleRows]) => {
-        setProfile(profileData)
-        setSummary(summaryData)
-        setRecentSales(saleRows)
-      })
-      .catch(() => setError('No se pudo cargar tu perfil.'))
-  }, [])
-
-  const logout = async () => {
-    await signOut()
-    navigate('/login')
+  const load = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const [profileData, summaryData, saleRows, account] = await Promise.all([
+        getCurrentProfile(),
+        getMySalesSummary(),
+        getMyRecentSales(),
+        getMyBankAccount()
+      ])
+      setProfile(profileData)
+      setSummary(summaryData)
+      setRecentSales(saleRows)
+      setBankAccount(account)
+    } catch (err) {
+      setError(err.message || 'No se pudo cargar tu panel.')
+    } finally {
+      setLoading(false)
+    }
   }
+
+  useEffect(() => { load() }, [])
+
+  const progress = useMemo(() => {
+    const count = Number(summary?.currentPeriodDeliveredSales || 0)
+    return Math.min((count / weeklyGoal) * 100, 100)
+  }, [summary])
 
   const submitPassword = async (event) => {
     event.preventDefault()
@@ -62,117 +107,165 @@ export function PanelHome() {
   }
 
   return (
-    <div className="page reseller-panel-page">
-      <section className="container narrow">
-        <div className="reseller-dashboard-grid">
-          <div className="stat-card"><span>Comision estimada</span><strong>{formatGs(summary?.openEstimated)}</strong></div>
-          <div className="stat-card"><span>Comision pendiente</span><strong>{formatGs(summary?.pendingEstimated)}</strong></div>
-          <div className="stat-card"><span>Comision confirmada semana</span><strong>{formatGs(summary?.confirmedWeek)}</strong></div>
-          <div className="stat-card"><span>Ventas entregadas semana</span><strong>{summary?.deliveredWeekCount || 0}</strong></div>
-          <div className="stat-card"><span>Ventas totales</span><strong>{summary?.deliveredTotalCount || 0}</strong></div>
-          <div className="stat-card"><span>Comision cobrada</span><strong>{formatGs(summary?.historicalEarned)}</strong></div>
-          <div className="stat-card"><span>Proximo pago</span><strong>{formatDatePy(summary?.nextPaymentDate)}</strong><small>10:00 a 17:00</small></div>
-        </div>
-
-        <div className="panel reseller-profile-card">
-          <p className="eyebrow">Camaraza Store</p>
-          <h1>Panel del revendedor</h1>
-          <p>Periodo: lunes a sabado. {formatDatePy(summary?.periodStart)} al {formatDatePy(summary?.periodEndExclusive ? new Date(summary.periodEndExclusive.getTime() - 1) : null)}.</p>
-          <p>Pago: lunes de 10:00 a 17:00. Domingo no trabajamos.</p>
-
-          <div className="profile-summary">
-            <div>
-              <span>Nombre</span>
-              <strong>{profile?.full_name || '-'}</strong>
-            </div>
-            <div>
-              <span>Codigo de revendedor</span>
-              <strong>{profile?.reseller_code || '-'}</strong>
-            </div>
-            <div>
-              <span>Correo</span>
-              <strong>{profile?.email || '-'}</strong>
-            </div>
-            <div>
-              <span>Estado de la cuenta</span>
-              <strong>{profile?.is_active ? 'Activa' : 'Inactiva'}</strong>
-            </div>
+    <ResellerPanelLayout>
+      <div className="reseller-dashboard-page">
+        <header className="reseller-dashboard-head">
+          <div>
+            <p className="eyebrow">Panel del revendedor</p>
+            <h1>Hola, {profile?.full_name || 'revendedor'}</h1>
+            <p>Codigo: <strong>{profile?.reseller_code || '-'}</strong></p>
           </div>
-
-          <button className="secondary-button big full" type="button" onClick={logout}>
-            <LogOut size={18} />
-            Cerrar sesion
-          </button>
-          <div className="panel-link-grid">
-            <Link className="secondary-button big full" to="/panel/cuenta-bancaria">Cuenta bancaria</Link>
-            <Link className="secondary-button big full" to="/panel/pagos">Mis pagos</Link>
+          <div className="dashboard-head-actions">
+            <span className={`account-pill ${profile?.is_active ? 'active' : ''}`}>{profile?.is_active ? 'Cuenta activa' : 'Cuenta inactiva'}</span>
+            <span className="next-pay-pill">Proximo pago: {formatDatePy(summary?.nextPaymentDate)}</span>
+            <Link className="primary-button" to="/catalogo"><Grid2X2 size={18} /> Ver catalogo</Link>
           </div>
-        </div>
+        </header>
 
-        <section className="panel reseller-profile-card">
-          <div className="section-title">
-            <h2>Mis ventas recientes</h2>
-            <Link to="/panel/ventas">Ver todas</Link>
-          </div>
-          <div className="reseller-sale-list compact">
-            {recentSales.map((sale) => (
-              <article className="reseller-recent-row" key={sale.id}>
-                <div>
-                  <strong>{sale.product_name_snapshot}</strong>
-                  <span>{formatDatePy(sale.created_at)} - {sale.customer_name} - {sale.customer_phone_masked}</span>
+        {error && <div className="error-box">{error} <button className="secondary-button" type="button" onClick={load}>Reintentar</button></div>}
+        {loading && <div className="panel">Cargando tablero...</div>}
+
+        {!loading && (
+          <>
+            <section className="reseller-metrics-grid">
+              <MetricCard featured tone="success" title="Comision disponible" value={formatGs(summary?.unpaidConfirmedCommission)} note="Disponible para proximo cierre" icon={WalletCards} />
+              <MetricCard title="Comision en proceso" value={formatGs(summary?.estimatedCommission)} note="Se confirma al entregar" icon={TrendingUp} />
+              <MetricCard title="Total ganado" value={formatGs(summary?.totalHistoricalCommission)} note="Historico de ventas entregadas" icon={Banknote} />
+              <MetricCard title="Ventas entregadas" value={summary?.totalDeliveredSales || 0} note="Total historico" icon={PackageCheck} />
+              <MetricCard title="Comision de esta semana" value={formatGs(summary?.currentPeriodCommission)} note={`${formatDatePy(summary?.periodStart)} al ${formatDatePy(summary?.periodEnd)}`} icon={CheckCircle2} />
+              <MetricCard title="Ventas de esta semana" value={summary?.currentPeriodDeliveredSales || 0} note="Periodo lunes a sabado" icon={PackageSearch} />
+              <MetricCard title="Proximo pago" value={formatDatePy(summary?.nextPaymentDate)} note="Lunes de 10:00 a 17:00" icon={Banknote} />
+              <MetricCard title="Pagos recibidos" value={formatGs(summary?.totalPaidCommission)} note={`Pendiente en pagos: ${formatGs(summary?.totalPendingPayments)}`} icon={ShieldCheck} />
+            </section>
+
+            <section className="reseller-two-column">
+              <article className="panel progress-panel">
+                <div className="section-title">
+                  <h2>Tu progreso esta semana</h2>
+                  <span>{summary?.currentPeriodDeliveredSales || 0} de {weeklyGoal} ventas</span>
                 </div>
-                <div>
-                  <span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span>
-                  <strong>{formatGs(sale.reseller_commission)}</strong>
+                <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
+                <div className="profile-summary">
+                  <div><span>Ventas entregadas</span><strong>{summary?.currentPeriodDeliveredSales || 0}</strong></div>
+                  <div><span>Comision generada</span><strong>{formatGs(summary?.currentPeriodCommission)}</strong></div>
+                  <div><span>Periodo</span><strong>Lunes a sabado</strong></div>
                 </div>
+                <p>{progressMessage(summary?.currentPeriodDeliveredSales || 0)}</p>
               </article>
-            ))}
-            {!recentSales.length && <div className="empty-state">Todavia no tenes ventas cargadas.</div>}
-          </div>
-        </section>
 
-        <form className="panel reseller-security-card" onSubmit={submitPassword}>
-          <h2><KeyRound size={20} /> Seguridad</h2>
-          <p>Cambia tu contrasena. Tu correo no se puede modificar desde esta pantalla.</p>
-          {error && <div className="error-box">{error}</div>}
-          {message && <div className="toast">{message}</div>}
+              <article className="panel bank-status-panel">
+                <div className="section-title">
+                  <h2>Datos bancarios</h2>
+                  <WalletCards size={20} />
+                </div>
+                {bankAccount ? (
+                  <>
+                    <strong>Cuenta para pagos configurada</strong>
+                    <p>{bankAccount.bank_name} - Alias {bankAccount.bank_alias ? `${String(bankAccount.bank_alias).slice(0, 4)}***` : '-'}</p>
+                    <Link className="secondary-button full" to="/panel/cuenta-bancaria">Actualizar cuenta bancaria</Link>
+                  </>
+                ) : (
+                  <>
+                    <strong>Completa tus datos bancarios para recibir tus comisiones.</strong>
+                    <Link className="primary-button full" to="/panel/cuenta-bancaria">Completar ahora</Link>
+                  </>
+                )}
+              </article>
+            </section>
 
-          <label>
-            Nueva contrasena
-            <span className="password-field">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(event) => setPassword(event.target.value)}
-                minLength="8"
-                required
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((value) => !value)}
-                aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
-              >
-                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+            <section className="panel">
+              <div className="section-title">
+                <h2>Estado de tus pedidos</h2>
+                <span>Solo tus ventas</span>
+              </div>
+              <div className="pipeline-grid">
+                <PipelineItem label="Pendientes" value={summary?.pipeline?.pending_contact || 0} />
+                <PipelineItem label="Confirmados" value={summary?.pipeline?.confirmed || 0} />
+                <PipelineItem label="En preparacion" value={summary?.pipeline?.preparing || 0} />
+                <PipelineItem label="En reparto" value={summary?.pipeline?.out_for_delivery || 0} />
+                <PipelineItem label="Entregados" value={summary?.pipeline?.delivered_paid || 0} />
+                <PipelineItem label="Cancelados / fallidos" value={summary?.pipeline?.cancelled_group || 0} />
+              </div>
+            </section>
+
+            <section className="panel">
+              <div className="section-title">
+                <h2>Ventas recientes</h2>
+                <Link to="/panel/ventas">Ver todas mis ventas <ArrowRight size={16} /></Link>
+              </div>
+              <div className="reseller-recent-list">
+                {recentSales.map((sale) => (
+                  <article className="reseller-recent-row pro" key={sale.id}>
+                    <div>
+                      <strong>{sale.product_name_snapshot}</strong>
+                      <span>{sale.customer_name} - {sale.customer_phone_masked}</span>
+                      <small>{formatDatePy(sale.created_at)}</small>
+                    </div>
+                    <div>
+                      <span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span>
+                      <strong>{formatGs(sale.reseller_commission)}</strong>
+                      <small>{commissionState(sale)}</small>
+                    </div>
+                  </article>
+                ))}
+                {!recentSales.length && <div className="empty-state">Todavia no tenes ventas cargadas. Empeza publicando productos del catalogo.</div>}
+              </div>
+            </section>
+
+            <section className="panel quick-actions-panel">
+              <h2>Acciones rapidas</h2>
+              <div className="quick-actions-grid">
+                <Link className="secondary-button big" to="/catalogo">Ver productos para publicar</Link>
+                <Link className="secondary-button big" to="/materiales">Descargar materiales</Link>
+                <Link className="secondary-button big" to="/ayuda">Ver videos de ayuda</Link>
+                <a className="secondary-button big" href={`https://wa.me/${whatsappNumber}`} target="_blank" rel="noreferrer">Contactar soporte</a>
+                <Link className="secondary-button big" to="/panel/cuenta-bancaria">Actualizar cuenta bancaria</Link>
+              </div>
+            </section>
+
+            <form id="seguridad" className="panel reseller-security-card" onSubmit={submitPassword}>
+              <h2><KeyRound size={20} /> Seguridad</h2>
+              <p>Cambia tu contrasena. Tu correo no se puede modificar desde esta pantalla.</p>
+              {message && <div className="toast">{message}</div>}
+
+              <label>
+                Nueva contrasena
+                <span className="password-field">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    value={password}
+                    onChange={(event) => setPassword(event.target.value)}
+                    minLength="8"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((value) => !value)}
+                    aria-label={showPassword ? 'Ocultar contrasena' : 'Mostrar contrasena'}
+                  >
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </span>
+              </label>
+
+              <label>
+                Confirmar contrasena nueva
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(event) => setConfirmPassword(event.target.value)}
+                  minLength="8"
+                  required
+                />
+              </label>
+
+              <button className="primary-button big full" type="submit" disabled={saving}>
+                {saving ? 'Guardando...' : 'Cambiar contrasena'}
               </button>
-            </span>
-          </label>
-
-          <label>
-            Confirmar contrasena nueva
-            <input
-              type={showPassword ? 'text' : 'password'}
-              value={confirmPassword}
-              onChange={(event) => setConfirmPassword(event.target.value)}
-              minLength="8"
-              required
-            />
-          </label>
-
-          <button className="primary-button big full" type="submit" disabled={saving}>
-            {saving ? 'Guardando...' : 'Cambiar contrasena'}
-          </button>
-        </form>
-      </section>
-    </div>
+            </form>
+          </>
+        )}
+      </div>
+    </ResellerPanelLayout>
   )
 }

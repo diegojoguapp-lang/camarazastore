@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, Save } from 'lucide-react'
+import { Save, WalletCards } from 'lucide-react'
+import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
 import { getMyBankAccount, saveMyBankAccount } from '../../lib/resellerCommissionsApi'
 
 const emptyForm = {
@@ -47,16 +47,16 @@ export function BankAccount() {
     }
   }
 
-  if (loading) return <div className="page reseller-panel-page"><section className="container narrow"><p>Cargando...</p></section></div>
+  if (loading) return <ResellerPanelLayout><div className="reseller-dashboard-page"><div className="panel">Cargando cuenta bancaria...</div></div></ResellerPanelLayout>
 
   return (
-    <div className="page reseller-panel-page">
-      <section className="container narrow">
-        <Link className="back-link" to="/panel"><ArrowLeft size={16} /> Volver</Link>
+    <ResellerPanelLayout>
+      <div className="reseller-dashboard-page">
         <form className="panel reseller-security-card" onSubmit={submit}>
           <p className="eyebrow">Mi panel</p>
-          <h1>Cuenta bancaria</h1>
+          <h1><WalletCards size={26} /> Cuenta bancaria</h1>
           <p>Usamos estos datos para pagar tus comisiones. Solo puede haber una cuenta principal.</p>
+          {!form.id && <div className="notice-box">Completa tus datos bancarios para recibir tus comisiones.</div>}
           {error && <div className="error-box">{error}</div>}
           {message && <div className="toast">{message}</div>}
           <label>Banco *<input value={form.bank_name || ''} onChange={(e) => setField('bank_name', e.target.value)} required /></label>
@@ -66,7 +66,7 @@ export function BankAccount() {
           <label>Tipo de cuenta<input value={form.account_type || ''} onChange={(e) => setField('account_type', e.target.value)} /></label>
           <button className="primary-button big full" type="submit" disabled={saving}><Save size={18} /> {saving ? 'Guardando...' : 'Guardar cuenta'}</button>
         </form>
-      </section>
-    </div>
+      </div>
+    </ResellerPanelLayout>
   )
 }

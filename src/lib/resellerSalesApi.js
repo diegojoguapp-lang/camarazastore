@@ -1,104 +1,104 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { COMMISSION_CONFIRMED_STATUS, COMMISSION_ESTIMATED_STATUSES } from './salesConstants'
-import { getCurrentCommissionPeriod, getNextCommissionPayment } from './dateUtils'
-
-const RESELLER_SALES_FIELDS = [
-  'id',
-  'reseller_id',
-  'product_id',
-  'product_name_snapshot',
-  'product_model_snapshot',
-  'quantity',
-  'status',
-  'reseller_visible_notes',
-  'product_sale_price',
-  'delivery_charged',
-  'total_collected',
-  'reseller_commission',
-  'commission_paid',
-  'ordered_at',
-  'delivered_at',
-  'created_at',
-  'delivery_city',
-  'customer_name',
-  'customer_phone_masked',
-  'customer_city'
-].join(',')
 
 function requireSupabase() {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
 }
 
-function nextDateInputDay(value) {
-  const [year, month, day] = String(value).split('-').map(Number)
-  const date = new Date(Date.UTC(year, month - 1, day + 1))
-  return date.toISOString().slice(0, 10)
+function normalizeSale(row) {
+  return {
+    id: row.sale_id,
+    sale_id: row.sale_id,
+    product_name_snapshot: row.product_name,
+    product_model_snapshot: row.product_model,
+    quantity: row.quantity,
+    status: row.status,
+    reseller_visible_notes: row.reseller_visible_notes,
+    product_sale_price: row.product_sale_price,
+    delivery_charged: row.delivery_charged,
+    total_collected: row.total_collected,
+    reseller_commission: row.reseller_commission,
+    ordered_at: row.ordered_at,
+    delivered_at: row.delivered_at,
+    created_at: row.created_at,
+    delivery_city: row.delivery_city,
+    customer_name: row.customer_name,
+    customer_phone_masked: row.customer_phone_masked,
+    customer_city: row.customer_city,
+    commission_paid: row.commission_paid,
+    commission_paid_at: row.commission_paid_at
+  }
+}
+
+function statusForFilter(filter) {
+  const map = {
+    pending: 'pending_contact',
+    delivered: COMMISSION_CONFIRMED_STATUS
+  }
+  if (filter === 'process' || filter === 'cancelled' || filter === 'all') return null
+  return map[filter] || filter || null
+}
+
+export function commissionState(sale) {
+  if (sale.commission_paid) return 'Pagada'
+  if (sale.status === COMMISSION_CONFIRMED_STATUS) return 'Confirmada pendiente'
+  if (COMMISSION_ESTIMATED_STATUSES.includes(sale.status)) return 'Estimada'
+  return 'No aplica'
 }
 
 export async function getMySales(filters = {}) {
   requireSupabase()
-  let query = supabase
-    .from('reseller_sales')
-    .select(RESELLER_SALES_FIELDS)
-    .order('created_at', { ascending: false })
-
-  if (filters.status) query = query.eq('status', filters.status)
-  if (filters.delivered_from) query = query.gte('delivered_at', filters.delivered_from)
-  if (filters.delivered_before) query = query.lt('delivered_at', filters.delivered_before)
-  if (filters.date_from) query = query.gte('delivered_at', `${filters.date_from}T00:00:00`)
-  if (filters.date_to) query = query.lt('delivered_at', `${nextDateInputDay(filters.date_to)}T00:00:00`)
-
-  const { data, error } = await query
+  const { data, error } = await supabase.rpc('get_my_sales', {
+    p_status: statusForFilter(filters.status),
+    p_search: filters.search?.trim() || null,
+    p_limit: filters.limit || 100,
+    p_offset: filters.offset || 0,
+    p_date_from: filters.date_from || null,
+    p_date_to: filters.date_to || null
+  })
   if (error) throw error
 
-  const search = String(filters.search || '').trim().toLowerCase()
-  return (data || []).filter((sale) => {
-    if (!search) return true
-    return String(sale.product_name_snapshot || '').toLowerCase().includes(search)
-  })
+  const rows = (data || []).map(normalizeSale)
+  if (filters.group === 'process') {
+    return rows.filter((sale) => COMMISSION_ESTIMATED_STATUSES.includes(sale.status))
+  }
+  if (filters.group === 'cancelled') {
+    return rows.filter((sale) => ['cancelled', 'failed_delivery', 'returned'].includes(sale.status))
+  }
+  return rows
 }
 
 export async function getMyRecentSales() {
-  const sales = await getMySales()
-  return sales.slice(0, 5)
+  return getMySales({ limit: 5 })
 }
 
 export async function getMySalesSummary() {
-  const { start, endExclusive } = getCurrentCommissionPeriod()
-  const nextPayment = getNextCommissionPayment()
-  const [sales, delivered, deliveredWeek, payments] = await Promise.all([
-    getMySales(),
-    getMySales({ status: COMMISSION_CONFIRMED_STATUS }),
-    getMySales({
-      status: COMMISSION_CONFIRMED_STATUS,
-      delivered_from: start.toISOString(),
-      delivered_before: endExclusive.toISOString()
-    }),
-    supabase
-      .from('commission_payments')
-      .select('net_paid,status')
-      .eq('status', 'paid')
-  ])
-  const paidRows = payments.error ? [] : payments.data || []
+  requireSupabase()
+  const { data: dashboardRows, error: dashboardError } = await supabase.rpc('get_my_reseller_dashboard')
+  if (dashboardError) throw dashboardError
 
-  const pendingEstimated = delivered
-    .filter((sale) => sale.commission_paid !== true)
-    .reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0)
-  const openEstimated = sales
-    .filter((sale) => COMMISSION_ESTIMATED_STATUSES.includes(sale.status))
-    .reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0)
+  const dashboard = dashboardRows?.[0] || {}
+  const pipeline = {
+    pending_contact: Number(dashboard.pending_contact_sales || 0),
+    confirmed: Number(dashboard.confirmed_sales || 0),
+    preparing: Number(dashboard.preparing_sales || 0),
+    out_for_delivery: Number(dashboard.out_for_delivery_sales || 0),
+    delivered_paid: Number(dashboard.total_delivered_sales || 0),
+    cancelled_group: Number(dashboard.cancelled_or_failed_sales || 0)
+  }
 
   return {
-    periodStart: start,
-    periodEndExclusive: endExclusive,
-    nextPaymentDate: nextPayment.date,
-    nextPaymentLabel: nextPayment.label,
-    nextPaymentHolidayNote: nextPayment.holidayNote,
-    openEstimated,
-    pendingEstimated,
-    confirmedWeek: deliveredWeek.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0),
-    deliveredWeekCount: deliveredWeek.length,
-    deliveredTotalCount: delivered.length,
-    historicalEarned: paidRows.reduce((sum, payment) => sum + Number(payment.net_paid || 0), 0)
+    estimatedCommission: Number(dashboard.estimated_commission || 0),
+    unpaidConfirmedCommission: Number(dashboard.unpaid_confirmed_commission || 0),
+    currentPeriodCommission: Number(dashboard.current_period_commission || 0),
+    currentPeriodDeliveredSales: Number(dashboard.current_period_delivered_sales || 0),
+    totalDeliveredSales: Number(dashboard.total_delivered_sales || 0),
+    totalHistoricalCommission: Number(dashboard.total_historical_commission || 0),
+    totalPaidCommission: Number(dashboard.total_paid_commission || 0),
+    totalPendingPayments: Number(dashboard.total_pending_payments || 0),
+    nextPaymentDate: dashboard.next_payment_date,
+    periodStart: dashboard.current_period_start,
+    periodEnd: dashboard.current_period_end,
+    pipeline
   }
 }

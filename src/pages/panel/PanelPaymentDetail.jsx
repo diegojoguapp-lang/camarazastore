@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
+import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
 import { getMyCommissionPayment, getMyCommissionPaymentItems } from '../../lib/resellerCommissionsApi'
 import { paymentStatusLabel } from '../../lib/commissionConstants'
 import { formatDatePy } from '../../lib/dateUtils'
@@ -23,12 +24,12 @@ export function PanelPaymentDetail() {
       .finally(() => setLoading(false))
   }, [id])
 
-  if (loading) return <div className="page reseller-panel-page"><section className="container narrow"><p>Cargando...</p></section></div>
-  if (!payment) return <div className="page reseller-panel-page"><section className="container narrow"><div className="error-box">Pago no encontrado.</div></section></div>
+  if (loading) return <ResellerPanelLayout><div className="reseller-dashboard-page"><div className="panel">Cargando pago...</div></div></ResellerPanelLayout>
+  if (!payment) return <ResellerPanelLayout><div className="reseller-dashboard-page"><div className="error-box">Pago no encontrado.</div></div></ResellerPanelLayout>
 
   return (
-    <div className="page reseller-panel-page">
-      <section className="container narrow">
+    <ResellerPanelLayout>
+      <div className="reseller-dashboard-page">
         <Link className="back-link" to="/panel/pagos"><ArrowLeft size={16} /> Volver</Link>
         <div className="panel">
           <p className="eyebrow">Pago</p>
@@ -53,7 +54,7 @@ export function PanelPaymentDetail() {
             ))}
           </div>
         </section>
-      </section>
-    </div>
+      </div>
+    </ResellerPanelLayout>
   )
 }

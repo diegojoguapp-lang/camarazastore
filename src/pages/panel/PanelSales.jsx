@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import { ArrowLeft, Search } from 'lucide-react'
-import { getMySales } from '../../lib/resellerSalesApi'
+import { Search } from 'lucide-react'
+import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
+import { commissionState, getMySales } from '../../lib/resellerSalesApi'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
-import { SALE_STATUSES, saleStatusLabel } from '../../lib/salesConstants'
+import { saleStatusLabel } from '../../lib/salesConstants'
 
 const emptyFilters = {
-  status: '',
+  status: 'all',
   date_from: '',
   date_to: '',
   search: ''
 }
+
+const filterOptions = [
+  ['all', 'Todos'],
+  ['pending', 'Pendientes'],
+  ['process', 'En proceso'],
+  ['delivered', 'Entregados'],
+  ['cancelled', 'Cancelados']
+]
 
 export function PanelSales() {
   const [sales, setSales] = useState([])
@@ -23,7 +31,11 @@ export function PanelSales() {
     try {
       setLoading(true)
       setError('')
-      setSales(await getMySales(nextFilters))
+      setSales(await getMySales({
+        ...nextFilters,
+        group: nextFilters.status === 'process' || nextFilters.status === 'cancelled' ? nextFilters.status : null,
+        status: nextFilters.status
+      }))
     } catch (err) {
       setError(err.message || 'No se pudieron cargar tus ventas.')
     } finally {
@@ -41,47 +53,98 @@ export function PanelSales() {
   }
 
   return (
-    <div className="page reseller-panel-page">
-      <section className="container narrow">
-        <Link className="back-link" to="/panel"><ArrowLeft size={16} /> Volver</Link>
-        <div className="panel">
-          <p className="eyebrow">Mi panel</p>
-          <h1>Mis ventas</h1>
-          <p>Solo ves tus ventas y tus comisiones. Los costos internos no se muestran.</p>
-        </div>
+    <ResellerPanelLayout>
+      <div className="reseller-dashboard-page">
+        <header className="reseller-dashboard-head">
+          <div>
+            <p className="eyebrow">Seguimiento</p>
+            <h1>Mis ventas</h1>
+            <p>Solo ves tus ventas, clientes enmascarados y tus comisiones.</p>
+          </div>
+          <strong className="result-pill">{sales.length} resultados</strong>
+        </header>
 
-        {error && <div className="error-box">{error}</div>}
+        {error && <div className="error-box">{error} <button className="secondary-button" type="button" onClick={() => load(filters)}>Reintentar</button></div>}
 
-        <form className="panel reseller-sales-filters" onSubmit={submit}>
-          <label>Buscar producto<input value={filters.search} onChange={(e) => setFilter('search', e.target.value)} /></label>
+        <form className="panel reseller-sales-filters pro" onSubmit={submit}>
+          <div className="segmented-filters">
+            {filterOptions.map(([value, label]) => (
+              <button
+                key={value}
+                className={filters.status === value ? 'active' : ''}
+                type="button"
+                onClick={() => {
+                  const next = { ...filters, status: value }
+                  setFilters(next)
+                  load(next)
+                }}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <label>Buscar producto<input value={filters.search} onChange={(event) => setFilter('search', event.target.value)} /></label>
           <div className="form-grid">
-            <label>Estado<select value={filters.status} onChange={(e) => setFilter('status', e.target.value)}><option value="">Todos</option>{SALE_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
-            <label>Entrega desde<input type="date" value={filters.date_from} onChange={(e) => setFilter('date_from', e.target.value)} /></label>
-            <label>Entrega hasta<input type="date" value={filters.date_to} onChange={(e) => setFilter('date_to', e.target.value)} /></label>
+            <label>Fecha desde<input type="date" value={filters.date_from} onChange={(event) => setFilter('date_from', event.target.value)} /></label>
+            <label>Fecha hasta<input type="date" value={filters.date_to} onChange={(event) => setFilter('date_to', event.target.value)} /></label>
           </div>
           <button className="primary-button full" type="submit"><Search size={16} /> Buscar</button>
         </form>
 
-        <div className="reseller-sale-list">
+        <section className="panel reseller-sales-table-panel">
           {loading && <p>Cargando ventas...</p>}
-          {!loading && sales.map((sale) => (
-            <article className="panel reseller-sale-card" key={sale.id}>
-              <div>
-                <span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span>
-                <h2>{sale.product_name_snapshot}</h2>
-                <p>{sale.customer_name} - {sale.customer_phone_masked}</p>
+          {!loading && !!sales.length && (
+            <>
+              <div className="reseller-sales-table">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>Fecha</th>
+                      <th>Producto</th>
+                      <th>Cliente</th>
+                      <th>Estado</th>
+                      <th>Precio vendido</th>
+                      <th>Comision</th>
+                      <th>Estado comision</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sales.map((sale) => (
+                      <tr key={sale.id}>
+                        <td>{formatDatePy(sale.delivered_at || sale.created_at)}</td>
+                        <td><strong>{sale.product_name_snapshot}</strong></td>
+                        <td>{sale.customer_name} <span>{sale.customer_phone_masked}</span></td>
+                        <td><span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span></td>
+                        <td>{formatGs(sale.product_sale_price)}</td>
+                        <td><strong>{formatGs(sale.reseller_commission)}</strong></td>
+                        <td>{commissionState(sale)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="profile-summary">
-                <div><span>Fecha</span><strong>{formatDatePy(sale.created_at)}</strong></div>
-                <div><span>Precio vendido</span><strong>{formatGs(sale.product_sale_price)}</strong></div>
-                <div><span>Comision</span><strong>{formatGs(sale.reseller_commission)}</strong></div>
-                <div><span>Entrega</span><strong>{formatDatePy(sale.delivered_at)}</strong></div>
+              <div className="reseller-sale-card-list">
+                {sales.map((sale) => (
+                  <article className="reseller-sale-mobile-card" key={sale.id}>
+                    <div>
+                      <span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span>
+                      <strong>{sale.product_name_snapshot}</strong>
+                      <p>{sale.customer_name} - {sale.customer_phone_masked}</p>
+                    </div>
+                    <div className="profile-summary">
+                      <div><span>Fecha</span><strong>{formatDatePy(sale.delivered_at || sale.created_at)}</strong></div>
+                      <div><span>Precio vendido</span><strong>{formatGs(sale.product_sale_price)}</strong></div>
+                      <div><span>Comision</span><strong>{formatGs(sale.reseller_commission)}</strong></div>
+                      <div><span>Comision</span><strong>{commissionState(sale)}</strong></div>
+                    </div>
+                  </article>
+                ))}
               </div>
-            </article>
-          ))}
-          {!loading && !sales.length && <div className="empty-state">Todavia no tenes ventas cargadas.</div>}
-        </div>
-      </section>
-    </div>
+            </>
+          )}
+          {!loading && !sales.length && <div className="empty-state">No encontramos ventas con estos filtros. Proba con otro estado o fecha.</div>}
+        </section>
+      </div>
+    </ResellerPanelLayout>
   )
 }

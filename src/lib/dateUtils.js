@@ -56,7 +56,11 @@ export function getNextCommissionPayment(now = new Date()) {
 
 export function formatDatePy(value, options = { dateStyle: 'short' }) {
   if (!value) return '-'
-  return new Intl.DateTimeFormat('es-PY', { timeZone: pyTimeZone, ...options }).format(new Date(value))
+  const dateOnly = typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value)
+  const date = dateOnly
+    ? new Date(Date.UTC(Number(value.slice(0, 4)), Number(value.slice(5, 7)) - 1, Number(value.slice(8, 10)), 12))
+    : new Date(value)
+  return new Intl.DateTimeFormat('es-PY', { timeZone: pyTimeZone, ...options }).format(date)
 }
 
 export function formatDateTimePy(value) {
