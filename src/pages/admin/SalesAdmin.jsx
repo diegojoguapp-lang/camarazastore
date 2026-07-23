@@ -56,6 +56,10 @@ export function SalesAdmin() {
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [statusModalSale, setStatusModalSale] = useState(null)
+  const [nextStatus, setNextStatus] = useState('')
+  const [statusNote, setStatusNote] = useState('')
+  const [statusSaving, setStatusSaving] = useState(false)
 
   const totals = useMemo(() => ({
     commissions: sales.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0),
@@ -101,17 +105,41 @@ export function SalesAdmin() {
     load(filters)
   }
 
-  const changeStatus = async (sale) => {
-    const status = window.prompt('Nuevo estado', sale.status)
-    if (!status || status === sale.status) return
+  const openStatusModal = (sale) => {
+    setStatusModalSale(sale)
+    setNextStatus(sale.status)
+    setStatusNote('')
+    setError('')
+    setMessage('')
+  }
+
+  const closeStatusModal = () => {
+    if (statusSaving) return
+    setStatusModalSale(null)
+    setNextStatus('')
+    setStatusNote('')
+  }
+
+  const changeStatus = async (event) => {
+    event.preventDefault()
+    if (!statusModalSale || !nextStatus || nextStatus === statusModalSale.status) {
+      closeStatusModal()
+      return
+    }
     try {
+      setStatusSaving(true)
       setMessage('')
       setError('')
-      await updateSaleStatus(sale.id, status)
+      await updateSaleStatus(statusModalSale.id, nextStatus, statusNote)
       setMessage('Estado actualizado.')
-      load(filters)
+      setStatusModalSale(null)
+      setNextStatus('')
+      setStatusNote('')
+      await load(filters)
     } catch (err) {
       setError(err.message || 'No se pudo cambiar el estado.')
+    } finally {
+      setStatusSaving(false)
     }
   }
 
@@ -128,7 +156,7 @@ export function SalesAdmin() {
       <RowActions>
         <Link className="icon-link" to={`/admin/ventas/${sale.id}`}><Eye size={14} /></Link>
         <Link className="icon-link" to={`/admin/ventas/${sale.id}/editar`}><Pencil size={14} /></Link>
-        <button type="button" onClick={() => changeStatus(sale)}>Estado</button>
+        <button type="button" onClick={() => openStatusModal(sale)}>Estado</button>
       </RowActions>
     ) }
   ]
@@ -173,6 +201,36 @@ export function SalesAdmin() {
       </div>
 
       <AdminDataTable columns={columns} rows={sales} loading={loading} empty="Todavia no hay ventas cargadas." />
+
+      {statusModalSale && (
+        <div className="ax-modal-backdrop" role="presentation">
+          <form className="ax-status-modal" onSubmit={changeStatus} role="dialog" aria-modal="true" aria-label="Cambiar estado del pedido">
+            <header>
+              <h2>Cambiar estado del pedido</h2>
+              <button type="button" onClick={closeStatusModal} disabled={statusSaving}>Cerrar</button>
+            </header>
+            <div className="ax-status-modal-info">
+              <div><span>Producto</span><strong>{statusModalSale.product_name_snapshot}</strong></div>
+              <div><span>Cliente</span><strong>{statusModalSale.customer?.full_name || '-'}</strong></div>
+              <div><span>Estado actual</span><strong>{saleStatusLabel(statusModalSale.status)}</strong></div>
+            </div>
+            <label>Nuevo estado
+              <select value={nextStatus} onChange={(event) => setNextStatus(event.target.value)} autoFocus>
+                {SALE_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}
+              </select>
+            </label>
+            <label>Nota
+              <textarea value={statusNote} onChange={(event) => setStatusNote(event.target.value)} placeholder="Opcional" />
+            </label>
+            <div className="ax-modal-actions">
+              <button className="secondary-button" type="button" onClick={closeStatusModal} disabled={statusSaving}>Cancelar</button>
+              <button className="primary-button" type="submit" disabled={statusSaving || nextStatus === statusModalSale.status}>
+                {statusSaving ? 'Actualizando...' : 'Actualizar estado'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }
