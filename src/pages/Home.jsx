@@ -3,22 +3,23 @@ import { BookOpen, HelpCircle, Instagram, MessageCircle, ShoppingBag, UserRound 
 import { whatsappNumber } from '../lib/utils'
 
 export function Home() {
-  const message = encodeURIComponent('Hola, quiero información para ser revendedor de Camaraza Store.')
+  const message = encodeURIComponent('Hola, quiero informacion para ser revendedor de Camaraza Store.')
   const links = [
-    { label: 'Ver catálogo', to: '/catalogo', icon: ShoppingBag, primary: true },
+    { label: 'Ver catalogo', to: '/catalogo', icon: ShoppingBag, primary: true },
     { label: 'Videos de ayuda', to: '/ayuda', icon: HelpCircle },
     { label: 'Contactar por WhatsApp', href: `https://wa.me/${whatsappNumber}?text=${message}`, icon: MessageCircle },
     { label: 'Redes sociales', to: '/redes', icon: Instagram },
-    { label: 'Panel del revendedor', description: 'ConsultÃ¡ tus ventas, comisiones y pagos.', to: '/login', icon: UserRound },
+    { label: 'Panel del revendedor', to: '/login', icon: UserRound },
     { label: 'Reglas para revendedores', to: '/reglas', icon: BookOpen, quiet: true }
   ]
 
   return (
     <main className="link-home">
       <section className="link-home-card">
+        <p className="eyebrow">Plataforma de reventa</p>
         <h1>RE-VENTA CAMARAZA STORE</h1>
         <div className="link-button-list">
-          {links.map(({ label, description, to, href, icon: Icon, primary, quiet }) => (
+          {links.map(({ label, to, href, icon: Icon, primary, quiet }) => (
             href ? (
               <a
                 key={label}
@@ -30,7 +31,6 @@ export function Home() {
                 <Icon size={20} />
                 <span className="link-button-copy">
                   <strong>{label}</strong>
-                  {description && <small>{description}</small>}
                 </span>
               </a>
             ) : (
@@ -42,7 +42,6 @@ export function Home() {
                 <Icon size={20} />
                 <span className="link-button-copy">
                   <strong>{label}</strong>
-                  {description && <small>{description}</small>}
                 </span>
               </Link>
             )

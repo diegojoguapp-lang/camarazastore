@@ -1,5 +1,5 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Banknote, BookOpen, Grid2X2, HelpCircle, Home, KeyRound, LogOut, PackageSearch, WalletCards } from 'lucide-react'
+import { Award, Banknote, BookOpen, Grid2X2, HelpCircle, Home, KeyRound, LogOut, PackageSearch, TrendingUp, UserRound, WalletCards } from 'lucide-react'
 import { signOut } from '../lib/roles'
 
 const navItems = [
@@ -7,8 +7,12 @@ const navItems = [
   { to: '/panel/ventas', label: 'Mis ventas', icon: PackageSearch },
   { to: '/panel/pagos', label: 'Mis pagos', icon: Banknote },
   { to: '/panel/cuenta-bancaria', label: 'Mi cuenta bancaria', icon: WalletCards },
+  { to: '/panel/rendimiento', label: 'Mi rendimiento', icon: TrendingUp },
+  { to: '/panel/logros', label: 'Mis logros', icon: Award },
+  { to: '/panel/perfil', label: 'Perfil', icon: UserRound },
   { to: '/catalogo', label: 'Catalogo', icon: Grid2X2 },
-  { to: '/ayuda', label: 'Materiales y ayuda', icon: HelpCircle },
+  { to: '/ayuda', label: 'Videos de ayuda', icon: HelpCircle },
+  { to: '/reglas', label: 'Reglas', icon: BookOpen },
   { to: '/panel#seguridad', label: 'Seguridad', icon: KeyRound }
 ]
 
@@ -45,7 +49,7 @@ export function ResellerPanelLayout({ children }) {
         <NavLink to="/panel" end><Home size={18} /><span>Inicio</span></NavLink>
         <NavLink to="/panel/ventas"><PackageSearch size={18} /><span>Ventas</span></NavLink>
         <NavLink to="/panel/pagos"><Banknote size={18} /><span>Pagos</span></NavLink>
-        <NavLink to="/catalogo"><BookOpen size={18} /><span>Catalogo</span></NavLink>
+        <NavLink to="/panel/rendimiento"><TrendingUp size={18} /><span>Rend.</span></NavLink>
       </nav>
     </div>
   )

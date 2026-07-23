@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate } from 'react-router-dom'
 import { isSupabaseConfigured } from '../lib/supabase'
-import { getCurrentProfile, getCurrentSession, hasActiveRole, ROLES } from '../lib/roles'
+import { getCurrentProfile, getCurrentSession, hasActiveRole, ROLES, signOut } from '../lib/roles'
 
 function AccessDenied({ profile, allowedRole }) {
   const isAdmin = profile?.role === ROLES.admin
@@ -54,6 +54,13 @@ export function RoleRoute({ role, children }) {
         if (nextSession) {
           const nextProfile = await getCurrentProfile()
           if (!active) return
+          if (nextProfile && !nextProfile.is_active) {
+            await signOut()
+            if (!active) return
+            setSession(null)
+            setError('Tu cuenta esta inactiva. Contacta con soporte.')
+            return
+          }
           setProfile(nextProfile)
         }
       } catch (err) {

@@ -5,11 +5,13 @@ import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
 import { getCurrentProfile, updateCurrentPassword } from '../../lib/roles'
 import { getMyRecentSales, getMySalesSummary, commissionState } from '../../lib/resellerSalesApi'
 import { getMyBankAccount } from '../../lib/resellerCommissionsApi'
+import { getMyActivity, getMyGoals, updateMyGoals } from '../../lib/resellerExperienceApi'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs, whatsappNumber } from '../../lib/utils'
 import { saleStatusLabel } from '../../lib/salesConstants'
+import { ProgressBar, Timeline } from '../../components/design'
 
-const weeklyGoal = 10
+const defaultGoals = { weekly_sales_goal: 10, weekly_commission_goal: 500000 }
 
 function MetricCard({ title, value, note, icon: Icon, featured = false, tone = 'default' }) {
   return (
@@ -27,6 +29,14 @@ function progressMessage(count) {
   if (count <= 4) return 'Buen comienzo. Segui publicando.'
   if (count <= 9) return 'Estas cerca de completar tu meta semanal.'
   return 'Meta semanal completada.'
+}
+
+function goalMessage(value, target) {
+  const pct = target > 0 ? (Number(value || 0) / Number(target)) * 100 : 0
+  if (pct <= 0) return 'Empeza publicando productos hoy.'
+  if (pct < 50) return 'Buen comienzo. Segui avanzando.'
+  if (pct < 100) return 'Estas cerca de completar tu objetivo.'
+  return 'Objetivo semanal completado.'
 }
 
 function PipelineItem({ label, value }) {
@@ -49,22 +59,35 @@ export function PanelHome() {
   const [summary, setSummary] = useState(null)
   const [recentSales, setRecentSales] = useState([])
   const [bankAccount, setBankAccount] = useState(null)
+  const [goals, setGoals] = useState(defaultGoals)
+  const [activity, setActivity] = useState([])
   const [loading, setLoading] = useState(true)
+  const [savingGoals, setSavingGoals] = useState(false)
 
   const load = async () => {
     try {
       setLoading(true)
       setError('')
-      const [profileData, summaryData, saleRows, account] = await Promise.all([
+      const [profileData, summaryData, saleRows, account, goalRows, activityRows] = await Promise.all([
         getCurrentProfile(),
         getMySalesSummary(),
         getMyRecentSales(),
-        getMyBankAccount()
+        getMyBankAccount(),
+        getMyGoals(),
+        getMyActivity(8)
       ])
       setProfile(profileData)
       setSummary(summaryData)
       setRecentSales(saleRows)
       setBankAccount(account)
+      setGoals({ ...defaultGoals, ...goalRows })
+      setActivity(activityRows.map((item) => ({
+        id: item.activity_id,
+        title: item.title,
+        detail: item.detail,
+        date: item.created_at,
+        amount: item.amount
+      })))
     } catch (err) {
       setError(err.message || 'No se pudo cargar tu panel.')
     } finally {
@@ -76,8 +99,24 @@ export function PanelHome() {
 
   const progress = useMemo(() => {
     const count = Number(summary?.currentPeriodDeliveredSales || 0)
-    return Math.min((count / weeklyGoal) * 100, 100)
-  }, [summary])
+    return Math.min((count / Number(goals.weekly_sales_goal || 1)) * 100, 100)
+  }, [summary, goals.weekly_sales_goal])
+
+  const saveGoals = async (event) => {
+    event.preventDefault()
+    try {
+      setSavingGoals(true)
+      setMessage('')
+      setError('')
+      const saved = await updateMyGoals(goals)
+      setGoals({ ...defaultGoals, ...saved })
+      setMessage('Objetivos actualizados.')
+    } catch (err) {
+      setError(err.message || 'No se pudieron guardar los objetivos.')
+    } finally {
+      setSavingGoals(false)
+    }
+  }
 
   const submitPassword = async (event) => {
     event.preventDefault()
@@ -142,7 +181,7 @@ export function PanelHome() {
               <article className="panel progress-panel">
                 <div className="section-title">
                   <h2>Tu progreso esta semana</h2>
-                  <span>{summary?.currentPeriodDeliveredSales || 0} de {weeklyGoal} ventas</span>
+                  <span>{summary?.currentPeriodDeliveredSales || 0} de {goals.weekly_sales_goal || 0} ventas</span>
                 </div>
                 <div className="progress-track"><span style={{ width: `${progress}%` }} /></div>
                 <div className="profile-summary">
@@ -173,6 +212,40 @@ export function PanelHome() {
               </article>
             </section>
 
+            <section className="reseller-two-column">
+              <form className="panel goals-panel" onSubmit={saveGoals}>
+                <div className="section-title">
+                  <h2>Objetivos semanales</h2>
+                  <button className="secondary-button" type="submit" disabled={savingGoals}>{savingGoals ? 'Guardando...' : 'Guardar metas'}</button>
+                </div>
+                <div className="form-grid">
+                  <label>Meta semanal de ventas<input type="number" min="0" value={goals.weekly_sales_goal || 0} onChange={(event) => setGoals((prev) => ({ ...prev, weekly_sales_goal: Number(event.target.value || 0) }))} /></label>
+                  <label>Meta semanal de comision<input type="number" min="0" value={goals.weekly_commission_goal || 0} onChange={(event) => setGoals((prev) => ({ ...prev, weekly_commission_goal: Number(event.target.value || 0) }))} /></label>
+                </div>
+                <div className="goal-line">
+                  <strong>{summary?.currentPeriodDeliveredSales || 0} de {goals.weekly_sales_goal || 0} ventas</strong>
+                  <ProgressBar value={summary?.currentPeriodDeliveredSales || 0} max={goals.weekly_sales_goal || 1} />
+                  <p>{goalMessage(summary?.currentPeriodDeliveredSales || 0, goals.weekly_sales_goal)}</p>
+                </div>
+                <div className="goal-line">
+                  <strong>{formatGs(summary?.currentPeriodCommission)} de {formatGs(goals.weekly_commission_goal)}</strong>
+                  <ProgressBar value={summary?.currentPeriodCommission || 0} max={goals.weekly_commission_goal || 1} />
+                  <p>{goalMessage(summary?.currentPeriodCommission || 0, goals.weekly_commission_goal)}</p>
+                </div>
+              </form>
+
+              <article className="panel payment-calendar-card">
+                <h2>Proximo pago</h2>
+                <strong>{formatDatePy(summary?.nextPaymentDate)}</strong>
+                <p>Lunes, de 10:00 a 17:00</p>
+                <div className="profile-summary">
+                  <div><span>Periodo</span><strong>Lunes a sabado</strong></div>
+                  <div><span>Domingo</span><strong>No trabajamos</strong></div>
+                </div>
+                <small>Si el lunes es feriado, el pago puede realizarse el martes.</small>
+              </article>
+            </section>
+
             <section className="panel">
               <div className="section-title">
                 <h2>Estado de tus pedidos</h2>
@@ -186,6 +259,14 @@ export function PanelHome() {
                 <PipelineItem label="Entregados" value={summary?.pipeline?.delivered_paid || 0} />
                 <PipelineItem label="Cancelados / fallidos" value={summary?.pipeline?.cancelled_group || 0} />
               </div>
+            </section>
+
+            <section className="panel">
+              <div className="section-title">
+                <h2>Actividad reciente</h2>
+                <Link to="/panel/rendimiento">Ver rendimiento</Link>
+              </div>
+              {activity.length ? <Timeline items={activity} /> : <div className="empty-state">Tu actividad aparecera aca cuando tengas ventas, pagos o logros.</div>}
             </section>
 
             <section className="panel">
