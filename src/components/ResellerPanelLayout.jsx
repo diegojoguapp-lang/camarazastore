@@ -1,19 +1,13 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
-import { Award, Banknote, BookOpen, Grid2X2, HelpCircle, Home, KeyRound, LogOut, PackageSearch, TrendingUp, UserRound, WalletCards } from 'lucide-react'
+import { Banknote, Home, LogOut, PackageSearch, TrendingUp, UserRound } from 'lucide-react'
 import { signOut } from '../lib/roles'
 
 const navItems = [
   { to: '/panel', label: 'Inicio', icon: Home },
-  { to: '/panel/ventas', label: 'Mis ventas', icon: PackageSearch },
-  { to: '/panel/pagos', label: 'Mis pagos', icon: Banknote },
-  { to: '/panel/cuenta-bancaria', label: 'Mi cuenta bancaria', icon: WalletCards },
-  { to: '/panel/rendimiento', label: 'Mi rendimiento', icon: TrendingUp },
-  { to: '/panel/logros', label: 'Mis logros', icon: Award },
-  { to: '/panel/perfil', label: 'Perfil', icon: UserRound },
-  { to: '/catalogo', label: 'Catalogo', icon: Grid2X2 },
-  { to: '/ayuda', label: 'Videos de ayuda', icon: HelpCircle },
-  { to: '/reglas', label: 'Reglas', icon: BookOpen },
-  { to: '/panel#seguridad', label: 'Seguridad', icon: KeyRound }
+  { to: '/panel/ventas', label: 'Ventas', icon: PackageSearch },
+  { to: '/panel/pagos', label: 'Pagos', icon: Banknote },
+  { to: '/panel/progreso', label: 'Progreso', icon: TrendingUp },
+  { to: '/panel/perfil', label: 'Perfil', icon: UserRound }
 ]
 
 export function ResellerPanelLayout({ children }) {
@@ -33,11 +27,7 @@ export function ResellerPanelLayout({ children }) {
         </Link>
         <nav className="reseller-nav">
           {navItems.map(({ to, label, icon: Icon }) => (
-            to.includes('#') || to.startsWith('/catalogo') || to.startsWith('/ayuda') ? (
-              <Link key={to} to={to}><Icon size={18} /> {label}</Link>
-            ) : (
-              <NavLink key={to} to={to} end={to === '/panel'}><Icon size={18} /> {label}</NavLink>
-            )
+            <NavLink key={to} to={to} end={to === '/panel'}><Icon size={18} /> {label}</NavLink>
           ))}
         </nav>
         <button className="reseller-logout" type="button" onClick={logout}>
@@ -46,10 +36,9 @@ export function ResellerPanelLayout({ children }) {
       </aside>
       <main className="reseller-main">{children}</main>
       <nav className="reseller-mobile-nav">
-        <NavLink to="/panel" end><Home size={18} /><span>Inicio</span></NavLink>
-        <NavLink to="/panel/ventas"><PackageSearch size={18} /><span>Ventas</span></NavLink>
-        <NavLink to="/panel/pagos"><Banknote size={18} /><span>Pagos</span></NavLink>
-        <NavLink to="/panel/rendimiento"><TrendingUp size={18} /><span>Rend.</span></NavLink>
+        {navItems.map(({ to, label, icon: Icon }) => (
+          <NavLink key={to} to={to} end={to === '/panel'}><Icon size={18} /><span>{label}</span></NavLink>
+        ))}
       </nav>
     </div>
   )

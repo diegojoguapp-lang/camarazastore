@@ -10,14 +10,14 @@ export const SALE_STATUSES = [
 ]
 
 export const SALE_STATUS_LABELS = {
-  pending_contact: 'Pendiente de contacto',
-  confirmed: 'Confirmada',
-  preparing: 'En preparacion',
-  out_for_delivery: 'En reparto',
-  delivered_paid: 'Entregada y cobrada',
-  cancelled: 'Cancelada',
+  pending_contact: 'Pendiente de coordinacion',
+  confirmed: 'Coordinado con el cliente',
+  preparing: 'Preparando pedido',
+  out_for_delivery: 'Entrega en curso',
+  delivered_paid: 'Entregado y cobrado',
+  cancelled: 'Cancelado',
   failed_delivery: 'Entrega fallida',
-  returned: 'Devuelta'
+  returned: 'Devuelto'
 }
 
 export const COMMISSION_ESTIMATED_STATUSES = ['confirmed', 'preparing', 'out_for_delivery']

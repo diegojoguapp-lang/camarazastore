@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
+import { CompactPageHeader, OrderListItem, StatusBadge } from '../../components/ResellerUX'
 import { commissionState, getMySales } from '../../lib/resellerSalesApi'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
-import { saleStatusLabel } from '../../lib/salesConstants'
 
 const emptyFilters = {
   status: 'all',
@@ -54,19 +54,15 @@ export function PanelSales() {
 
   return (
     <ResellerPanelLayout>
-      <div className="reseller-dashboard-page">
-        <header className="reseller-dashboard-head">
-          <div>
-            <p className="eyebrow">Seguimiento</p>
-            <h1>Mis ventas</h1>
-            <p>Solo ves tus ventas, clientes enmascarados y tus comisiones.</p>
-          </div>
+      <div className="rx-page">
+        <CompactPageHeader title="Ventas" subtitle="Pedidos, estados y comisiones." />
+        <div className="rx-results-head">
           <strong className="result-pill">{sales.length} resultados</strong>
-        </header>
+        </div>
 
         {error && <div className="error-box">{error} <button className="secondary-button" type="button" onClick={() => load(filters)}>Reintentar</button></div>}
 
-        <form className="panel reseller-sales-filters pro" onSubmit={submit}>
+        <form className="rx-filter-panel" onSubmit={submit}>
           <div className="segmented-filters">
             {filterOptions.map(([value, label]) => (
               <button
@@ -83,7 +79,7 @@ export function PanelSales() {
               </button>
             ))}
           </div>
-          <label>Buscar producto<input value={filters.search} onChange={(event) => setFilter('search', event.target.value)} /></label>
+          <label>Buscar producto o cliente<input value={filters.search} onChange={(event) => setFilter('search', event.target.value)} /></label>
           <div className="form-grid">
             <label>Fecha desde<input type="date" value={filters.date_from} onChange={(event) => setFilter('date_from', event.target.value)} /></label>
             <label>Fecha hasta<input type="date" value={filters.date_to} onChange={(event) => setFilter('date_to', event.target.value)} /></label>
@@ -91,7 +87,7 @@ export function PanelSales() {
           <button className="primary-button full" type="submit"><Search size={16} /> Buscar</button>
         </form>
 
-        <section className="panel reseller-sales-table-panel">
+        <section className="rx-section">
           {loading && <p>Cargando ventas...</p>}
           {!loading && !!sales.length && (
             <>
@@ -114,7 +110,7 @@ export function PanelSales() {
                         <td>{formatDatePy(sale.delivered_at || sale.created_at)}</td>
                         <td><strong>{sale.product_name_snapshot}</strong></td>
                         <td>{sale.customer_name} <span>{sale.customer_phone_masked}</span></td>
-                        <td><span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span></td>
+                        <td><StatusBadge status={sale.status} /></td>
                         <td>{formatGs(sale.product_sale_price)}</td>
                         <td><strong>{formatGs(sale.reseller_commission)}</strong></td>
                         <td>{commissionState(sale)}</td>
@@ -125,19 +121,7 @@ export function PanelSales() {
               </div>
               <div className="reseller-sale-card-list">
                 {sales.map((sale) => (
-                  <article className="reseller-sale-mobile-card" key={sale.id}>
-                    <div>
-                      <span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span>
-                      <strong>{sale.product_name_snapshot}</strong>
-                      <p>{sale.customer_name} - {sale.customer_phone_masked}</p>
-                    </div>
-                    <div className="profile-summary">
-                      <div><span>Fecha</span><strong>{formatDatePy(sale.delivered_at || sale.created_at)}</strong></div>
-                      <div><span>Precio vendido</span><strong>{formatGs(sale.product_sale_price)}</strong></div>
-                      <div><span>Comision</span><strong>{formatGs(sale.reseller_commission)}</strong></div>
-                      <div><span>Comision</span><strong>{commissionState(sale)}</strong></div>
-                    </div>
-                  </article>
+                  <OrderListItem key={sale.id} sale={sale} />
                 ))}
               </div>
             </>

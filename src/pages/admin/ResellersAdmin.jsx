@@ -15,6 +15,8 @@ const emptyCreate = {
 const emptyReset = {
   userId: '',
   name: '',
+  email: '',
+  resellerCode: '',
   password: '',
   confirmPassword: ''
 }
@@ -102,12 +104,17 @@ export function ResellersAdmin() {
 
   const copyCredentials = async (payload) => {
     const text = [
-      'Credenciales Camaraza Store',
-      `Codigo: ${payload.resellerCode}`,
-      `Nombre: ${payload.fullName}`,
-      `Correo: ${payload.email}`,
-      `Contrasena temporal: ${payload.temporaryPassword}`,
-      'Ingresar en: https://camarazareventa.com/login'
+      'Credenciales *Panel Revendedor*',
+      '',
+      '*ACCESO*',
+      `*Correo:* ${payload.email}`,
+      `*Contraseña:* ${payload.temporaryPassword}`,
+      '',
+      'Ingresar en:',
+      'https://camarazareventa.com/login',
+      '',
+      `*Código Revendedor:* ${payload.resellerCode}`,
+      `*Nombre:* ${payload.fullName}`
     ].join('\n')
     const ok = await copyToClipboard(text)
     setMessage(ok ? 'Credenciales copiadas.' : 'No se pudo copiar.')
@@ -117,6 +124,8 @@ export function ResellersAdmin() {
     setResetForm({
       userId: reseller.id,
       name: reseller.full_name || reseller.email,
+      email: reseller.email || '',
+      resellerCode: reseller.reseller_code || '',
       password: '',
       confirmPassword: ''
     })
@@ -142,7 +151,12 @@ export function ResellersAdmin() {
       await resetResellerPassword(resetForm.userId, resetForm.password)
       setCreated(null)
       setMessage('Contrasena restablecida correctamente.')
-      await copyToClipboard(`Nueva contrasena temporal para ${resetForm.name}: ${resetForm.password}`)
+      await copyCredentials({
+        email: resetForm.email,
+        temporaryPassword: resetForm.password,
+        resellerCode: resetForm.resellerCode,
+        fullName: resetForm.name
+      })
       setResetForm(emptyReset)
     } catch (err) {
       setError(err.message || 'No se pudo restablecer la contrasena.')

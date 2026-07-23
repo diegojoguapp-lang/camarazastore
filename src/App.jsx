@@ -41,6 +41,8 @@ const PanelSales = lazyNamed(() => import('./pages/panel/PanelSales'), 'PanelSal
 const BankAccount = lazyNamed(() => import('./pages/panel/BankAccount'), 'BankAccount')
 const PanelPayments = lazyNamed(() => import('./pages/panel/PanelPayments'), 'PanelPayments')
 const PanelPaymentDetail = lazyNamed(() => import('./pages/panel/PanelPaymentDetail'), 'PanelPaymentDetail')
+const PanelSaleDetail = lazyNamed(() => import('./pages/panel/PanelSaleDetail'), 'PanelSaleDetail')
+const PanelProgress = lazyNamed(() => import('./pages/panel/PanelProgress'), 'PanelProgress')
 const PanelPerformance = lazyNamed(() => import('./pages/panel/PanelPerformance'), 'PanelPerformance')
 const PanelAchievements = lazyNamed(() => import('./pages/panel/PanelAchievements'), 'PanelAchievements')
 const PanelProfile = lazyNamed(() => import('./pages/panel/PanelProfile'), 'PanelProfile')
@@ -77,9 +79,11 @@ export default function App() {
           <Route path="/actualizar-contrasena" element={<Public><UpdatePassword /></Public>} />
           <Route path="/panel" element={<Panel><PanelHome /></Panel>} />
           <Route path="/panel/ventas" element={<Panel><PanelSales /></Panel>} />
+          <Route path="/panel/ventas/:id" element={<Panel><PanelSaleDetail /></Panel>} />
           <Route path="/panel/cuenta-bancaria" element={<Panel><BankAccount /></Panel>} />
           <Route path="/panel/pagos" element={<Panel><PanelPayments /></Panel>} />
           <Route path="/panel/pagos/:id" element={<Panel><PanelPaymentDetail /></Panel>} />
+          <Route path="/panel/progreso" element={<Panel><PanelProgress /></Panel>} />
           <Route path="/panel/rendimiento" element={<Panel><PanelPerformance /></Panel>} />
           <Route path="/panel/logros" element={<Panel><PanelAchievements /></Panel>} />
           <Route path="/panel/perfil" element={<Panel><PanelProfile /></Panel>} />

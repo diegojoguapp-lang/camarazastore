@@ -1,77 +1,135 @@
 import { useEffect, useState } from 'react'
-import { Mail, MapPin, Phone, ShieldCheck, UserRound, WalletCards } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { BookOpen, Grid2X2, HelpCircle, KeyRound, LogOut, MessageCircle, ShieldCheck, UserRound, WalletCards } from 'lucide-react'
 import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
-import { MetricCard, PageHeader } from '../../components/design'
-import { getCurrentProfile } from '../../lib/roles'
+import { ActivityListItem, CompactPageHeader, SettingsRow } from '../../components/ResellerUX'
+import { getCurrentProfile, signOut, updateCurrentPassword } from '../../lib/roles'
 import { getMyBankAccount } from '../../lib/resellerCommissionsApi'
-import { getMyPerformance } from '../../lib/resellerExperienceApi'
+import { getMyActivity } from '../../lib/resellerExperienceApi'
 import { formatDatePy } from '../../lib/dateUtils'
-import { formatGs } from '../../lib/utils'
+import { whatsappNumber } from '../../lib/utils'
 
 export function PanelProfile() {
+  const navigate = useNavigate()
   const [profile, setProfile] = useState(null)
   const [account, setAccount] = useState(null)
-  const [performance, setPerformance] = useState({})
+  const [activity, setActivity] = useState([])
+  const [showPassword, setShowPassword] = useState(false)
+  const [password, setPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
 
-  useEffect(() => {
-    Promise.all([getCurrentProfile(), getMyBankAccount(), getMyPerformance()])
-      .then(([profileData, accountData, performanceData]) => {
-        setProfile(profileData)
-        setAccount(accountData)
-        setPerformance(performanceData)
-      })
-      .catch((err) => setError(err.message || 'No se pudo cargar tu perfil.'))
-      .finally(() => setLoading(false))
-  }, [])
+  const load = async () => {
+    try {
+      setLoading(true)
+      setError('')
+      const [profileData, accountData, activityRows] = await Promise.all([
+        getCurrentProfile(),
+        getMyBankAccount(),
+        getMyActivity(8)
+      ])
+      setProfile(profileData)
+      setAccount(accountData)
+      setActivity(activityRows || [])
+    } catch (err) {
+      setError(err.message || 'No se pudo cargar tu cuenta.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  const logout = async () => {
+    await signOut()
+    navigate('/login')
+  }
+
+  const submitPassword = async (event) => {
+    event.preventDefault()
+    if (password.length < 8) {
+      setError('La contrasena nueva debe tener minimo 8 caracteres.')
+      return
+    }
+    if (password !== confirmPassword) {
+      setError('Las contrasenas no coinciden.')
+      return
+    }
+    try {
+      setSaving(true)
+      setError('')
+      setMessage('')
+      await updateCurrentPassword(password)
+      setPassword('')
+      setConfirmPassword('')
+      setShowPassword(false)
+      setMessage('Contrasena actualizada correctamente.')
+    } catch (err) {
+      setError(err.message || 'No se pudo actualizar la contrasena.')
+    } finally {
+      setSaving(false)
+    }
+  }
 
   return (
     <ResellerPanelLayout>
-      <div className="reseller-dashboard-page">
-        <PageHeader eyebrow="Cuenta" title="Mi perfil" description="Datos de tu cuenta de revendedor y resumen de actividad." />
+      <div className="rx-page">
+        <CompactPageHeader profile={profile} title="Mi cuenta" subtitle="Datos, seguridad y accesos." />
         {error && <div className="error-box">{error}</div>}
-        {loading && <div className="panel">Cargando perfil...</div>}
+        {message && <div className="toast">{message}</div>}
+        {loading && <div className="rx-skeleton-list"><span /><span /><span /></div>}
+
         {!loading && (
           <>
-            <section className="profile-hero-card panel">
-              <div className="profile-avatar">{(profile?.full_name || profile?.email || 'R').slice(0, 2).toUpperCase()}</div>
-              <div>
-                <h2>{profile?.full_name || '-'}</h2>
-                <p>Codigo: <strong>{profile?.reseller_code || '-'}</strong></p>
-                <span className={`account-pill ${profile?.is_active ? 'active' : ''}`}>{profile?.is_active ? 'Cuenta activa' : 'Cuenta suspendida'}</span>
+            <section className="rx-settings-group">
+              <h2>Informacion de cuenta</h2>
+              <div className="rx-info-list">
+                <div><span>Nombre</span><strong>{profile?.full_name || '-'}</strong></div>
+                <div><span>Codigo</span><strong>{profile?.reseller_code || '-'}</strong></div>
+                <div><span>Correo</span><strong>{profile?.email || '-'}</strong></div>
+                <div><span>WhatsApp</span><strong>{profile?.phone || '-'}</strong></div>
+                <div><span>Ciudad</span><strong>{profile?.city || '-'}</strong></div>
+                <div><span>Ingreso</span><strong>{formatDatePy(profile?.created_at)}</strong></div>
               </div>
             </section>
 
-            <section className="reseller-metrics-grid">
-              <MetricCard icon={UserRound} label="Ventas totales" value={performance.total_sales || 0} hint="Pedidos registrados" />
-              <MetricCard icon={ShieldCheck} label="Ventas entregadas" value={performance.delivered_sales || 0} hint="Pedidos completados" />
-              <MetricCard icon={WalletCards} label="Comisiones generadas" value={formatGs(performance.generated_commission)} hint="Historico entregado" />
-              <MetricCard icon={WalletCards} label="Comisiones cobradas" value={formatGs(performance.paid_commission)} hint="Pagos recibidos" />
+            <section className="rx-settings-group">
+              <h2>Datos bancarios</h2>
+              <SettingsRow icon={WalletCards} label={account ? account.bank_name : 'Cuenta bancaria pendiente'} detail={account?.bank_alias ? `Alias ${String(account.bank_alias).slice(0, 4)}***` : 'Editar datos bancarios'} to="/panel/cuenta-bancaria" />
             </section>
 
-            <section className="reseller-two-column">
-              <article className="panel">
-                <h2>Datos personales</h2>
-                <div className="profile-summary">
-                  <div><span><Mail size={14} /> Correo</span><strong>{profile?.email || '-'}</strong></div>
-                  <div><span><Phone size={14} /> WhatsApp</span><strong>{profile?.phone || '-'}</strong></div>
-                  <div><span><MapPin size={14} /> Ciudad</span><strong>{profile?.city || '-'}</strong></div>
-                  <div><span>Fecha de ingreso</span><strong>{formatDatePy(profile?.created_at)}</strong></div>
-                  <div><span>Ultima venta</span><strong>{formatDatePy(performance.last_sale_at)}</strong></div>
-                </div>
-              </article>
-              <article className="panel">
-                <h2>Cuenta bancaria</h2>
-                {account ? (
-                  <div className="profile-summary">
-                    <div><span>Banco</span><strong>{account.bank_name}</strong></div>
-                    <div><span>Alias</span><strong>{account.bank_alias || '-'}</strong></div>
-                    <div><span>Titular</span><strong>{account.bank_holder}</strong></div>
-                    <div><span>Estado</span><strong>Configurada</strong></div>
-                  </div>
-                ) : <div className="empty-state">Completa tu cuenta bancaria para recibir pagos.</div>}
-              </article>
+            <section className="rx-settings-group">
+              <h2>Seguridad</h2>
+              <SettingsRow icon={KeyRound} label="Cambiar contrasena" detail="Actualiza tu acceso" onClick={() => setShowPassword((value) => !value)} />
+              {showPassword && (
+                <form className="rx-inline-form" onSubmit={submitPassword}>
+                  <label>Nueva contrasena<input type="password" value={password} onChange={(event) => setPassword(event.target.value)} minLength="8" required /></label>
+                  <label>Confirmar contrasena<input type="password" value={confirmPassword} onChange={(event) => setConfirmPassword(event.target.value)} minLength="8" required /></label>
+                  <button className="primary-button" type="submit" disabled={saving}>{saving ? 'Guardando...' : 'Guardar contrasena'}</button>
+                </form>
+              )}
+              <SettingsRow icon={LogOut} label="Cerrar sesion" detail="Salir de este dispositivo" onClick={logout} danger />
+            </section>
+
+            <section className="rx-settings-group">
+              <h2>Actividad</h2>
+              <div className="rx-activity-list">
+                {activity.map((item) => <ActivityListItem key={item.activity_id || item.id} item={item} />)}
+                {!activity.length && <div className="rx-empty">Tu actividad aparecera aca cuando tengas ventas, pagos o logros.</div>}
+              </div>
+            </section>
+
+            <section className="rx-settings-group">
+              <h2>Ayuda y accesos</h2>
+              <SettingsRow icon={Grid2X2} label="Ver catalogo" to="/catalogo" />
+              <SettingsRow icon={HelpCircle} label="Videos de ayuda" to="/ayuda" />
+              <SettingsRow icon={BookOpen} label="Reglas" to="/reglas" />
+              <SettingsRow icon={MessageCircle} label="Contactar soporte" onClick={() => window.open(`https://wa.me/${whatsappNumber}`, '_blank', 'noreferrer')} />
+              <SettingsRow icon={ShieldCheck} label="Estado de cuenta" detail={profile?.is_active ? 'Cuenta activa' : 'Cuenta suspendida'} />
+              <SettingsRow icon={UserRound} label="Perfil publico" detail="No editable desde esta pantalla" />
             </section>
           </>
         )}
