@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save } from 'lucide-react'
 import { MoneyInput } from '../../components/MoneyInput'
+import { AdminPageHeader, StickySummary } from '../../components/AdminUX'
 import { getProducts } from '../../lib/api'
 import { createCustomer } from '../../lib/customerApi'
 import { createSale, getAdminSaleById, updateSale } from '../../lib/adminSalesApi'
@@ -187,104 +188,97 @@ export function SaleForm() {
   if (loading) return <div className="admin-page"><p>Cargando...</p></div>
 
   return (
-    <div className="admin-page">
-      <div className="admin-head">
-        <div>
-          <p className="eyebrow">Admin</p>
-          <h1>{editing ? 'Editar venta' : 'Nueva venta'}</h1>
-        </div>
-        <Link className="secondary-button" to="/admin/ventas"><ArrowLeft size={16} /> Volver</Link>
-      </div>
+    <div className="admin-page ax-page">
+      <AdminPageHeader
+        title={editing ? 'Editar venta' : 'Nueva venta'}
+        description="Carga operativa con resumen financiero permanente."
+        actions={<Link className="secondary-button" to="/admin/ventas"><ArrowLeft size={16} /> Volver</Link>}
+      />
 
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
 
-      <form className="product-form" onSubmit={submit}>
-        <section className="form-section">
-          <h2>1. Revendedor</h2>
-          <label>Revendedor activo *
-            <select value={saleForm.reseller_id} onChange={(event) => setSale('reseller_id', event.target.value)} required>
-              <option value="">Seleccionar</option>
-              {resellers.map((item) => <option key={item.id} value={item.id}>{item.reseller_code} - {item.full_name} {item.city ? `(${item.city})` : ''}</option>)}
-            </select>
-          </label>
-        </section>
-
-        <section className="form-section">
-          <h2>2. Producto</h2>
-          <div className="form-grid">
-            <label>Producto
-              <select value={saleForm.product_id} onChange={(event) => selectProduct(event.target.value)}>
-                <option value="">Seleccionar producto</option>
-                {products.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+      <form className="ax-sale-form" onSubmit={submit}>
+        <div className="ax-form-main">
+          <section className="form-section">
+            <h2>Revendedor</h2>
+            <label>Revendedor activo *
+              <select value={saleForm.reseller_id} onChange={(event) => setSale('reseller_id', event.target.value)} required>
+                <option value="">Seleccionar por codigo, nombre o ciudad</option>
+                {resellers.map((item) => <option key={item.id} value={item.id}>{item.reseller_code} - {item.full_name} {item.city ? `(${item.city})` : ''}</option>)}
               </select>
             </label>
-            <label>Cantidad<input type="number" min="1" value={saleForm.quantity} onChange={(event) => setSale('quantity', event.target.value)} /></label>
-            <MoneyInput label="Costo del producto" value={saleForm.product_cost} onChange={(value) => setSale('product_cost', value)} disabled />
-          </div>
-        </section>
+          </section>
 
-        <section className="form-section">
-          <h2>3. Cliente y entrega</h2>
-          <div className="form-grid">
-            <label>Nombre completo *<input value={customerForm.full_name || ''} onChange={(event) => setCustomer('full_name', event.target.value)} disabled={editing} required={!editing} /></label>
-            <label>Numero de WhatsApp *<input value={customerForm.phone || ''} onChange={(event) => setCustomer('phone', event.target.value)} disabled={editing} required={!editing} /></label>
-            <label>Ciudad *<input value={customerForm.city || ''} onChange={(event) => setCustomer('city', event.target.value)} disabled={editing} required={!editing} /></label>
-            <label>Horario para recibir<input type="time" value={saleForm.delivery_schedule || ''} onChange={(event) => setSale('delivery_schedule', event.target.value)} /></label>
-            <label>Tipo de envio *
-              <select value={saleForm.fulfillment_type} onChange={(event) => setSale('fulfillment_type', event.target.value)} required>
-                <option value="delivery">Delivery</option>
-                <option value="transportadora">Transportadora</option>
-              </select>
-            </label>
-          </div>
-        </section>
+          <section className="form-section">
+            <h2>Producto</h2>
+            <div className="form-grid">
+              <label>Producto
+                <select value={saleForm.product_id} onChange={(event) => selectProduct(event.target.value)}>
+                  <option value="">Seleccionar producto</option>
+                  {products.map((item) => <option key={item.id} value={item.id}>{item.name} {item.model ? `- ${item.model}` : ''}</option>)}
+                </select>
+              </label>
+              <label>Cantidad<input type="number" min="1" value={saleForm.quantity} onChange={(event) => setSale('quantity', event.target.value)} /></label>
+              <MoneyInput label="Costo del producto" value={saleForm.product_cost} onChange={(value) => setSale('product_cost', value)} disabled />
+            </div>
+          </section>
 
-        <section className="form-section">
-          <h2>4. Dinero y pago</h2>
-          <div className="form-grid">
-            <MoneyInput label="Precio de venta" value={saleForm.product_sale_price} onChange={(value) => setSale('product_sale_price', value)} />
-            <MoneyInput label="Comision del revendedor" value={saleForm.reseller_commission} onChange={(value) => setSale('reseller_commission', value)} />
-            <MoneyInput label="Costo de envio cobrado" value={saleForm.delivery_charged} onChange={(value) => setSale('delivery_charged', value)} />
-            <label>Forma de pago
-              <select value={saleForm.payment_method} onChange={(event) => setSale('payment_method', event.target.value)}>
-                <option value="cash">Efectivo</option>
-                <option value="transfer">Transferencia</option>
-                <option value="card">Tarjeta</option>
-              </select>
-            </label>
-            <label>Momento del pago
-              <select value={saleForm.payment_timing} onChange={(event) => setSale('payment_timing', event.target.value)}>
-                <option value="on_delivery">Contra entrega</option>
-                <option value="prepaid">Paga antes de enviar</option>
-              </select>
-            </label>
-          </div>
-          <div className="money-preview">
-            <div><span>Total cobrado</span><strong>{formatGs(totals.total_collected)}</strong></div>
-            <div><span>Comision revendedor</span><strong>{formatGs(saleForm.reseller_commission)}</strong></div>
-            <div><span>Ganancia Camaraza</span><strong>{formatGs(totals.camaraza_net_profit)}</strong></div>
-          </div>
-        </section>
+          <section className="form-section">
+            <h2>Cliente y entrega</h2>
+            <div className="form-grid">
+              <label>Nombre completo *<input value={customerForm.full_name || ''} onChange={(event) => setCustomer('full_name', event.target.value)} disabled={editing} required={!editing} /></label>
+              <label>Numero de WhatsApp *<input value={customerForm.phone || ''} onChange={(event) => setCustomer('phone', event.target.value)} disabled={editing} required={!editing} /></label>
+              <label>Ciudad *<input value={customerForm.city || ''} onChange={(event) => setCustomer('city', event.target.value)} disabled={editing} required={!editing} /></label>
+              <label>Horario para recibir<input type="time" value={saleForm.delivery_schedule || ''} onChange={(event) => setSale('delivery_schedule', event.target.value)} /></label>
+              <label>Tipo de envio *
+                <select value={saleForm.fulfillment_type} onChange={(event) => setSale('fulfillment_type', event.target.value)} required>
+                  <option value="delivery">Delivery</option>
+                  <option value="transportadora">Transportadora</option>
+                </select>
+              </label>
+            </div>
+          </section>
 
-        <section className="form-section">
-          <h2>5. Estado inicial</h2>
-          <label>Estado
-            <select value={saleForm.status} onChange={(event) => setSale('status', event.target.value)}>
-              {SALE_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}
-            </select>
-          </label>
-        </section>
+          <section className="form-section">
+            <h2>Dinero y pago</h2>
+            <div className="form-grid">
+              <MoneyInput label="Precio de venta" value={saleForm.product_sale_price} onChange={(value) => setSale('product_sale_price', value)} />
+              <MoneyInput label="Comision del revendedor" value={saleForm.reseller_commission} onChange={(value) => setSale('reseller_commission', value)} />
+              <MoneyInput label="Envio cobrado" value={saleForm.delivery_charged} onChange={(value) => setSale('delivery_charged', value)} />
+              <label>Forma de pago<select value={saleForm.payment_method} onChange={(event) => setSale('payment_method', event.target.value)}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card">Tarjeta</option></select></label>
+              <label>Momento del pago<select value={saleForm.payment_timing} onChange={(event) => setSale('payment_timing', event.target.value)}><option value="on_delivery">Contra entrega</option><option value="prepaid">Paga antes de enviar</option></select></label>
+            </div>
+          </section>
 
-        <section className="form-section">
-          <h2>6. Observaciones</h2>
-          <label>Notas internas<textarea value={saleForm.admin_notes || ''} onChange={(event) => setSale('admin_notes', event.target.value)} /></label>
-          <label>Notas visibles para revendedor<textarea value={saleForm.reseller_visible_notes || ''} onChange={(event) => setSale('reseller_visible_notes', event.target.value)} /></label>
-        </section>
-
-        <div className="sticky-actions">
-          <button className="primary-button big" type="submit" disabled={saving}><Save size={18} /> {saving ? 'Guardando...' : 'Guardar venta'}</button>
+          <section className="form-section">
+            <h2>Estado y observaciones</h2>
+            <div className="form-grid">
+              <label>Estado<select value={saleForm.status} onChange={(event) => setSale('status', event.target.value)}>{SALE_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
+            </div>
+            <label>Notas internas<textarea value={saleForm.admin_notes || ''} onChange={(event) => setSale('admin_notes', event.target.value)} /></label>
+            <label>Notas visibles para revendedor<textarea value={saleForm.reseller_visible_notes || ''} onChange={(event) => setSale('reseller_visible_notes', event.target.value)} /></label>
+          </section>
         </div>
+
+        <StickySummary
+          title="Resumen"
+          items={[
+            { label: 'Producto', value: saleForm.product_name_snapshot || 'Sin seleccionar' },
+            { label: 'Cantidad', value: saleForm.quantity || 1 },
+            { label: 'Costo', value: formatGs(saleForm.product_cost) },
+            { label: 'Precio venta', value: formatGs(saleForm.product_sale_price) },
+            { label: 'Comision', value: formatGs(saleForm.reseller_commission) },
+            { label: 'Envio cobrado', value: formatGs(saleForm.delivery_charged) },
+            { label: 'Total cobrado', value: formatGs(totals.total_collected) },
+            { label: 'Ganancia Camaraza', value: formatGs(totals.camaraza_net_profit) },
+            { label: 'Estado', value: saleStatusLabel(saleForm.status) }
+          ]}
+        >
+          {error && <div className="error-box">{error}</div>}
+          <button className="primary-button" type="submit" disabled={saving}><Save size={18} /> {saving ? 'Guardando...' : 'Guardar venta'}</button>
+          <Link className="secondary-button" to="/admin/ventas">Cancelar</Link>
+        </StickySummary>
       </form>
     </div>
   )

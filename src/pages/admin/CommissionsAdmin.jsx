@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Plus } from 'lucide-react'
+import { Eye, Plus } from 'lucide-react'
+import { AdminDataTable, AdminMetric, AdminPageHeader, AdminStatusBadge, DateCell, MoneyCell, RowActions } from '../../components/AdminUX'
 import { createCommissionBatch, getCommissionBatches, getEligibleSalesForBatch, getPaymentsForBatch, groupSalesByReseller } from '../../lib/adminCommissionsApi'
-import { getCurrentCommissionPeriod } from '../../lib/dateUtils'
+import { getCurrentCommissionPeriod, formatDatePy } from '../../lib/dateUtils'
 import { batchStatusLabel } from '../../lib/commissionConstants'
-import { formatDatePy } from '../../lib/dateUtils'
-import { formatGs } from '../../lib/utils'
 
 export function CommissionsAdmin() {
   const [batches, setBatches] = useState([])
@@ -62,47 +61,39 @@ export function CommissionsAdmin() {
     }
   }
 
+  const columns = [
+    { key: 'period', label: 'Periodo', render: (batch) => `${formatDatePy(batch.period_start)} al ${formatDatePy(batch.period_end)}` },
+    { key: 'payment_day', label: 'Pago', render: (batch) => <DateCell value={batch.payment_day} /> },
+    { key: 'resellers', label: 'Revendedores', align: 'right', render: (batch) => stats[batch.id]?.resellers || 0 },
+    { key: 'pending', label: 'Pendiente', align: 'right', render: (batch) => <MoneyCell value={stats[batch.id]?.pending || 0} /> },
+    { key: 'paid', label: 'Pagado', align: 'right', render: (batch) => <MoneyCell value={stats[batch.id]?.paid || 0} /> },
+    { key: 'status', label: 'Estado', render: (batch) => <AdminStatusBadge tone={batch.status === 'paid' ? 'success' : 'neutral'}>{batchStatusLabel(batch.status)}</AdminStatusBadge> },
+    { key: 'actions', label: 'Acciones', render: (batch) => <RowActions><Link to={`/admin/comisiones/${batch.id}`}><Eye size={14} /> Abrir</Link></RowActions> }
+  ]
+
   return (
-    <div className="admin-page">
-      <div className="admin-head">
-        <div>
-          <p className="eyebrow">Admin</p>
-          <h1>Comisiones</h1>
-        </div>
-        <button className="primary-button" type="button" onClick={createCurrentBatch} disabled={creating}>
-          <Plus size={16} /> {creating ? 'Creando...' : 'Crear lote actual'}
-        </button>
-      </div>
+    <div className="admin-page ax-page">
+      <AdminPageHeader
+        eyebrow="Finanzas"
+        title="Comisiones"
+        description="Lotes semanales, pagos realizados y saldos pendientes por revendedor."
+        actions={<button className="primary-button" type="button" onClick={createCurrentBatch} disabled={creating}><Plus size={16} /> {creating ? 'Creando...' : 'Crear lote actual'}</button>}
+      />
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
 
-      <div className="stats-grid sales-stats">
-        <div className="stat-card"><span>Lotes</span><strong>{batches.length}</strong></div>
-        <div className="stat-card"><span>Total pendiente</span><strong>{formatGs(totals.pending)}</strong></div>
-        <div className="stat-card"><span>Total pagado</span><strong>{formatGs(totals.paid)}</strong></div>
+      <div className="ax-metric-grid">
+        <AdminMetric label="Lotes" value={batches.length} />
+        <AdminMetric label="Total pendiente" value={<MoneyCell value={totals.pending} />} featured />
+        <AdminMetric label="Total pagado" value={<MoneyCell value={totals.paid} />} />
       </div>
 
-      <div className="table-wrap">
-        {loading && <p className="table-loading">Cargando lotes...</p>}
-        {!loading && (
-          <table className="admin-table commission-table">
-            <thead><tr><th>Periodo</th><th>Revendedores</th><th>Pendiente</th><th>Pagado</th><th>Estado</th><th>Acciones</th></tr></thead>
-            <tbody>
-              {batches.map((batch) => (
-                <tr key={batch.id}>
-                  <td>{formatDatePy(batch.period_start)} al {formatDatePy(batch.period_end)}</td>
-                  <td>{stats[batch.id]?.resellers || 0}</td>
-                  <td>{formatGs(stats[batch.id]?.pending || 0)}</td>
-                  <td>{formatGs(stats[batch.id]?.paid || 0)}</td>
-                  <td><span className="sale-status">{batchStatusLabel(batch.status)}</span></td>
-                  <td><Link className="primary-button" to={`/admin/comisiones/${batch.id}`}>Abrir lote</Link></td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
-        {!loading && !batches.length && <div className="empty-state">Todavia no hay lotes de comisiones.</div>}
-      </div>
+      <AdminDataTable
+        columns={columns}
+        rows={batches}
+        loading={loading}
+        empty="Todavia no hay lotes de comisiones."
+      />
     </div>
   )
 }

@@ -126,7 +126,7 @@ export function AdminDashboard() {
         eyebrow="Admin"
         title="Dashboard"
         description="Vista rapida para operar ventas, comisiones, productos y revendedores."
-        actions={<Link className="primary-button" to="/admin/productos/nuevo">Agregar producto</Link>}
+        actions={<><Link className="primary-button" to="/admin/ventas/nueva">Nueva venta</Link><Link className="secondary-button" to="/admin/productos/nuevo">Agregar producto</Link></>}
       />
 
       <section className="admin-search-panel">

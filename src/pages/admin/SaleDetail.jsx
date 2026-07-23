@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil } from 'lucide-react'
+import { AdminPageHeader, AdminStatusBadge, MoneyCell, StickySummary } from '../../components/AdminUX'
 import { getAdminSaleById, getSaleEvents, updateSaleStatus } from '../../lib/adminSalesApi'
 import { formatDateTimePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
@@ -55,93 +56,96 @@ export function SaleDetail() {
     }
   }
 
-  if (loading) return <div className="admin-page"><p>Cargando...</p></div>
-  if (!sale) return <div className="admin-page"><div className="error-box">Venta no encontrada.</div></div>
+  if (loading) return <div className="admin-page ax-page"><p>Cargando...</p></div>
+  if (!sale) return <div className="admin-page ax-page"><div className="error-box">Venta no encontrada.</div></div>
 
   return (
-    <div className="admin-page">
-      <div className="admin-head">
-        <div>
-          <p className="eyebrow">Venta</p>
-          <h1>{sale.product_name_snapshot}</h1>
-        </div>
-        <div className="form-actions-row">
-          <Link className="secondary-button" to="/admin/ventas"><ArrowLeft size={16} /> Volver</Link>
-          <Link className="primary-button" to={`/admin/ventas/${sale.id}/editar`}><Pencil size={16} /> Editar</Link>
-        </div>
-      </div>
+    <div className="admin-page ax-page">
+      <AdminPageHeader
+        eyebrow="Venta"
+        title={sale.product_name_snapshot}
+        description={`${sale.customer?.full_name || 'Cliente'} - ${sale.reseller?.full_name || 'Revendedor'}`}
+        actions={(
+          <>
+            <Link className="secondary-button" to="/admin/ventas"><ArrowLeft size={16} /> Volver</Link>
+            <Link className="primary-button" to={`/admin/ventas/${sale.id}/editar`}><Pencil size={16} /> Editar</Link>
+          </>
+        )}
+      />
 
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
 
-      <div className="detail-grid">
-        <section className="panel">
-          <h2>Estado</h2>
-          <span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span>
-          <form className="status-change-form" onSubmit={submitStatus}>
+      <div className="ax-detail-layout">
+        <div className="ax-form-main">
+          <section className="ax-panel">
+            <h2>Cliente</h2>
+            <div className="ax-info-grid">
+              <DetailItem label="Nombre" value={sale.customer?.full_name} />
+              <DetailItem label="Telefono" value={sale.customer?.phone} />
+              <DetailItem label="Ciudad" value={sale.customer?.city} />
+              <DetailItem label="Direccion" value={sale.customer?.address} />
+              <DetailItem label="Referencia" value={sale.customer?.reference} />
+              <DetailItem label="Pago adelantado" value={sale.customer?.requires_advance_payment ? 'Si' : 'No'} />
+            </div>
+          </section>
+
+          <section className="ax-panel">
+            <h2>Revendedor y producto</h2>
+            <div className="ax-info-grid">
+              <DetailItem label="Revendedor" value={`${sale.reseller?.reseller_code || ''} ${sale.reseller?.full_name || ''}`} />
+              <DetailItem label="Producto" value={sale.product_name_snapshot} />
+              <DetailItem label="Modelo" value={sale.product_model_snapshot} />
+              <DetailItem label="Cantidad" value={sale.quantity} />
+            </div>
+          </section>
+
+          <section className="ax-panel">
+            <h2>Entrega y pago</h2>
+            <div className="ax-info-grid">
+              <DetailItem label="Ciudad" value={sale.delivery_city || sale.customer?.city} />
+              <DetailItem label="Tipo de envio" value={fulfillmentTypeLabel(sale.fulfillment_type)} />
+              <DetailItem label="Horario" value={sale.delivery_schedule} />
+              <DetailItem label="Forma de pago" value={paymentMethodLabel(sale.payment_method)} />
+              <DetailItem label="Momento del pago" value={paymentTimingLabel(sale.payment_timing)} />
+              <DetailItem label="Entregado" value={formatDateTimePy(sale.delivered_at)} />
+            </div>
+          </section>
+
+          <section className="ax-panel">
+            <h2>Linea de tiempo</h2>
+            <div className="ax-timeline-list">
+              {events.map((item) => (
+                <div key={item.id}>
+                  <strong>{item.event_type}</strong>
+                  <span>{formatDateTimePy(item.created_at)}</span>
+                  <p>{item.from_status ? `${saleStatusLabel(item.from_status)} -> ${saleStatusLabel(item.to_status)}` : saleStatusLabel(item.to_status)}</p>
+                  {item.notes && <p>{item.notes}</p>}
+                </div>
+              ))}
+              {!events.length && <p>No hay eventos todavia.</p>}
+            </div>
+          </section>
+        </div>
+
+        <StickySummary
+          title="Resumen interno"
+          items={[
+            { label: 'Estado', value: <AdminStatusBadge tone={sale.status === 'delivered_paid' ? 'success' : 'neutral'}>{saleStatusLabel(sale.status)}</AdminStatusBadge> },
+            { label: 'Precio producto', value: <MoneyCell value={sale.product_sale_price} /> },
+            { label: 'Costo producto', value: <MoneyCell value={sale.product_cost} /> },
+            { label: 'Envio cobrado', value: <MoneyCell value={sale.delivery_charged} /> },
+            { label: 'Comision', value: <MoneyCell value={sale.reseller_commission} /> },
+            { label: 'Total cobrado', value: <MoneyCell value={sale.total_collected} /> },
+            { label: 'Ganancia Camaraza', value: <span className={Number(sale.camaraza_net_profit || 0) < 0 ? 'ax-negative' : ''}>{formatGs(sale.camaraza_net_profit)}</span> }
+          ]}
+        >
+          <form className="ax-drawer-form" onSubmit={submitStatus}>
             <label>Cambiar estado<select value={status} onChange={(e) => setStatus(e.target.value)}>{SALE_STATUSES.map((item) => <option key={item} value={item}>{saleStatusLabel(item)}</option>)}</select></label>
             <label>Nota opcional<textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
             <button className="primary-button" type="submit" disabled={saving || status === sale.status}>{saving ? 'Guardando...' : 'Actualizar estado'}</button>
           </form>
-        </section>
-
-        <section className="panel">
-          <h2>Cliente</h2>
-          <div className="profile-summary">
-            <DetailItem label="Nombre" value={sale.customer?.full_name} />
-            <DetailItem label="Telefono" value={sale.customer?.phone} />
-            <DetailItem label="Ciudad" value={sale.customer?.city} />
-          </div>
-        </section>
-
-        <section className="panel">
-          <h2>Revendedor y producto</h2>
-          <div className="profile-summary">
-            <DetailItem label="Revendedor" value={`${sale.reseller?.reseller_code || ''} ${sale.reseller?.full_name || ''}`} />
-            <DetailItem label="Producto" value={sale.product_name_snapshot} />
-            <DetailItem label="Modelo" value={sale.product_model_snapshot} />
-            <DetailItem label="Cantidad" value={sale.quantity} />
-          </div>
-        </section>
-
-        <section className="panel">
-          <h2>Montos internos</h2>
-          <div className="profile-summary">
-            <DetailItem label="Precio producto" value={formatGs(sale.product_sale_price)} />
-            <DetailItem label="Costo producto" value={formatGs(sale.product_cost)} />
-            <DetailItem label="Envio cobrado" value={formatGs(sale.delivery_charged)} />
-            <DetailItem label="Comision" value={formatGs(sale.reseller_commission)} />
-            <DetailItem label="Total cobrado" value={formatGs(sale.total_collected)} />
-            <DetailItem label="Ganancia Camaraza" value={formatGs(sale.camaraza_net_profit)} />
-          </div>
-        </section>
-
-        <section className="panel">
-          <h2>Entrega y pago</h2>
-          <div className="profile-summary">
-            <DetailItem label="Ciudad" value={sale.delivery_city || sale.customer?.city} />
-            <DetailItem label="Tipo de envio" value={fulfillmentTypeLabel(sale.fulfillment_type)} />
-            <DetailItem label="Horario" value={sale.delivery_schedule} />
-            <DetailItem label="Forma de pago" value={paymentMethodLabel(sale.payment_method)} />
-            <DetailItem label="Momento del pago" value={paymentTimingLabel(sale.payment_timing)} />
-            <DetailItem label="Entregado" value={formatDateTimePy(sale.delivered_at)} />
-          </div>
-        </section>
-
-        <section className="panel">
-          <h2>Linea de tiempo</h2>
-          <div className="timeline-list">
-            {events.map((item) => (
-              <div key={item.id}>
-                <strong>{item.event_type}</strong>
-                <span>{formatDateTimePy(item.created_at)}</span>
-                <p>{item.from_status ? `${saleStatusLabel(item.from_status)} -> ${saleStatusLabel(item.to_status)}` : saleStatusLabel(item.to_status)}</p>
-                {item.notes && <p>{item.notes}</p>}
-              </div>
-            ))}
-            {!events.length && <p>No hay eventos todavia.</p>}
-          </div>
-        </section>
+        </StickySummary>
       </div>
     </div>
   )

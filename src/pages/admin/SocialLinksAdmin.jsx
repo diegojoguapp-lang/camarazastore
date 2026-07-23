@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react'
+import { Save } from 'lucide-react'
+import { AdminPageHeader, AdminStatusBadge } from '../../components/AdminUX'
 import { getSocialLinks, saveSocialLinks } from '../../lib/api'
 
 export function SocialLinksAdmin() {
@@ -25,18 +27,33 @@ export function SocialLinksAdmin() {
   }
 
   return (
-    <div className="admin-page">
-      <div className="admin-head"><div><p className="eyebrow">Admin</p><h1>Redes sociales</h1></div></div>
+    <div className="admin-page ax-page">
+      <AdminPageHeader
+        eyebrow="Contenido"
+        title="Redes sociales"
+        description="Links visibles para contacto y redes desde la portada."
+      />
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
-      <form className="form-section admin-simple-form" onSubmit={submit}>
-        <div className="form-grid single">
-          <label>WhatsApp<input value={links.whatsapp || ''} onChange={(e) => set('whatsapp', e.target.value)} placeholder="https://wa.me/..." /></label>
-          <label>Instagram<input value={links.instagram || ''} onChange={(e) => set('instagram', e.target.value)} placeholder="https://instagram.com/..." /></label>
-          <label>TikTok<input value={links.tiktok || ''} onChange={(e) => set('tiktok', e.target.value)} placeholder="https://tiktok.com/@..." /></label>
-          <label>Facebook<input value={links.facebook || ''} onChange={(e) => set('facebook', e.target.value)} placeholder="https://facebook.com/..." /></label>
+
+      <form className="ax-panel ax-settings-panel" onSubmit={submit}>
+        {[
+          ['whatsapp', 'WhatsApp', 'https://wa.me/...'],
+          ['instagram', 'Instagram', 'https://instagram.com/...'],
+          ['tiktok', 'TikTok', 'https://tiktok.com/@...'],
+          ['facebook', 'Facebook', 'https://facebook.com/...']
+        ].map(([key, label, placeholder]) => (
+          <label className="ax-setting-row" key={key}>
+            <span>
+              <strong>{label}</strong>
+              <AdminStatusBadge tone={links[key] ? 'success' : 'neutral'}>{links[key] ? 'Cargado' : 'Vacio'}</AdminStatusBadge>
+            </span>
+            <input value={links[key] || ''} onChange={(e) => set(key, e.target.value)} placeholder={placeholder} />
+          </label>
+        ))}
+        <div className="form-actions-row">
+          <button className="primary-button" type="submit"><Save size={16} /> Guardar redes</button>
         </div>
-        <button className="primary-button" type="submit">Guardar redes</button>
       </form>
     </div>
   )

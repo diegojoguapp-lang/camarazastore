@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
+import { AdminDataTable, AdminPageHeader, MoneyCell, RowActions } from '../../components/AdminUX'
 import { deleteProduct, getProducts, updateProductStatus } from '../../lib/api'
-import { calculateProfit, formatGs, imageFallback, internalStatusLabel } from '../../lib/utils'
+import { calculateProfit, imageFallback, internalStatusLabel } from '../../lib/utils'
 
 export function ProductList() {
   const [products, setProducts] = useState([])
@@ -33,9 +34,7 @@ export function ProductList() {
   }
 
   const removeProduct = async (product) => {
-    const confirmed = window.confirm('¿Seguro que querés eliminar este producto? Esta acción no se puede deshacer.')
-    if (!confirmed) return
-
+    if (!window.confirm('Seguro que queres eliminar este producto? Esta accion no se puede deshacer.')) return
     try {
       setError('')
       setMessage('')
@@ -48,72 +47,45 @@ export function ProductList() {
   }
 
   return (
-    <div className="admin-page">
-      <div className="admin-head">
-        <div>
-          <p className="eyebrow">Admin</p>
-          <h1>Productos</h1>
-        </div>
-        <Link className="primary-button" to="/admin/productos/nuevo"><Plus size={16} /> Agregar producto</Link>
-      </div>
+    <div className="admin-page ax-page">
+      <AdminPageHeader
+        title="Productos"
+        description="Catalogo, precios y estados comerciales."
+        actions={<Link className="primary-button" to="/admin/productos/nuevo"><Plus size={16} /> Agregar producto</Link>}
+      />
 
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
-      {loading && <p>Cargando productos...</p>}
 
-      {!loading && (
-        <div className="table-wrap">
-          <table className="admin-table">
-            <thead>
-              <tr>
-                <th>Producto</th>
-                <th>Categoría</th>
-                <th>Mayorista</th>
-                <th>Sugerido</th>
-                <th>Posible ganancia</th>
-                <th>Destacado</th>
-                <th>Orden</th>
-                <th>Estado</th>
-                <th>Acciones</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => (
-                <tr key={product.id}>
-                  <td>
-                    <div className="table-product">
-                      <img src={product.main_image_url || '/placeholder.svg'} alt={product.name} width="52" height="52" loading="lazy" decoding="async" onError={imageFallback} />
-                      <div>
-                        <strong>{product.name}</strong>
-                        <span>{product.brand} {product.model}</span>
-                      </div>
-                    </div>
-                  </td>
-                  <td>{product.category}</td>
-                  <td>{formatGs(product.wholesale_price)}</td>
-                  <td>{formatGs(product.suggested_price)}</td>
-                  <td>{formatGs(calculateProfit(product))}</td>
-                  <td>{product.is_featured ? 'Sí' : 'No'}</td>
-                  <td>{Number(product.sort_priority || 0)}</td>
-                  <td><span className="admin-status">{product.public_stock_status === 'agotado' ? 'Agotado' : internalStatusLabel(product.internal_status)}</span></td>
-                  <td>
-                    <div className="table-actions ordered-actions">
-                      <Link className="icon-link" to={`/producto/${product.slug}`} title="Ver"><Eye size={16} /></Link>
-                      <Link className="icon-link" to={`/admin/productos/${product.id}/editar`} title="Editar"><Pencil size={16} /></Link>
-                      <button type="button" onClick={() => changeStatus(product.id, product.internal_status === 'active' ? 'hidden' : 'active')}>
-                        {product.internal_status === 'active' ? 'Ocultar' : 'Activar'}
-                      </button>
-                      <button type="button" onClick={() => changeStatus(product.id, 'sold_out')}>Agotado</button>
-                      <button type="button" className="danger-action" onClick={() => removeProduct(product)}><Trash2 size={14} /> Eliminar</button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-          {!products.length && <div className="empty-state">Todavía no cargaste productos.</div>}
-        </div>
-      )}
+      <AdminDataTable
+        loading={loading}
+        rows={products}
+        empty="Todavia no cargaste productos."
+        columns={[
+          { key: 'product', label: 'Producto', render: (product) => (
+            <div className="table-product">
+              <img src={product.main_image_url || '/placeholder.svg'} alt={product.name} width="44" height="44" loading="lazy" decoding="async" onError={imageFallback} />
+              <div><strong>{product.name}</strong><span>{product.brand} {product.model}</span></div>
+            </div>
+          ) },
+          { key: 'category', label: 'Categoria', render: (product) => product.category || '-' },
+          { key: 'wholesale', label: 'Mayorista', align: 'right', render: (product) => <MoneyCell value={product.wholesale_price} /> },
+          { key: 'suggested', label: 'Sugerido', align: 'right', render: (product) => <MoneyCell value={product.suggested_price} /> },
+          { key: 'profit', label: 'Ganancia', align: 'right', render: (product) => <MoneyCell value={calculateProfit(product)} /> },
+          { key: 'featured', label: 'Destacado', render: (product) => product.is_featured ? 'Si' : 'No' },
+          { key: 'order', label: 'Orden', render: (product) => Number(product.sort_priority || 0) },
+          { key: 'status', label: 'Estado', render: (product) => <span className="admin-status">{product.public_stock_status === 'agotado' ? 'Agotado' : internalStatusLabel(product.internal_status)}</span> },
+          { key: 'actions', label: 'Acciones', render: (product) => (
+            <RowActions>
+              <Link className="icon-link" to={`/producto/${product.slug}`} title="Ver"><Eye size={16} /></Link>
+              <Link className="icon-link" to={`/admin/productos/${product.id}/editar`} title="Editar"><Pencil size={16} /></Link>
+              <button type="button" onClick={() => changeStatus(product.id, product.internal_status === 'active' ? 'hidden' : 'active')}>{product.internal_status === 'active' ? 'Ocultar' : 'Activar'}</button>
+              <button type="button" onClick={() => changeStatus(product.id, 'sold_out')}>Agotado</button>
+              <button type="button" className="danger-action" onClick={() => removeProduct(product)}><Trash2 size={14} /></button>
+            </RowActions>
+          ) }
+        ]}
+      />
     </div>
   )
 }

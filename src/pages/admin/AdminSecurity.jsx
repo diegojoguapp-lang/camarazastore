@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { Eye, EyeOff, KeyRound } from 'lucide-react'
+import { AdminPageHeader } from '../../components/AdminUX'
 import { updateCurrentPassword } from '../../lib/roles'
 
 export function AdminSecurity() {
@@ -38,17 +39,21 @@ export function AdminSecurity() {
   }
 
   return (
-    <div className="admin-page">
-      <div className="admin-head">
-        <div>
-          <p className="eyebrow">Admin</p>
-          <h1>Seguridad</h1>
-        </div>
-      </div>
+    <div className="admin-page ax-page">
+      <AdminPageHeader
+        eyebrow="Sistema"
+        title="Seguridad"
+        description="Actualizacion de la contrasena del usuario administrador actual."
+      />
 
-      <form className="form-section admin-simple-form security-form" onSubmit={submit}>
-        <h2><KeyRound size={18} /> Cambiar mi contrasena</h2>
-        <p>Esta accion cambia solamente tu propia contrasena de acceso.</p>
+      <form className="ax-panel ax-settings-panel security-form" onSubmit={submit}>
+        <div className="ax-section-title">
+          <KeyRound size={18} />
+          <div>
+            <h2>Cambiar mi contrasena</h2>
+            <p>Esta accion cambia solamente tu propia contrasena de acceso.</p>
+          </div>
+        </div>
         {message && <div className="toast">{message}</div>}
         {error && <div className="error-box">{error}</div>}
 

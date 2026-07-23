@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { AdminPageHeader, MoneyCell, StickySummary } from '../../components/AdminUX'
 import { createProduct, getProductById, updateProduct } from '../../lib/api'
 import { calculateProfit, formatGs, imageFallback, slugify } from '../../lib/utils'
 
@@ -173,14 +174,17 @@ export function ProductForm() {
   }
 
   return (
-    <div className="admin-page">
-      <div className="admin-head">
-        <div><p className="eyebrow">Productos</p><h1>{editing ? 'Editar producto' : 'Agregar producto'}</h1></div>
-        <Link className="secondary-button" to="/admin/productos">Volver</Link>
-      </div>
+    <div className="admin-page ax-page">
+      <AdminPageHeader
+        eyebrow="Productos"
+        title={editing ? 'Editar producto' : 'Agregar producto'}
+        description="Datos visibles en catalogo, material comercial y preguntas frecuentes."
+        actions={<Link className="secondary-button" to="/admin/productos">Volver</Link>}
+      />
       {error && <div className="error-box">{error}</div>}
 
-      <form className="product-form" onSubmit={submit}>
+      <form className="product-form ax-sale-form" onSubmit={submit}>
+        <div className="ax-form-main">
         <section className="form-section">
           <h2>Datos básicos</h2>
           <div className="form-grid">
@@ -287,7 +291,32 @@ export function ProductForm() {
           <button className="secondary-button" type="button" onClick={addFaq}>Agregar pregunta</button>
         </section>
 
-        <div className="sticky-actions"><button type="submit" className="primary-button big" disabled={saving}>{saving ? 'Guardando...' : 'Guardar producto'}</button></div>
+        </div>
+
+        <StickySummary
+          title="Resumen"
+          items={[
+            { label: 'Estado', value: selectedStatus === 'sold_out' ? 'Agotado' : selectedStatus === 'hidden' ? 'Oculto' : 'Hay stock' },
+            { label: 'Mayorista', value: <MoneyCell value={form.wholesale_price} /> },
+            { label: 'Sugerido', value: <MoneyCell value={form.suggested_price} /> },
+            { label: 'Posible ganancia', value: <MoneyCell value={profit} /> },
+            { label: 'Stock', value: form.stock_quantity === '' ? 'Sin definir' : form.stock_quantity },
+            { label: 'FAQs', value: faqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length }
+          ]}
+        >
+          {(mainPreview || form.main_image_url) && (
+            <img
+              className="ax-summary-image"
+              src={mainPreview || form.main_image_url || '/placeholder.svg'}
+              alt={form.name || 'Producto'}
+              width="320"
+              height="240"
+              decoding="async"
+              onError={imageFallback}
+            />
+          )}
+          <button type="submit" className="primary-button big" disabled={saving}>{saving ? 'Guardando...' : 'Guardar producto'}</button>
+        </StickySummary>
       </form>
     </div>
   )
