@@ -22,6 +22,9 @@ const Redes = lazyNamed(() => import('./pages/Redes'), 'Redes')
 const AdminDashboard = lazyNamed(() => import('./pages/admin/AdminDashboard'), 'AdminDashboard')
 const ProductList = lazyNamed(() => import('./pages/admin/ProductList'), 'ProductList')
 const ProductForm = lazyNamed(() => import('./pages/admin/ProductForm'), 'ProductForm')
+const InventoryAdmin = lazyNamed(() => import('./pages/admin/InventoryAdmin'), 'InventoryAdmin')
+const InventoryHistory = lazyNamed(() => import('./pages/admin/InventoryHistory'), 'InventoryHistory')
+const SuppliersAdmin = lazyNamed(() => import('./pages/admin/SuppliersAdmin'), 'SuppliersAdmin')
 const HelpVideosAdmin = lazyNamed(() => import('./pages/admin/HelpVideosAdmin'), 'HelpVideosAdmin')
 const SocialLinksAdmin = lazyNamed(() => import('./pages/admin/SocialLinksAdmin'), 'SocialLinksAdmin')
 const ResellersAdmin = lazyNamed(() => import('./pages/admin/ResellersAdmin'), 'ResellersAdmin')
@@ -91,6 +94,9 @@ export default function App() {
           <Route path="/admin/productos" element={<Admin><ProductList /></Admin>} />
           <Route path="/admin/productos/nuevo" element={<Admin><ProductForm /></Admin>} />
           <Route path="/admin/productos/:id/editar" element={<Admin><ProductForm /></Admin>} />
+          <Route path="/admin/inventario" element={<Admin><InventoryAdmin /></Admin>} />
+          <Route path="/admin/inventario/:productId" element={<Admin><InventoryHistory /></Admin>} />
+          <Route path="/admin/proveedores" element={<Admin><SuppliersAdmin /></Admin>} />
           <Route path="/admin/ventas" element={<Admin><SalesAdmin /></Admin>} />
           <Route path="/admin/ventas/nueva" element={<Admin><SaleForm /></Admin>} />
           <Route path="/admin/ventas/:id" element={<Admin><SaleDetail /></Admin>} />

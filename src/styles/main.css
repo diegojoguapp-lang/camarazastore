@@ -1374,6 +1374,11 @@ textarea:focus-visible {
   border-color: #b7d8c7;
   color: var(--admin-primary-hover);
 }
+.ax-quick-filters button.active {
+  border-color: #b7d8c7;
+  background: var(--admin-primary-soft);
+  color: var(--admin-primary-hover);
+}
 .ax-search-field {
   min-height: 34px;
   display: flex;
@@ -1416,6 +1421,20 @@ textarea:focus-visible {
   border-radius: 10px;
   background: var(--admin-surface);
   padding: 9px 10px;
+}
+.ax-inventory-page .ax-toolbar label:not(.ax-search-field) {
+  display: grid;
+  gap: 5px;
+  color: var(--admin-text);
+  font-size: 12px;
+  font-weight: 600;
+}
+.ax-inventory-page .ax-toolbar select {
+  min-height: 34px;
+  border: 1px solid var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface);
+  padding: 7px 9px;
 }
 .ax-compact-summary {
   min-height: 42px;
@@ -1470,6 +1489,7 @@ textarea:focus-visible {
 .ax-table .right { text-align: right; }
 .ax-money { font-variant-numeric: tabular-nums; font-weight: 600; }
 .ax-negative { color: var(--admin-danger); font-weight: 700; }
+.ax-positive { color: var(--admin-primary-hover); font-weight: 700; }
 .ax-inline-link {
   color: var(--admin-primary-hover);
   font-weight: 650;
@@ -1622,6 +1642,52 @@ textarea:focus-visible {
   border-radius: 12px;
   background: var(--admin-primary-soft);
   padding: 12px;
+}
+.ax-help-text {
+  margin: -2px 0 12px;
+  color: var(--admin-text-secondary);
+  font-size: 12px;
+}
+.ax-readonly-field {
+  display: grid;
+  gap: 6px;
+  align-content: center;
+  min-height: 40px;
+  border: 1px dashed var(--admin-border);
+  border-radius: 10px;
+  background: var(--admin-surface-secondary);
+  padding: 9px 10px;
+}
+.ax-readonly-field span, .ax-readonly-field small {
+  color: var(--admin-text-secondary);
+  font-size: 12px;
+}
+.ax-readonly-field strong {
+  color: var(--admin-text);
+  font-size: 14px;
+  font-weight: 700;
+}
+.ax-stock-preview, .ax-stock-result {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-surface-secondary);
+  padding: 10px;
+}
+.ax-stock-preview span, .ax-stock-result span {
+  color: var(--admin-text-secondary);
+  font-size: 12px;
+}
+.ax-stock-preview strong, .ax-stock-result strong {
+  color: var(--admin-text);
+}
+.ax-stock-result.danger {
+  border-color: #ffccc7;
+  background: #fff2f0;
+}
+.ax-stock-result.danger strong {
+  color: var(--admin-danger);
 }
 .ax-modal-backdrop {
   position: fixed;

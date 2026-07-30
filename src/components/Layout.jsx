@@ -2,6 +2,7 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
   Boxes,
+  Package,
   Eye,
   FileVideo,
   LayoutDashboard,
@@ -90,7 +91,9 @@ export function AdminLayout({ children }) {
       ['/admin/comisiones', 'Comisiones', ReceiptText]
     ]],
     ['Catalogo', [
-      ['/admin/productos', 'Productos', Boxes]
+      ['/admin/productos', 'Productos', Boxes],
+      ['/admin/inventario', 'Inventario', Package],
+      ['/admin/proveedores', 'Proveedores', Users]
     ]],
     ['Equipo', [
       ['/admin/revendedores', 'Revendedores', UserRound]

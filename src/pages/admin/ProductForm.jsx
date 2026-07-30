@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageHeader, MoneyCell, StickySummary } from '../../components/AdminUX'
 import { createProduct, getProductById, updateProduct } from '../../lib/api'
+import { getProductAdminDetails, getSuppliers, saveProductAdminDetails } from '../../lib/adminInventoryApi'
 import { calculateProfit, formatGs, imageFallback, slugify } from '../../lib/utils'
 
 const initial = {
@@ -16,6 +17,14 @@ const initial = {
 }
 
 const emptyFaq = { question: '', answer: '' }
+const emptyAdminDetails = {
+  sku: '',
+  retail_price: '',
+  supplier_id: '',
+  track_inventory: true,
+  low_stock_threshold: 2
+}
+const internalDetailsError = 'El producto se guardo correctamente, pero no se pudieron guardar los datos internos. Podes volver a intentarlo desde la edicion del producto.'
 
 function parseFaqs(value) {
   try {
@@ -44,6 +53,22 @@ function PriceInput({ label, value, onChange, required }) {
   )
 }
 
+function OptionalPriceInput({ label, value, onChange }) {
+  return (
+    <label>{label}
+      <input
+        inputMode="numeric"
+        value={value === '' || value === null || value === undefined ? '' : formatGs(value)}
+        onChange={(event) => {
+          const digits = onlyDigits(event.target.value)
+          onChange(digits ? Number(digits) : '')
+        }}
+        placeholder="Opcional"
+      />
+    </label>
+  )
+}
+
 function statusFromProduct(product) {
   if (product.internal_status === 'hidden') return 'hidden'
   if (product.public_stock_status === 'agotado' || product.internal_status === 'sold_out') return 'sold_out'
@@ -62,16 +87,35 @@ export function ProductForm() {
   const [existingImages, setExistingImages] = useState([])
   const [deleteImages, setDeleteImages] = useState([])
   const [imageReplacements, setImageReplacements] = useState({})
+  const [suppliers, setSuppliers] = useState([])
+  const [adminDetails, setAdminDetails] = useState(emptyAdminDetails)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
   useEffect(() => {
-    if (!editing) return
-    getProductById(id).then((data) => {
-      setForm({ ...initial, ...data.product, stock_quantity: data.product.stock_quantity ?? '' })
-      setFaqs(parseFaqs(data.product.reseller_group_text))
-      setExistingImages(data.images || [])
-    }).catch((err) => setError(err.message))
+    async function load() {
+      try {
+        const supplierRows = await getSuppliers()
+        setSuppliers(supplierRows)
+        if (!editing) return
+        const [data, details] = await Promise.all([
+          getProductById(id),
+          getProductAdminDetails(id)
+        ])
+        setForm({ ...initial, ...data.product, stock_quantity: data.product.stock_quantity ?? 0 })
+        setAdminDetails({
+          ...emptyAdminDetails,
+          ...details,
+          retail_price: details.retail_price ?? '',
+          supplier_id: details.supplier_id || ''
+        })
+        setFaqs(parseFaqs(data.product.reseller_group_text))
+        setExistingImages(data.images || [])
+      } catch (err) {
+        setError(err.message)
+      }
+    }
+    load()
   }, [id, editing])
 
   useEffect(() => {
@@ -93,6 +137,22 @@ export function ProductForm() {
       if (name === 'name' && !editing) next.slug = slugify(value)
       return next
     })
+  }
+  const setAdminField = (name, value) => setAdminDetails((prev) => ({ ...prev, [name]: value }))
+
+  const validateAdminDetails = () => {
+    if (adminDetails.retail_price !== '' && adminDetails.retail_price !== null && adminDetails.retail_price !== undefined) {
+      const retailPrice = Number(adminDetails.retail_price)
+      if (!Number.isFinite(retailPrice)) return 'El precio minorista debe ser numerico.'
+      if (retailPrice < 0) return 'El precio minorista no puede ser negativo.'
+    }
+    if (adminDetails.low_stock_threshold === '' || adminDetails.low_stock_threshold === null || adminDetails.low_stock_threshold === undefined) {
+      return 'El stock minimo es obligatorio.'
+    }
+    const threshold = Number(adminDetails.low_stock_threshold)
+    if (!Number.isFinite(threshold) || !Number.isInteger(threshold)) return 'El stock minimo debe ser un numero entero.'
+    if (threshold < 0) return 'El stock minimo no puede ser negativo.'
+    return ''
   }
 
   const setStatus = (value) => {
@@ -119,6 +179,13 @@ export function ProductForm() {
     setSaving(true)
     setError('')
     try {
+      const adminValidationError = validateAdminDetails()
+      if (adminValidationError) {
+        setError(adminValidationError)
+        window.alert(adminValidationError)
+        return
+      }
+
       const cleanFaqs = faqs.filter((faq) => faq.question.trim() && faq.answer.trim())
       const productFields = { ...form }
       delete productFields.short_description
@@ -130,13 +197,33 @@ export function ProductForm() {
         suggested_price: Number(form.suggested_price || 0),
         is_featured: Boolean(form.is_featured),
         sort_priority: Number(form.sort_priority || 0),
-        stock_quantity: form.stock_quantity === '' ? null : Number(form.stock_quantity),
         slug: slugify(form.slug || form.name),
         reseller_group_text: JSON.stringify(cleanFaqs)
       }
+      delete payload.stock_quantity
+      if (!editing) payload.stock_quantity = 0
       const replacements = Object.entries(imageReplacements).map(([imageId, file]) => ({ id: imageId, file }))
-      if (editing) await updateProduct(id, payload, { main: mainFile, gallery: galleryFiles }, deleteImages, replacements)
-      else await createProduct(payload, { main: mainFile, gallery: galleryFiles })
+      let savedProduct
+      if (editing) {
+        savedProduct = await updateProduct(id, payload, { main: mainFile, gallery: galleryFiles }, deleteImages, replacements)
+        try {
+          await saveProductAdminDetails(id, adminDetails)
+        } catch {
+          setError(internalDetailsError)
+          window.alert(internalDetailsError)
+          return
+        }
+      } else {
+        savedProduct = await createProduct(payload, { main: mainFile, gallery: galleryFiles })
+        try {
+          await saveProductAdminDetails(savedProduct.id, adminDetails)
+        } catch {
+          setError(internalDetailsError)
+          window.alert(internalDetailsError)
+          navigate(`/admin/productos/${savedProduct.id}/editar`)
+          return
+        }
+      }
       const imageWasReplaced = editing && (Boolean(mainFile) || replacements.length > 0)
       window.alert(editing
         ? `Producto actualizado correctamente${imageWasReplaced ? '\nImagen reemplazada correctamente' : ''}`
@@ -199,7 +286,7 @@ export function ProductForm() {
                 <option value="hidden">Oculto</option>
               </select>
             </label>
-            <label>Stock<input type="number" value={form.stock_quantity || ''} onChange={(e) => setField('stock_quantity', e.target.value)} /></label>
+            <div className="ax-readonly-field"><span>Stock actual</span><strong>{Number(form.stock_quantity || 0)} unidades</strong></div>
             <label>Destacado
               <select value={form.is_featured ? 'yes' : 'no'} onChange={(e) => setField('is_featured', e.target.value === 'yes')}>
                 <option value="no">No</option>
@@ -220,6 +307,32 @@ export function ProductForm() {
             <PriceInput label="Precio mayorista" value={form.wholesale_price} onChange={(value) => setField('wholesale_price', value)} required />
             <PriceInput label="Precio sugerido" value={form.suggested_price} onChange={(value) => setField('suggested_price', value)} required />
             <div className="calculated-box"><span>Posible ganancia</span><strong>{formatGs(profit)}</strong></div>
+          </div>
+        </section>
+
+        <section className="form-section">
+          <h2>Datos internos</h2>
+          <p className="ax-help-text">Precio minorista: Referencia interna para ventas directas. No visible para revendedores.</p>
+          <div className="form-grid">
+            <label>SKU
+              <input value={adminDetails.sku || ''} onChange={(event) => setAdminField('sku', event.target.value)} placeholder="Ej: CAM-001" />
+            </label>
+            <label>Proveedor principal
+              <select value={adminDetails.supplier_id || ''} onChange={(event) => setAdminField('supplier_id', event.target.value)}>
+                <option value="">Sin proveedor asignado</option>
+                {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
+              </select>
+            </label>
+            <OptionalPriceInput label="Precio minorista" value={adminDetails.retail_price} onChange={(value) => setAdminField('retail_price', value)} />
+            <label className="checkbox-label"><input type="checkbox" checked={adminDetails.track_inventory !== false} onChange={(event) => setAdminField('track_inventory', event.target.checked)} /> Controlar inventario</label>
+            <label>Stock minimo
+              <input type="number" min="0" step="1" value={adminDetails.low_stock_threshold ?? 2} onChange={(event) => setAdminField('low_stock_threshold', event.target.value)} />
+            </label>
+            <div className="ax-readonly-field">
+              <span>Stock actual</span>
+              <strong>{Number(form.stock_quantity || 0)} unidades</strong>
+              {editing ? <Link className="secondary-button" to={`/admin/inventario/${id}`}>Gestionar inventario</Link> : <small>Disponible despues de guardar el producto.</small>}
+            </div>
           </div>
         </section>
 
@@ -300,6 +413,7 @@ export function ProductForm() {
             { label: 'Mayorista', value: <MoneyCell value={form.wholesale_price} /> },
             { label: 'Sugerido', value: <MoneyCell value={form.suggested_price} /> },
             { label: 'Posible ganancia', value: <MoneyCell value={profit} /> },
+            { label: 'Precio minorista', value: adminDetails.retail_price ? <MoneyCell value={adminDetails.retail_price} /> : '-' },
             { label: 'Stock', value: form.stock_quantity === '' ? 'Sin definir' : form.stock_quantity },
             { label: 'FAQs', value: faqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length }
           ]}
