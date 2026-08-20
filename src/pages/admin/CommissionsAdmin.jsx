@@ -2,13 +2,14 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Plus } from 'lucide-react'
 import { AdminDataTable, AdminMetric, AdminPageHeader, AdminStatusBadge, DateCell, MoneyCell, RowActions } from '../../components/AdminUX'
-import { createCommissionBatch, getCommissionBatches, getEligibleSalesForBatch, getPaymentsForBatch, groupSalesByReseller } from '../../lib/adminCommissionsApi'
+import { createCommissionBatch, getCommissionBatchOverview, getCommissionBatches, getPaymentsForBatch, getSundayCommissionWarnings } from '../../lib/adminCommissionsApi'
 import { getCurrentCommissionPeriod, formatDatePy } from '../../lib/dateUtils'
 import { batchStatusLabel } from '../../lib/commissionConstants'
 
 export function CommissionsAdmin() {
   const [batches, setBatches] = useState([])
   const [stats, setStats] = useState({})
+  const [warnings, setWarnings] = useState([])
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -26,13 +27,19 @@ export function CommissionsAdmin() {
       setLoading(true)
       setError('')
       const rows = await getCommissionBatches()
+      const [overview, sundayRows] = await Promise.all([
+        getCommissionBatchOverview(null),
+        getSundayCommissionWarnings()
+      ])
       setBatches(rows)
+      setWarnings(sundayRows)
       const nextStats = {}
       for (const batch of rows) {
-        const [sales, payments] = await Promise.all([getEligibleSalesForBatch(batch), getPaymentsForBatch(batch.id)])
+        const [payments] = await Promise.all([getPaymentsForBatch(batch.id)])
+        const batchRows = overview.filter((row) => row.batch_id === batch.id)
         nextStats[batch.id] = {
-          resellers: groupSalesByReseller(sales).length || payments.length,
-          pending: sales.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0),
+          resellers: batchRows.length || payments.length,
+          pending: batchRows.reduce((sum, row) => sum + Number(row.net_commission || 0), 0),
           paid: payments.filter((payment) => payment.status === 'paid').reduce((sum, payment) => sum + Number(payment.net_paid || 0), 0)
         }
       }
@@ -81,6 +88,11 @@ export function CommissionsAdmin() {
       />
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
+      {warnings.length > 0 && (
+        <div className="warning-box">
+          Hay {warnings.length} venta(s) entregadas en domingo. Domingo no pertenece a ningun periodo de comisiones.
+        </div>
+      )}
 
       <div className="ax-metric-grid">
         <AdminMetric label="Lotes" value={batches.length} />

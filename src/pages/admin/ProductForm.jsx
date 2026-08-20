@@ -103,7 +103,13 @@ export function ProductForm() {
           getProductById(id),
           getProductAdminDetails(id)
         ])
-        setForm({ ...initial, ...data.product, stock_quantity: data.product.stock_quantity ?? 0 })
+        setForm({
+          ...initial,
+          ...data.product,
+          stock_quantity: data.product.stock_quantity ?? 0,
+          reserved_stock_quantity: data.product.reserved_stock_quantity ?? 0,
+          available_stock_quantity: data.product.available_stock_quantity ?? ((data.product.stock_quantity ?? 0) - (data.product.reserved_stock_quantity ?? 0))
+        })
         setAdminDetails({
           ...emptyAdminDetails,
           ...details,
@@ -291,7 +297,7 @@ export function ProductForm() {
                 <option value="hidden">Oculto</option>
               </select>
             </label>
-            <div className="ax-readonly-field"><span>Stock actual</span><strong>{Number(form.stock_quantity || 0)} unidades</strong></div>
+            <div className="ax-readonly-field"><span>Stock disponible</span><strong>{Number(form.available_stock_quantity ?? form.stock_quantity ?? 0)} unidades</strong></div>
             <label>Destacado
               <select value={form.is_featured ? 'yes' : 'no'} onChange={(e) => setField('is_featured', e.target.value === 'yes')}>
                 <option value="no">No</option>
@@ -335,8 +341,9 @@ export function ProductForm() {
               <input type="number" min="0" step="1" value={adminDetails.low_stock_threshold ?? 2} onChange={(event) => setAdminField('low_stock_threshold', event.target.value)} />
             </label>
             <div className="ax-readonly-field">
-              <span>Stock actual</span>
-              <strong>{Number(form.stock_quantity || 0)} unidades</strong>
+              <span>Inventario</span>
+              <strong>{Number(form.stock_quantity || 0)} fisico</strong>
+              <small>{Number(form.reserved_stock_quantity || 0)} reservado - {Number(form.available_stock_quantity ?? form.stock_quantity ?? 0)} disponible</small>
               {editing ? <Link className="secondary-button" to={`/admin/inventario/${id}`}>Gestionar inventario</Link> : <small>Disponible despues de guardar el producto.</small>}
             </div>
           </div>
@@ -421,7 +428,7 @@ export function ProductForm() {
             { label: 'Posible ganancia', value: <MoneyCell value={profit} /> },
             { label: 'Precio minorista', value: adminDetails.retail_price ? <MoneyCell value={adminDetails.retail_price} /> : '-' },
             { label: 'Comision revendedor', value: <MoneyCell value={adminDetails.reseller_commission_amount || 0} /> },
-            { label: 'Stock', value: form.stock_quantity === '' ? 'Sin definir' : form.stock_quantity },
+            { label: 'Stock disponible', value: form.available_stock_quantity === undefined ? (form.stock_quantity === '' ? 'Sin definir' : form.stock_quantity) : form.available_stock_quantity },
             { label: 'FAQs', value: faqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length }
           ]}
         >

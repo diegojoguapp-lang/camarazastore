@@ -176,25 +176,15 @@ export async function updateSale(id, payload) {
 
 export async function updateSaleStatus(id, status, notes = '') {
   requireSupabase()
-  const { data, error } = await supabase
-    .from('sales')
-    .update({ status, updated_at: new Date().toISOString() })
-    .eq('id', id)
-    .select('id,status,delivered_at,paid_at')
-    .maybeSingle()
+  const { data, error } = await supabase.rpc('admin_transition_sale_status', {
+    p_sale_id: id,
+    p_status: status,
+    p_notes: notes.trim() || null
+  })
   if (error) throw error
-  if (!data?.id) throw new Error('No se pudo confirmar el cambio de estado. Revisa que la venta exista y sea visible para el admin.')
-
-  if (notes.trim()) {
-    await supabase.from('sale_events').insert({
-      sale_id: id,
-      event_type: 'status_note',
-      to_status: status,
-      notes: notes.trim()
-    })
-  }
-
-  return data
+  const row = Array.isArray(data) ? data[0] : data
+  if (!row?.id) throw new Error('No se pudo confirmar el cambio de estado. Revisa que la venta exista y sea visible para el admin.')
+  return row
 }
 
 export async function getSalesSummary(filters = {}) {

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save } from 'lucide-react'
 import { AdminDataTable, AdminPageHeader, DateCell, MoneyCell, StickySummary } from '../../components/AdminUX'
-import { createCommissionPayment, getBankAccountForReseller, getCommissionBatch, getEligibleSalesForBatch } from '../../lib/adminCommissionsApi'
+import { createCommissionPayment, getBankAccountForReseller, getCommissionBatch, getCommissionBatchOverview, getCommissionBatchSales } from '../../lib/adminCommissionsApi'
 import { calculateNetPaid } from '../../lib/commissionConstants'
 import { formatDatePy } from '../../lib/dateUtils'
 
@@ -21,6 +21,7 @@ export function CommissionPaymentForm() {
   const navigate = useNavigate()
   const [batch, setBatch] = useState(null)
   const [sales, setSales] = useState([])
+  const [overview, setOverview] = useState(null)
   const [bankAccount, setBankAccount] = useState(null)
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
@@ -29,19 +30,21 @@ export function CommissionPaymentForm() {
 
   const gross = useMemo(() => sales.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0), [sales])
   const net = calculateNetPaid({ gross_commission: gross, adjustments: form.adjustments, discounts: form.discounts })
-  const reseller = sales[0]?.reseller
+  const reseller = overview ? { full_name: overview.reseller_name, reseller_code: overview.reseller_code } : sales[0]?.reseller
 
   useEffect(() => {
     async function load() {
       try {
         setLoading(true)
         const batchData = await getCommissionBatch(batchId)
-        const [saleRows, bank] = await Promise.all([
-          getEligibleSalesForBatch(batchData),
+        const [saleRows, overviewRows, bank] = await Promise.all([
+          getCommissionBatchSales(batchId, resellerId),
+          getCommissionBatchOverview(batchId),
           getBankAccountForReseller(resellerId)
         ])
         setBatch(batchData)
-        setSales(saleRows.filter((sale) => sale.reseller_id === resellerId))
+        setSales(saleRows)
+        setOverview(overviewRows.find((row) => row.reseller_id === resellerId) || null)
         setBankAccount(bank)
       } catch (err) {
         setError(err.message || 'No se pudo preparar el pago.')
@@ -144,6 +147,7 @@ export function CommissionPaymentForm() {
           items={[
             { label: 'Ventas', value: sales.length },
             { label: 'Total comision', value: <MoneyCell value={gross} /> },
+            { label: 'Ajustes pendientes', value: <MoneyCell value={overview?.pending_adjustments || 0} /> },
             { label: 'Ajustes', value: <MoneyCell value={form.adjustments} /> },
             { label: 'Descuentos', value: <MoneyCell value={form.discounts} /> },
             { label: 'Neto a pagar', value: <MoneyCell value={net} /> }

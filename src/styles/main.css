@@ -75,11 +75,13 @@ p { color: var(--muted); line-height: 1.65; }
 .check-list svg { color: var(--success); flex: none; margin-top: 3px; }
 .page-head { margin-bottom: 24px; }
 .page-head h1 { font-size: clamp(34px, 5vw, 56px); }
-.notice, .error-box, .empty-state, .toast { border-radius: 16px; padding: 14px 16px; margin: 16px 0; font-weight: 700; }
+.notice, .error-box, .empty-state, .toast, .warning-box { border-radius: 16px; padding: 14px 16px; margin: 16px 0; font-weight: 700; }
 .notice { background: #fff6d6; color: #765c25; border: 1px solid #efd586; }
 .error-box { background: #fff2f0; color: var(--danger); border: 1px solid #ffccc7; }
 .empty-state { background: var(--surface); border: 1px dashed var(--line); color: var(--muted); }
 .toast { background: #ecfdf3; color: var(--success); border: 1px solid #abefc6; }
+.warning-box { background: #fff7e6; color: #92400e; border: 1px solid #f59e0b; }
+.disabled-link { opacity: 0.45; pointer-events: none; }
 .filters { display: grid; grid-template-columns: 1fr 220px 220px; gap: 12px; margin-bottom: 24px; }
 .search-box { display: flex; align-items: center; gap: 10px; background: var(--surface); border: 1px solid var(--line); border-radius: 16px; padding: 0 14px; }
 .search-box input, .filters select, .auth-card input, .product-form input, .product-form select, .product-form textarea, .form-section input, .form-section select, .form-section textarea, .panel input { width: 100%; border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; background: white; color: var(--text); }
@@ -1456,6 +1458,30 @@ textarea:focus-visible {
   color: var(--admin-text);
   font-weight: 650;
 }
+.ax-panel-card {
+  background: var(--admin-surface);
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  margin: 16px 0;
+  padding: 16px;
+}
+.ax-reservation-list {
+  display: grid;
+  gap: 8px;
+}
+.ax-reservation-row {
+  align-items: center;
+  border-bottom: 1px solid var(--admin-border);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 1.2fr 0.8fr 0.8fr 0.8fr;
+  padding: 10px 0;
+}
+.ax-reservation-row:last-child { border-bottom: 0; }
+.ax-reservation-row span {
+  color: var(--admin-text-secondary);
+  font-size: 13px;
+}
 .ax-table-wrap {
   overflow: auto;
   border: 1px solid var(--admin-border);
@@ -1984,4 +2010,5 @@ textarea:focus-visible {
   .ax-filter-drawer { grid-template-columns: 1fr; }
   .ax-sale-form .form-grid { grid-template-columns: 1fr; }
   .ax-metric-grid, .ax-info-grid, .ax-setting-row { grid-template-columns: 1fr; }
+  .ax-reservation-row { grid-template-columns: 1fr; align-items: start; }
 }

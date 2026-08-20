@@ -2,7 +2,7 @@ import { supabase, isSupabaseConfigured } from './supabase'
 import { demoProduct, isLikelyImageUrl, slugify } from './utils'
 
 const BUCKET = 'product-images'
-const PRODUCT_LIST_FIELDS = 'id,name,slug,category,internal_status,public_stock_status,wholesale_price,suggested_price,main_image_url,is_featured,sort_priority,created_at'
+const PRODUCT_LIST_FIELDS = 'id,name,slug,category,internal_status,public_stock_status,wholesale_price,suggested_price,main_image_url,is_featured,sort_priority,created_at,available_stock_quantity'
 const defaultHelpVideos = []
 
 const defaultSocialLinks = {

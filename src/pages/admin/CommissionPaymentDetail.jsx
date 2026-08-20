@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { ArrowLeft } from 'lucide-react'
+import { ArrowLeft, MessageCircle } from 'lucide-react'
 import { AdminDataTable, AdminPageHeader, AdminStatusBadge, DateCell, MoneyCell, StickySummary } from '../../components/AdminUX'
-import { getCommissionPayment, getPaymentItems } from '../../lib/adminCommissionsApi'
+import { getCommissionPayment, getPaymentAdjustments, getPaymentItems } from '../../lib/adminCommissionsApi'
 import { paymentStatusLabel } from '../../lib/commissionConstants'
 import { formatDatePy } from '../../lib/dateUtils'
 
@@ -10,15 +10,17 @@ export function CommissionPaymentDetail() {
   const { id } = useParams()
   const [payment, setPayment] = useState(null)
   const [items, setItems] = useState([])
+  const [adjustments, setAdjustments] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     async function load() {
       try {
-        const [paymentData, itemRows] = await Promise.all([getCommissionPayment(id), getPaymentItems(id)])
+        const [paymentData, itemRows, adjustmentRows] = await Promise.all([getCommissionPayment(id), getPaymentItems(id), getPaymentAdjustments(id)])
         setPayment(paymentData)
         setItems(itemRows)
+        setAdjustments(adjustmentRows)
       } catch (err) {
         setError(err.message || 'No se pudo cargar el pago.')
       } finally {
@@ -36,6 +38,12 @@ export function CommissionPaymentDetail() {
     { key: 'product', label: 'Producto', render: (item) => item.sale?.product_name_snapshot || '-' },
     { key: 'commission', label: 'Comision', align: 'right', render: (item) => <MoneyCell value={item.commission_amount_snapshot} /> }
   ]
+  const adjustmentColumns = [
+    { key: 'reason', label: 'Motivo', render: (item) => item.adjustment?.reason || '-' },
+    { key: 'amount', label: 'Aplicado', align: 'right', render: (item) => <MoneyCell value={item.amount_applied} /> }
+  ]
+  const phone = String(payment.reseller?.phone || '').replace(/\D/g, '')
+  const whatsappUrl = phone ? `https://wa.me/${phone}` : ''
 
   return (
     <div className="admin-page ax-page">
@@ -56,6 +64,17 @@ export function CommissionPaymentDetail() {
             loading={false}
             empty="Este pago no tiene ventas asociadas."
           />
+          {adjustments.length > 0 && (
+            <>
+              <h2>Ajustes aplicados</h2>
+              <AdminDataTable
+                columns={adjustmentColumns}
+                rows={adjustments}
+                loading={false}
+                empty="Sin ajustes aplicados."
+              />
+            </>
+          )}
         </section>
 
         <StickySummary
@@ -70,6 +89,7 @@ export function CommissionPaymentDetail() {
           ]}
         >
           {payment.voucher_url && <a className="secondary-button" href={payment.voucher_url} target="_blank" rel="noreferrer">Ver comprobante</a>}
+          {payment.status === 'paid' && whatsappUrl && <a className="primary-button" href={whatsappUrl} target="_blank" rel="noreferrer"><MessageCircle size={16} /> Avisar por WhatsApp</a>}
         </StickySummary>
       </div>
     </div>

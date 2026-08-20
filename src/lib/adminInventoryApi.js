@@ -10,6 +10,7 @@ function readableError(error, fallback) {
   if (message.includes('product_admin_details_sku_unique_idx')) return new Error('Ya existe un producto con ese SKU.')
   if (message.includes('Inventory tracking is disabled')) return new Error('El control de inventario esta desactivado para este producto.')
   if (message.includes('negative stock')) return new Error('El movimiento dejaria stock negativo.')
+  if (message.includes('below reserved')) return new Error('No podes bajar el stock fisico por debajo del stock reservado.')
   if (message.includes('Movement reason is required')) return new Error('El motivo es obligatorio.')
   if (message.includes('Producto no encontrado')) return new Error('Producto no encontrado.')
   if (message.includes('Retail price cannot be negative')) return new Error('El precio minorista no puede ser negativo.')
@@ -50,7 +51,7 @@ async function currentUserId() {
 
 export function inventoryStatus(product) {
   const details = product.admin_details || {}
-  const stock = Number(product.stock_quantity || 0)
+  const stock = Number(product.available_stock_quantity ?? product.stock_quantity ?? 0)
   const threshold = Number(details.low_stock_threshold || 0)
   if (details.track_inventory === false) return 'untracked'
   if (stock <= 0) return 'out'
@@ -75,7 +76,9 @@ export function movementTypeLabel(type) {
     adjustment_in: 'Ajuste positivo',
     adjustment_out: 'Ajuste negativo',
     damaged: 'Producto averiado',
-    lost: 'Producto perdido'
+    lost: 'Producto perdido',
+    sale_delivery: 'Entrega de venta',
+    sale_return: 'Devolucion de venta'
   }[type] || type || '-'
 }
 
@@ -84,7 +87,7 @@ export async function getInventoryProducts() {
   const [productsResult, detailsResult, suppliersResult] = await Promise.all([
     supabase
       .from('products')
-      .select('id,name,slug,brand,model,cost_price,wholesale_price,suggested_price,stock_quantity,internal_status,public_stock_status,main_image_url,created_at')
+      .select('id,name,slug,brand,model,cost_price,wholesale_price,suggested_price,stock_quantity,reserved_stock_quantity,available_stock_quantity,internal_status,public_stock_status,main_image_url,created_at')
       .order('name', { ascending: true }),
     supabase
       .from('product_admin_details')
@@ -115,6 +118,8 @@ export async function getInventoryProducts() {
     return {
       ...product,
       stock_quantity: Number(product.stock_quantity || 0),
+      reserved_stock_quantity: Number(product.reserved_stock_quantity || 0),
+      available_stock_quantity: Number(product.available_stock_quantity ?? (Number(product.stock_quantity || 0) - Number(product.reserved_stock_quantity || 0))),
       admin_details: details,
       supplier: details.supplier_id ? supplierMap.get(details.supplier_id) : null
     }
@@ -126,13 +131,17 @@ export async function getInventorySummary() {
   return products.reduce((acc, product) => {
     const status = inventoryStatus(product)
     const stock = Number(product.stock_quantity || 0)
+    const reserved = Number(product.reserved_stock_quantity || 0)
+    const available = Number(product.available_stock_quantity ?? stock - reserved)
     if (product.admin_details?.track_inventory !== false) acc.controlled += 1
     acc.units += stock
+    acc.reserved += reserved
+    acc.available += available
     acc.value += stock * Number(product.cost_price || 0)
     if (status === 'low') acc.low += 1
     if (status === 'out') acc.out += 1
     return acc
-  }, { controlled: 0, units: 0, low: 0, out: 0, value: 0 })
+  }, { controlled: 0, units: 0, reserved: 0, available: 0, low: 0, out: 0, value: 0 })
 }
 
 export async function getProductAdminDetails(productId) {
@@ -202,6 +211,18 @@ export async function getInventoryHistory(productId) {
       actor_name: profile?.full_name || profile?.email || (row.created_by ? 'Administrador' : null)
     }
   })
+}
+
+export async function getProductReservations(productId) {
+  requireSupabase()
+  const { data, error } = await supabase
+    .from('sale_stock_reservations')
+    .select('*,sale:sales(id,status,product_name_snapshot,created_at),sale_item:sale_items(id,product_name_snapshot,quantity)')
+    .eq('product_id', productId)
+    .eq('status', 'active')
+    .order('reserved_at', { ascending: false })
+  if (error) throw error
+  return data || []
 }
 
 export async function createInventoryMovement(payload) {

@@ -73,3 +73,14 @@ export async function getMyCommissionPaymentItems(paymentId) {
   if (error) throw error
   return data || []
 }
+
+export async function getMyCommissionPaymentAdjustments(paymentId) {
+  requireSupabase()
+  const { data, error } = await supabase
+    .from('commission_payment_adjustments')
+    .select('*,adjustment:commission_adjustments(reason,source_type)')
+    .eq('payment_id', paymentId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data || []
+}

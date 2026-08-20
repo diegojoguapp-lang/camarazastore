@@ -19,12 +19,19 @@ function toDateOnly(value) {
 
 export async function getCommissionBatches() {
   requireSupabase()
+  await ensureCommissionBatches()
   const { data, error } = await supabase
     .from('commission_batches')
     .select('*')
     .order('period_start', { ascending: false })
   if (error) throw error
   return data || []
+}
+
+export async function ensureCommissionBatches() {
+  requireSupabase()
+  const { error } = await supabase.rpc('admin_ensure_commission_batches')
+  if (error && !String(error.message || '').includes('Could not find the function')) throw error
 }
 
 export async function createCommissionBatch(period, notes = '') {
@@ -93,6 +100,32 @@ export async function getEligibleSalesForBatch(batch) {
   return data || []
 }
 
+export async function getCommissionBatchOverview(batchId = null) {
+  requireSupabase()
+  const { data, error } = await supabase.rpc('admin_get_commission_batch_overview', {
+    p_batch_id: batchId
+  })
+  if (error) throw error
+  return data || []
+}
+
+export async function getCommissionBatchSales(batchId, resellerId) {
+  requireSupabase()
+  const { data, error } = await supabase.rpc('admin_get_commission_batch_sales', {
+    p_batch_id: batchId,
+    p_reseller_id: resellerId
+  })
+  if (error) throw error
+  return data || []
+}
+
+export async function getSundayCommissionWarnings() {
+  requireSupabase()
+  const { data, error } = await supabase.rpc('admin_get_sunday_commission_warnings')
+  if (error) throw error
+  return data || []
+}
+
 export function groupSalesByReseller(sales = []) {
   const groups = new Map()
   sales.forEach((sale) => {
@@ -137,7 +170,7 @@ export async function getCommissionPayment(id) {
   requireSupabase()
   const { data, error } = await supabase
     .from('commission_payments')
-    .select('*,batch:commission_batches(*),reseller:profiles(id,reseller_code,full_name,email)')
+    .select('*,batch:commission_batches(*),reseller:profiles(id,reseller_code,full_name,email,phone)')
     .eq('id', id)
     .single()
   if (error) throw error
@@ -149,6 +182,17 @@ export async function getPaymentItems(paymentId) {
   const { data, error } = await supabase
     .from('commission_payment_items')
     .select('*,sale:sales(id,product_name_snapshot,delivered_at,reseller_commission)')
+    .eq('payment_id', paymentId)
+    .order('created_at', { ascending: true })
+  if (error) throw error
+  return data || []
+}
+
+export async function getPaymentAdjustments(paymentId) {
+  requireSupabase()
+  const { data, error } = await supabase
+    .from('commission_payment_adjustments')
+    .select('*,adjustment:commission_adjustments(*)')
     .eq('payment_id', paymentId)
     .order('created_at', { ascending: true })
   if (error) throw error
@@ -184,6 +228,21 @@ export async function createCommissionPayment({ batchId, resellerId, sales, bank
   if (paidError) throw paidError
 
   return getCommissionPayment(paidPaymentId)
+}
+
+export async function createBulkCommissionPayments({ batchId, resellerIds, form }) {
+  requireSupabase()
+  const { data, error } = await supabase.rpc('admin_create_commission_payments_bulk', {
+    p_batch_id: batchId,
+    p_reseller_ids: resellerIds,
+    p_payment_date: form.payment_date || toDateOnly(new Date()),
+    p_payment_method: form.payment_method?.trim() || null,
+    p_voucher_url: form.voucher_url?.trim() || null,
+    p_voucher_number: form.voucher_number?.trim() || null,
+    p_notes: form.notes?.trim() || null
+  })
+  if (error) throw error
+  return data || []
 }
 
 export async function cancelCommissionPayment(id, notes = '') {

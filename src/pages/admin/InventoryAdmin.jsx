@@ -92,34 +92,41 @@ export function InventoryAdmin() {
         (status === 'all' || productStatus === status) &&
         (supplierId === 'all' || details.supplier_id === supplierId)
     }).sort((a, b) => {
-      if (sort === 'stock_desc') return Number(b.stock_quantity || 0) - Number(a.stock_quantity || 0)
+      if (sort === 'stock_desc') return Number(b.available_stock_quantity ?? b.stock_quantity ?? 0) - Number(a.available_stock_quantity ?? a.stock_quantity ?? 0)
       if (sort === 'value_desc') return Number(b.stock_quantity || 0) * Number(b.cost_price || 0) - Number(a.stock_quantity || 0) * Number(a.cost_price || 0)
-      return Number(a.stock_quantity || 0) - Number(b.stock_quantity || 0)
+      return Number(a.available_stock_quantity ?? a.stock_quantity ?? 0) - Number(b.available_stock_quantity ?? b.stock_quantity ?? 0)
     })
   }, [products, search, status, supplierId, sort])
 
   const summary = useMemo(() => products.reduce((acc, product) => {
     const productStatus = inventoryStatus(product)
     const stock = Number(product.stock_quantity || 0)
+    const reserved = Number(product.reserved_stock_quantity || 0)
+    const available = Number(product.available_stock_quantity ?? stock - reserved)
     if (product.admin_details?.track_inventory !== false) acc.controlled += 1
     acc.units += stock
+    acc.reserved += reserved
+    acc.available += available
     acc.value += stock * Number(product.cost_price || 0)
     if (productStatus === 'low') acc.low += 1
     if (productStatus === 'out') acc.out += 1
     return acc
-  }, { controlled: 0, units: 0, low: 0, out: 0, value: 0 }), [products])
+  }, { controlled: 0, units: 0, reserved: 0, available: 0, low: 0, out: 0, value: 0 }), [products])
 
   const selectedProduct = products.find((product) => product.id === movementForm.product_id)
   const movementQuantity = Number(movementForm.quantity || 0)
   const movementQuantityIsInteger = Number.isInteger(movementQuantity)
   const delta = movementQuantity > 0 ? movementQuantity * movementSign(movementForm.movement_type) : 0
   const nextStock = Number(selectedProduct?.stock_quantity || 0) + delta
+  const selectedReserved = Number(selectedProduct?.reserved_stock_quantity || 0)
+  const nextAvailable = nextStock - selectedReserved
   const movementBlocked = !selectedProduct ||
     selectedProduct.admin_details?.track_inventory === false ||
     movementQuantity <= 0 ||
     !movementQuantityIsInteger ||
     !movementForm.reason.trim() ||
-    nextStock < 0
+    nextStock < 0 ||
+    nextAvailable < 0
 
   const openMovement = (product, type = 'manual_entry') => {
     setMovementForm({ ...emptyMovement, product_id: product.id, movement_type: type })
@@ -169,7 +176,9 @@ export function InventoryAdmin() {
     { key: 'supplier', label: 'Proveedor', render: (product) => product.supplier?.name || '-' },
     { key: 'cost', label: 'Costo unitario', align: 'right', render: (product) => <MoneyCell value={product.cost_price} /> },
     { key: 'retail', label: 'Precio minorista', align: 'right', render: (product) => product.admin_details?.retail_price ? <MoneyCell value={product.admin_details.retail_price} /> : '-' },
-    { key: 'stock', label: 'Stock actual', align: 'right', render: (product) => Number(product.stock_quantity || 0) },
+    { key: 'stock', label: 'Fisico', align: 'right', render: (product) => Number(product.stock_quantity || 0) },
+    { key: 'reserved', label: 'Reservado', align: 'right', render: (product) => Number(product.reserved_stock_quantity || 0) },
+    { key: 'available', label: 'Disponible', align: 'right', render: (product) => Number(product.available_stock_quantity ?? (Number(product.stock_quantity || 0) - Number(product.reserved_stock_quantity || 0))) },
     { key: 'min', label: 'Stock minimo', align: 'right', render: (product) => product.admin_details?.low_stock_threshold ?? 2 },
     { key: 'status', label: 'Estado', render: (product) => {
       const current = inventoryStatus(product)
@@ -200,7 +209,9 @@ export function InventoryAdmin() {
 
       <div className="ax-metric-grid">
         <AdminMetric label="Productos controlados" value={summary.controlled} />
-        <AdminMetric label="Unidades en stock" value={summary.units} />
+        <AdminMetric label="Stock fisico" value={summary.units} />
+        <AdminMetric label="Stock reservado" value={summary.reserved} />
+        <AdminMetric label="Disponible" value={summary.available} />
         <AdminMetric label="Stock bajo" value={summary.low} />
         <AdminMetric label="Agotados" value={summary.out} />
         <AdminMetric label="Valor aproximado" value={formatGs(summary.value)} featured />
@@ -249,7 +260,9 @@ export function InventoryAdmin() {
           </label>
           {selectedProduct && (
             <div className="ax-stock-preview">
-              <span>Stock actual: <strong>{Number(selectedProduct.stock_quantity || 0)}</strong></span>
+              <span>Fisico: <strong>{Number(selectedProduct.stock_quantity || 0)}</strong></span>
+              <span>Reservado: <strong>{Number(selectedProduct.reserved_stock_quantity || 0)}</strong></span>
+              <span>Disponible: <strong>{Number(selectedProduct.available_stock_quantity ?? (Number(selectedProduct.stock_quantity || 0) - Number(selectedProduct.reserved_stock_quantity || 0)))}</strong></span>
               {selectedProduct.admin_details?.track_inventory === false && <AdminStatusBadge>Sin control de inventario</AdminStatusBadge>}
             </div>
           )}
@@ -267,13 +280,15 @@ export function InventoryAdmin() {
           <label>Observacion opcional
             <textarea value={movementForm.notes} onChange={(event) => setMovementForm((prev) => ({ ...prev, notes: event.target.value }))} />
           </label>
-          <div className={`ax-stock-result ${nextStock < 0 ? 'danger' : ''}`}>
-            <span>Stock actual: {Number(selectedProduct?.stock_quantity || 0)}</span>
+          <div className={`ax-stock-result ${nextStock < 0 || nextAvailable < 0 ? 'danger' : ''}`}>
+            <span>Fisico actual: {Number(selectedProduct?.stock_quantity || 0)}</span>
+            <span>Reservado: {selectedReserved}</span>
             <span>Movimiento: {delta > 0 ? `+${delta}` : delta}</span>
-            <strong>Nuevo stock: {selectedProduct ? nextStock : '-'}</strong>
+            <strong>Nuevo disponible: {selectedProduct ? nextAvailable : '-'}</strong>
           </div>
           {movementForm.quantity && !movementQuantityIsInteger && <div className="error-box">La cantidad debe ser un numero entero.</div>}
           {nextStock < 0 && <div className="error-box">No se puede dejar stock negativo.</div>}
+          {nextAvailable < 0 && <div className="error-box">No se puede bajar el stock fisico por debajo de lo reservado.</div>}
           <button className="primary-button" type="submit" disabled={saving || movementBlocked}>{saving ? 'Guardando...' : 'Registrar movimiento'}</button>
         </form>
       </Drawer>

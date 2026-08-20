@@ -2,12 +2,13 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { AdminDataTable, AdminPageHeader, AdminStatusBadge, DateCell } from '../../components/AdminUX'
-import { getInventoryHistory, getInventoryProducts, movementTypeLabel } from '../../lib/adminInventoryApi'
+import { getInventoryHistory, getInventoryProducts, getProductReservations, movementTypeLabel } from '../../lib/adminInventoryApi'
 
 export function InventoryHistory() {
   const { productId } = useParams()
   const [product, setProduct] = useState(null)
   const [movements, setMovements] = useState([])
+  const [reservations, setReservations] = useState([])
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
 
@@ -15,12 +16,14 @@ export function InventoryHistory() {
     async function load() {
       try {
         setLoading(true)
-        const [products, rows] = await Promise.all([
+        const [products, rows, reservationRows] = await Promise.all([
           getInventoryProducts(),
-          getInventoryHistory(productId)
+          getInventoryHistory(productId),
+          getProductReservations(productId)
         ])
         setProduct(products.find((item) => item.id === productId) || rows[0]?.product || null)
         setMovements(rows)
+        setReservations(reservationRows)
       } catch (err) {
         setError(err.message || 'No se pudo cargar el historial.')
       } finally {
@@ -52,11 +55,28 @@ export function InventoryHistory() {
       {error && <div className="error-box">{error}</div>}
       {product && (
         <div className="ax-compact-summary">
-          <span>Stock actual <strong>{Number(product.stock_quantity || 0)}</strong></span>
+          <span>Fisico <strong>{Number(product.stock_quantity || 0)}</strong></span>
+          <span>Reservado <strong>{Number(product.reserved_stock_quantity || 0)}</strong></span>
+          <span>Disponible <strong>{Number(product.available_stock_quantity ?? (Number(product.stock_quantity || 0) - Number(product.reserved_stock_quantity || 0)))}</strong></span>
           <span>SKU <strong>{product.admin_details?.sku || '-'}</strong></span>
           <span>Control <strong>{product.admin_details?.track_inventory === false ? 'Desactivado' : 'Activo'}</strong></span>
           {product.admin_details?.track_inventory === false && <AdminStatusBadge>Sin control de inventario</AdminStatusBadge>}
         </div>
+      )}
+      {reservations.length > 0 && (
+        <section className="ax-panel-card">
+          <h2>Reservas activas</h2>
+          <div className="ax-reservation-list">
+            {reservations.map((reservation) => (
+              <div className="ax-reservation-row" key={reservation.id}>
+                <strong>{reservation.sale?.product_name_snapshot || reservation.sale_item?.product_name_snapshot || 'Venta'}</strong>
+                <span>{reservation.quantity} unidades reservadas</span>
+                <span>Estado venta: {reservation.sale?.status || '-'}</span>
+                <DateCell value={reservation.reserved_at} />
+              </div>
+            ))}
+          </div>
+        </section>
       )}
       <AdminDataTable
         columns={columns}
