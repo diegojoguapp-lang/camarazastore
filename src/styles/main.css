@@ -1689,6 +1689,56 @@ textarea:focus-visible {
 .ax-stock-result.danger strong {
   color: var(--admin-danger);
 }
+.ax-sale-items-list, .rx-sale-items-list {
+  display: grid;
+  gap: 10px;
+}
+.ax-sale-item-row {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) 84px minmax(130px, 160px) minmax(110px, 140px) minmax(110px, 140px) auto;
+  gap: 10px;
+  align-items: end;
+  border: 1px solid var(--admin-border);
+  border-radius: 12px;
+  background: var(--admin-surface);
+  padding: 10px;
+}
+.ax-sale-item-row > div:first-child {
+  display: grid;
+  gap: 3px;
+  align-self: center;
+}
+.ax-sale-item-row > div:first-child span,
+.ax-sale-item-row > div:first-child small {
+  color: var(--admin-text-secondary);
+  font-size: 12px;
+}
+.ax-sale-items-detail {
+  display: grid;
+  gap: 8px;
+}
+.ax-sale-items-detail > div {
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) repeat(5, auto);
+  gap: 10px;
+  align-items: center;
+  border-bottom: 1px solid var(--admin-border);
+  padding: 9px 0;
+}
+.ax-sale-items-detail > div > div {
+  display: grid;
+  gap: 2px;
+}
+.ax-sale-items-detail span {
+  color: var(--admin-text-secondary);
+  font-size: 12px;
+}
+@media (max-width: 860px) {
+  .ax-sale-item-row, .ax-sale-items-detail > div {
+    grid-template-columns: 1fr;
+    align-items: stretch;
+  }
+}
 .ax-modal-backdrop {
   position: fixed;
   inset: 0;

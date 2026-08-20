@@ -48,6 +48,20 @@ export function PanelSaleDetail() {
               <div className="rx-finance-row"><span>Fecha</span><strong>{formatDatePy(sale.delivered_at || sale.created_at)}</strong></div>
             </section>
 
+            {!!sale.items?.length && (
+              <section className="rx-section">
+                <div className="rx-section-head"><h2>Productos</h2></div>
+                <div className="rx-sale-items-list">
+                  {sale.items.map((item, index) => (
+                    <div key={`${item.product_name}-${index}`} className="rx-finance-row">
+                      <span>{item.quantity} x {item.product_name}{item.product_model ? ` ${item.product_model}` : ''}</span>
+                      <strong>{formatGs(item.line_subtotal)}</strong>
+                    </div>
+                  ))}
+                </div>
+              </section>
+            )}
+
             <section className="rx-section">
               <div className="rx-section-head"><h2>Seguimiento</h2></div>
               <OrderTimeline sale={sale} />

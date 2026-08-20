@@ -84,6 +84,7 @@ export async function getEligibleSalesForBatch(batch) {
       reseller:profiles(id,reseller_code,full_name,email,city)
     `)
     .eq('status', 'delivered_paid')
+    .eq('sale_type', 'reseller')
     .eq('commission_paid', false)
     .gte('delivered_at', `${batch.period_start}T00:00:00`)
     .lt('delivered_at', `${endExclusive.toISOString().slice(0, 10)}T00:00:00`)

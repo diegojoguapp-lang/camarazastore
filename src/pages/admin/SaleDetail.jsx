@@ -11,6 +11,14 @@ function DetailItem({ label, value }) {
   return <div><span>{label}</span><strong>{value || '-'}</strong></div>
 }
 
+function itemTotals(item) {
+  return {
+    subtotal: Number(item.line_subtotal || Number(item.unit_sale_price || 0) * Number(item.quantity || 0)),
+    cost: Number(item.line_cost_total || Number(item.unit_cost_snapshot || 0) * Number(item.quantity || 0)),
+    commission: Number(item.line_commission_total || Number(item.unit_commission_snapshot || 0) * Number(item.quantity || 0))
+  }
+}
+
 export function SaleDetail() {
   const { id } = useParams()
   const [sale, setSale] = useState(null)
@@ -91,12 +99,35 @@ export function SaleDetail() {
           </section>
 
           <section className="ax-panel">
-            <h2>Revendedor y producto</h2>
+            <h2>{sale.sale_type === 'direct' ? 'Tipo y productos' : 'Revendedor y productos'}</h2>
             <div className="ax-info-grid">
-              <DetailItem label="Revendedor" value={`${sale.reseller?.reseller_code || ''} ${sale.reseller?.full_name || ''}`} />
-              <DetailItem label="Producto" value={sale.product_name_snapshot} />
-              <DetailItem label="Modelo" value={sale.product_model_snapshot} />
-              <DetailItem label="Cantidad" value={sale.quantity} />
+              <DetailItem label="Tipo" value={sale.sale_type === 'direct' ? 'Cliente final' : 'Revendedor'} />
+              {sale.sale_type !== 'direct' && <DetailItem label="Revendedor" value={`${sale.reseller?.reseller_code || ''} ${sale.reseller?.full_name || ''}`} />}
+              <DetailItem label="Resumen" value={sale.product_name_snapshot} />
+              <DetailItem label="Cantidad total" value={sale.quantity} />
+            </div>
+          </section>
+
+          <section className="ax-panel">
+            <h2>Productos</h2>
+            <div className="ax-sale-items-detail">
+              {(sale.items || []).map((item) => {
+                const line = itemTotals(item)
+                return (
+                  <div key={item.id || `${item.product_id}-${item.sort_order}`}>
+                    <div>
+                      <strong>{item.product_name_snapshot}</strong>
+                      <span>{item.product_model_snapshot || '-'}</span>
+                    </div>
+                    <span>{item.quantity} x {formatGs(item.unit_sale_price)}</span>
+                    <span>Subtotal {formatGs(line.subtotal)}</span>
+                    <span>Costo {formatGs(line.cost)}</span>
+                    {sale.sale_type !== 'direct' && <span>Comision {formatGs(line.commission)}</span>}
+                    <strong>Ganancia {formatGs(line.subtotal - line.cost - line.commission)}</strong>
+                  </div>
+                )
+              })}
+              {!sale.items?.length && <p>No hay items cargados.</p>}
             </div>
           </section>
 
@@ -135,7 +166,7 @@ export function SaleDetail() {
             { label: 'Precio producto', value: <MoneyCell value={sale.product_sale_price} /> },
             { label: 'Costo producto', value: <MoneyCell value={sale.product_cost} /> },
             { label: 'Envio cobrado', value: <MoneyCell value={sale.delivery_charged} /> },
-            { label: 'Comision', value: <MoneyCell value={sale.reseller_commission} /> },
+            ...(sale.sale_type === 'direct' ? [] : [{ label: 'Comision', value: <MoneyCell value={sale.reseller_commission} /> }]),
             { label: 'Total cobrado', value: <MoneyCell value={sale.total_collected} /> },
             { label: 'Ganancia Camaraza', value: <span className={Number(sale.camaraza_net_profit || 0) < 0 ? 'ax-negative' : ''}>{formatGs(sale.camaraza_net_profit)}</span> }
           ]}

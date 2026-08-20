@@ -20,6 +20,7 @@ const emptyFaq = { question: '', answer: '' }
 const emptyAdminDetails = {
   sku: '',
   retail_price: '',
+  reseller_commission_amount: 0,
   supplier_id: '',
   track_inventory: true,
   low_stock_threshold: 2
@@ -107,6 +108,7 @@ export function ProductForm() {
           ...emptyAdminDetails,
           ...details,
           retail_price: details.retail_price ?? '',
+          reseller_commission_amount: details.reseller_commission_amount ?? 0,
           supplier_id: details.supplier_id || ''
         })
         setFaqs(parseFaqs(data.product.reseller_group_text))
@@ -146,6 +148,9 @@ export function ProductForm() {
       if (!Number.isFinite(retailPrice)) return 'El precio minorista debe ser numerico.'
       if (retailPrice < 0) return 'El precio minorista no puede ser negativo.'
     }
+    const resellerCommission = Number(adminDetails.reseller_commission_amount || 0)
+    if (!Number.isFinite(resellerCommission)) return 'La comision del revendedor debe ser numerica.'
+    if (resellerCommission < 0) return 'La comision del revendedor no puede ser negativa.'
     if (adminDetails.low_stock_threshold === '' || adminDetails.low_stock_threshold === null || adminDetails.low_stock_threshold === undefined) {
       return 'El stock minimo es obligatorio.'
     }
@@ -324,6 +329,7 @@ export function ProductForm() {
               </select>
             </label>
             <OptionalPriceInput label="Precio minorista" value={adminDetails.retail_price} onChange={(value) => setAdminField('retail_price', value)} />
+            <OptionalPriceInput label="Comision revendedor" value={adminDetails.reseller_commission_amount} onChange={(value) => setAdminField('reseller_commission_amount', value || 0)} />
             <label className="checkbox-label"><input type="checkbox" checked={adminDetails.track_inventory !== false} onChange={(event) => setAdminField('track_inventory', event.target.checked)} /> Controlar inventario</label>
             <label>Stock minimo
               <input type="number" min="0" step="1" value={adminDetails.low_stock_threshold ?? 2} onChange={(event) => setAdminField('low_stock_threshold', event.target.value)} />
@@ -414,6 +420,7 @@ export function ProductForm() {
             { label: 'Sugerido', value: <MoneyCell value={form.suggested_price} /> },
             { label: 'Posible ganancia', value: <MoneyCell value={profit} /> },
             { label: 'Precio minorista', value: adminDetails.retail_price ? <MoneyCell value={adminDetails.retail_price} /> : '-' },
+            { label: 'Comision revendedor', value: <MoneyCell value={adminDetails.reseller_commission_amount || 0} /> },
             { label: 'Stock', value: form.stock_quantity === '' ? 'Sin definir' : form.stock_quantity },
             { label: 'FAQs', value: faqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length }
           ]}

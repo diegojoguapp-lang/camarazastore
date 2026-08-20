@@ -108,7 +108,7 @@ export function PanelSales() {
                     {sales.map((sale) => (
                       <tr key={sale.id}>
                         <td>{formatDatePy(sale.delivered_at || sale.created_at)}</td>
-                        <td><strong>{sale.product_name_snapshot}</strong></td>
+                        <td><strong>{sale.product_name_snapshot}</strong><span>{Number(sale.quantity || 0)} unidades</span></td>
                         <td>{sale.customer_name} <span>{sale.customer_phone_masked}</span></td>
                         <td><StatusBadge status={sale.status} /></td>
                         <td>{formatGs(sale.product_sale_price)}</td>

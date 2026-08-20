@@ -26,7 +26,8 @@ function normalizeSale(row) {
     customer_phone_masked: row.customer_phone_masked,
     customer_city: row.customer_city,
     commission_paid: row.commission_paid,
-    commission_paid_at: row.commission_paid_at
+    commission_paid_at: row.commission_paid_at,
+    items: Array.isArray(row.items) ? row.items : []
   }
 }
 

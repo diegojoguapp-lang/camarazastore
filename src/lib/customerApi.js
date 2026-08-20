@@ -47,13 +47,15 @@ export async function getCustomerByPhone(phone) {
     .select(CUSTOMER_FIELDS)
     .eq('normalized_phone', normalized)
     .order('created_at', { ascending: false })
-    .limit(5)
+    .limit(1)
   if (error) throw error
-  return data || []
+  return data?.[0] || null
 }
 
 export async function createCustomer(payload) {
   requireSupabase()
+  const existing = await getCustomerByPhone(payload.phone || payload.normalized_phone)
+  if (existing?.id) return existing
   const clean = {
     ...payload,
     full_name: payload.full_name?.trim(),
@@ -68,7 +70,13 @@ export async function createCustomer(payload) {
     requires_advance_payment: Boolean(payload.requires_advance_payment)
   }
   const { data, error } = await supabase.from('customers').insert(clean).select(CUSTOMER_FIELDS).maybeSingle()
-  if (error) throw error
+  if (error) {
+    if (error.message?.includes('customers_normalized_phone_unique_idx')) {
+      const existingAfterConflict = await getCustomerByPhone(clean.phone || clean.normalized_phone)
+      if (existingAfterConflict?.id) return existingAfterConflict
+    }
+    throw error
+  }
   if (!data?.id) throw new Error('El cliente se guardo, pero Supabase no devolvio el registro. Revisa permisos SELECT/RLS.')
   return data
 }

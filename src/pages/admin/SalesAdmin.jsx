@@ -47,6 +47,15 @@ function monthStartISO() {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-01`
 }
 
+function saleTypeLabel(sale) {
+  return sale.sale_type === 'direct' ? 'Cliente final' : 'Revendedor'
+}
+
+function unitsLabel(sale) {
+  const units = Number(sale.quantity || 0)
+  return units === 1 ? '1 unidad' : `${units} unidades`
+}
+
 export function SalesAdmin() {
   const [sales, setSales] = useState([])
   const [resellers, setResellers] = useState([])
@@ -146,8 +155,9 @@ export function SalesAdmin() {
   const columns = [
     { key: 'date', label: 'Fecha', render: (sale) => formatDatePy(sale.created_at) },
     { key: 'customer', label: 'Cliente', render: (sale) => sale.customer?.full_name || '-' },
-    { key: 'product', label: 'Producto', render: (sale) => <strong>{sale.product_name_snapshot}</strong> },
-    { key: 'reseller', label: 'Revendedor', render: (sale) => `${sale.reseller?.reseller_code || '-'} ${sale.reseller?.full_name || ''}` },
+    { key: 'type', label: 'Tipo', render: (sale) => saleTypeLabel(sale) },
+    { key: 'product', label: 'Productos', render: (sale) => <div><strong>{sale.product_name_snapshot}</strong><span>{unitsLabel(sale)}</span></div> },
+    { key: 'reseller', label: 'Revendedor', render: (sale) => sale.sale_type === 'direct' ? '-' : `${sale.reseller?.reseller_code || '-'} ${sale.reseller?.full_name || ''}` },
     { key: 'status', label: 'Estado', render: (sale) => <span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span> },
     { key: 'price', label: 'Precio', align: 'right', render: (sale) => <MoneyCell value={sale.product_sale_price} /> },
     { key: 'commission', label: 'Comision', align: 'right', render: (sale) => <MoneyCell value={sale.reseller_commission} /> },

@@ -1,6 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { getCurrentSession } from './roles'
-import { calculateSaleTotals } from './salesConstants'
 
 function requireSupabase() {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
@@ -10,7 +9,8 @@ const SALE_SELECT = `
   *,
   customer:customers(id,full_name,phone,city,neighborhood,address,map_url,reference,requires_advance_payment,notes),
   reseller:profiles(id,reseller_code,full_name,email,city),
-  product:products(id,name,model,main_image_url)
+  product:products(id,name,model,main_image_url),
+  items:sale_items(*)
 `
 
 function cleanNumber(value) {
@@ -23,37 +23,34 @@ function cleanEnum(value, allowed, fallback) {
 }
 
 function cleanSalePayload(payload) {
-  const totals = calculateSaleTotals(payload)
   const status = payload.status || 'pending_contact'
+  const items = (payload.items || []).map((item, index) => ({
+    product_id: item.product_id,
+    quantity: Math.max(Number(item.quantity || 1), 1),
+    unit_sale_price: cleanNumber(item.unit_sale_price),
+    sort_order: index
+  }))
   return {
+    sale_type: payload.sale_type || 'reseller',
     reseller_id: payload.reseller_id,
     customer_id: payload.customer_id,
-    product_id: payload.product_id || null,
-    product_name_snapshot: payload.product_name_snapshot?.trim(),
-    product_model_snapshot: payload.product_model_snapshot?.trim() || null,
-    quantity: Math.max(Number(payload.quantity || 1), 1),
+    items,
     status,
     admin_notes: payload.admin_notes?.trim() || null,
     reseller_visible_notes: payload.reseller_visible_notes?.trim() || null,
-    product_sale_price: cleanNumber(payload.product_sale_price),
-    product_cost: cleanNumber(payload.product_cost),
     delivery_charged: cleanNumber(payload.delivery_charged),
-    delivery_cost: 0,
-    reseller_commission: cleanNumber(payload.reseller_commission),
-    other_costs: 0,
-    total_collected: totals.total_collected,
-    camaraza_net_profit: totals.camaraza_net_profit,
     delivery_city: payload.delivery_city?.trim() || null,
-    delivery_neighborhood: null,
-    delivery_address: null,
-    delivery_map_url: null,
     delivery_reference: payload.delivery_reference?.trim() || null,
     delivery_schedule: payload.delivery_schedule?.trim() || null,
     fulfillment_type: cleanEnum(payload.fulfillment_type, ['delivery', 'transportadora'], 'delivery'),
     payment_method: cleanEnum(payload.payment_method, ['cash', 'transfer', 'card'], 'cash'),
-    payment_timing: cleanEnum(payload.payment_timing, ['on_delivery', 'prepaid'], 'on_delivery'),
-    amount_received: status === 'delivered_paid' ? totals.total_collected : 0
+    payment_timing: cleanEnum(payload.payment_timing, ['on_delivery', 'prepaid'], 'on_delivery')
   }
+}
+
+function normalizeSale(row) {
+  const items = [...(row.items || [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
+  return { ...row, items }
 }
 
 export async function getAdminSales(filters = {}) {
@@ -65,18 +62,29 @@ export async function getAdminSales(filters = {}) {
 
   if (filters.status) query = query.eq('status', filters.status)
   if (filters.reseller_id) query = query.eq('reseller_id', filters.reseller_id)
-  if (filters.product_id) query = query.eq('product_id', filters.product_id)
   if (filters.date_from) query = query.gte('created_at', `${filters.date_from}T00:00:00`)
   if (filters.date_to) query = query.lte('created_at', `${filters.date_to}T23:59:59`)
 
   const { data, error } = await query
   if (error) throw error
 
+  let productSaleIds = null
+  if (filters.product_id) {
+    const { data: itemRows, error: itemError } = await supabase
+      .from('sale_items')
+      .select('sale_id')
+      .eq('product_id', filters.product_id)
+    if (itemError) throw itemError
+    productSaleIds = new Set((itemRows || []).map((item) => item.sale_id))
+  }
+
   const search = String(filters.search || '').trim().toLowerCase()
   const city = String(filters.city || '').trim().toLowerCase()
-  return (data || []).filter((sale) => {
+  return (data || []).map(normalizeSale).filter((sale) => {
+    if (productSaleIds && !productSaleIds.has(sale.id)) return false
     const haystack = [
       sale.product_name_snapshot,
+      ...(sale.items || []).map((item) => item.product_name_snapshot),
       sale.customer?.full_name,
       sale.customer?.phone,
       sale.reseller?.full_name,
@@ -96,7 +104,7 @@ export async function getAdminSaleById(id) {
     .maybeSingle()
   if (error) throw error
   if (!data) throw new Error('Venta no encontrada o no visible para el admin.')
-  return data
+  return normalizeSale(data)
 }
 
 export async function getSaleEvents(saleId) {
@@ -116,23 +124,54 @@ export async function createSale(payload) {
   const createdBy = session?.user?.id
   if (!createdBy) throw new Error('Sesion no valida.')
 
-  const clean = {
-    ...cleanSalePayload(payload),
-    created_by: createdBy
-  }
-  const { data, error } = await supabase.from('sales').insert(clean).select('id').maybeSingle()
+  const clean = cleanSalePayload(payload)
+  if (!clean.items.length) throw new Error('Agrega al menos un producto.')
+  const { data, error } = await supabase.rpc('admin_save_sale', {
+    p_sale_id: null,
+    p_sale_type: clean.sale_type,
+    p_customer_id: clean.customer_id,
+    p_reseller_id: clean.sale_type === 'direct' ? null : clean.reseller_id,
+    p_items: clean.items,
+    p_status: clean.status,
+    p_delivery_charged: clean.delivery_charged,
+    p_delivery_city: clean.delivery_city,
+    p_delivery_reference: clean.delivery_reference,
+    p_delivery_schedule: clean.delivery_schedule,
+    p_fulfillment_type: clean.fulfillment_type,
+    p_payment_method: clean.payment_method,
+    p_payment_timing: clean.payment_timing,
+    p_admin_notes: clean.admin_notes,
+    p_reseller_visible_notes: clean.reseller_visible_notes
+  })
   if (error) throw error
-  if (!data?.id) throw new Error('La venta se guardo, pero Supabase no devolvio el registro. Revisa permisos SELECT/RLS.')
-  return data
+  if (!data) throw new Error('La venta se guardo, pero Supabase no devolvio el registro.')
+  return { id: data }
 }
 
 export async function updateSale(id, payload) {
   requireSupabase()
   const clean = cleanSalePayload(payload)
-  const { data, error } = await supabase.from('sales').update(clean).eq('id', id).select('id').maybeSingle()
+  if (!clean.items.length) throw new Error('Agrega al menos un producto.')
+  const { data, error } = await supabase.rpc('admin_save_sale', {
+    p_sale_id: id,
+    p_sale_type: clean.sale_type,
+    p_customer_id: clean.customer_id,
+    p_reseller_id: clean.sale_type === 'direct' ? null : clean.reseller_id,
+    p_items: clean.items,
+    p_status: clean.status,
+    p_delivery_charged: clean.delivery_charged,
+    p_delivery_city: clean.delivery_city,
+    p_delivery_reference: clean.delivery_reference,
+    p_delivery_schedule: clean.delivery_schedule,
+    p_fulfillment_type: clean.fulfillment_type,
+    p_payment_method: clean.payment_method,
+    p_payment_timing: clean.payment_timing,
+    p_admin_notes: clean.admin_notes,
+    p_reseller_visible_notes: clean.reseller_visible_notes
+  })
   if (error) throw error
-  if (!data?.id) throw new Error('No se pudo confirmar la venta actualizada. Revisa que exista y que el admin pueda leerla.')
-  return data
+  if (!data) throw new Error('No se pudo confirmar la venta actualizada.')
+  return { id: data }
 }
 
 export async function updateSaleStatus(id, status, notes = '') {

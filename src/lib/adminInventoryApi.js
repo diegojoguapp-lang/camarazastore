@@ -88,7 +88,7 @@ export async function getInventoryProducts() {
       .order('name', { ascending: true }),
     supabase
       .from('product_admin_details')
-      .select('product_id,sku,retail_price,supplier_id,track_inventory,low_stock_threshold,updated_at'),
+      .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,updated_at'),
     supabase
       .from('suppliers')
       .select('id,name,is_active')
@@ -107,6 +107,7 @@ export async function getInventoryProducts() {
       product_id: product.id,
       sku: '',
       retail_price: null,
+      reseller_commission_amount: 0,
       supplier_id: null,
       track_inventory: true,
       low_stock_threshold: 2
@@ -146,6 +147,7 @@ export async function getProductAdminDetails(productId) {
     product_id: productId,
     sku: '',
     retail_price: null,
+    reseller_commission_amount: 0,
     supplier_id: null,
     track_inventory: true,
     low_stock_threshold: 2
@@ -159,6 +161,7 @@ export async function saveProductAdminDetails(productId, payload) {
     product_id: productId,
     sku: normalizeSku(payload.sku),
     retail_price: normalizeMoney(payload.retail_price),
+    reseller_commission_amount: normalizeMoney(payload.reseller_commission_amount) ?? 0,
     supplier_id: payload.supplier_id || null,
     track_inventory: payload.track_inventory !== false,
     low_stock_threshold: lowStockThreshold,
