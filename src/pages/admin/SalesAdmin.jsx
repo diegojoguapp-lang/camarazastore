@@ -8,7 +8,7 @@ import { getFinancialAccounts } from '../../lib/adminFinanceApi'
 import { getResellers } from '../../lib/resellerApi'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
-import { SALE_STATUSES, saleStatusLabel } from '../../lib/salesConstants'
+import { saleStatusLabel } from '../../lib/salesConstants'
 
 const emptyFilters = {
   date_from: '',
@@ -29,6 +29,7 @@ const quickFilters = [
   ['out_for_delivery', 'En reparto'],
   ['delivered_paid', 'Entregadas']
 ]
+const OPERATIONAL_STATUSES = ['confirmed', 'out_for_delivery', 'delivered_paid', 'cancelled']
 
 function dateISO(offset = 0) {
   const date = new Date()
@@ -207,7 +208,7 @@ export function SalesAdmin() {
         <form className="ax-filter-drawer" onSubmit={submitFilters}>
           <label>Desde<input type="date" value={filters.date_from} onChange={(e) => setFilter('date_from', e.target.value)} /></label>
           <label>Hasta<input type="date" value={filters.date_to} onChange={(e) => setFilter('date_to', e.target.value)} /></label>
-          <label>Estado<select value={filters.status} onChange={(e) => setFilter('status', e.target.value)}><option value="">Todos</option>{SALE_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
+          <label>Estado<select value={filters.status} onChange={(e) => setFilter('status', e.target.value)}><option value="">Todos</option>{OPERATIONAL_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
           <label>Revendedor<select value={filters.reseller_id} onChange={(e) => setFilter('reseller_id', e.target.value)}><option value="">Todos</option>{resellers.map((item) => <option key={item.id} value={item.id}>{item.reseller_code} - {item.full_name}</option>)}</select></label>
           <label>Producto<select value={filters.product_id} onChange={(e) => setFilter('product_id', e.target.value)}><option value="">Todos</option>{products.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>Ciudad<input value={filters.city} onChange={(e) => setFilter('city', e.target.value)} /></label>
@@ -238,7 +239,8 @@ export function SalesAdmin() {
             </div>
             <label>Nuevo estado
               <select value={nextStatus} onChange={(event) => setNextStatus(event.target.value)} autoFocus>
-                {SALE_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}
+                {OPERATIONAL_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}
+                {statusModalSale.status === 'delivered_paid' && <option value="returned">Registrar devolucion</option>}
               </select>
             </label>
             {nextStatus === 'delivered_paid' && statusModalSale.status !== 'delivered_paid' && (

@@ -19,22 +19,27 @@ function cleanNumber(value) {
   return Number.isFinite(number) && number >= 0 ? number : 0
 }
 
+function uuidOrNull(value) {
+  const clean = String(value || '').trim()
+  return clean || null
+}
+
 function cleanEnum(value, allowed, fallback) {
   return allowed.includes(value) ? value : fallback
 }
 
 function cleanSalePayload(payload) {
-  const status = payload.status || 'pending_contact'
+  const status = payload.status || 'confirmed'
   const items = (payload.items || []).map((item, index) => ({
-    product_id: item.product_id,
+    product_id: uuidOrNull(item.product_id),
     quantity: Math.max(Number(item.quantity || 1), 1),
     unit_sale_price: cleanNumber(item.unit_sale_price),
     sort_order: index
   }))
   return {
     sale_type: payload.sale_type || 'reseller',
-    reseller_id: payload.reseller_id,
-    customer_id: payload.customer_id,
+    reseller_id: uuidOrNull(payload.reseller_id),
+    customer_id: uuidOrNull(payload.customer_id),
     items,
     status,
     admin_notes: payload.admin_notes?.trim() || null,
@@ -43,10 +48,24 @@ function cleanSalePayload(payload) {
     delivery_city: payload.delivery_city?.trim() || null,
     delivery_reference: payload.delivery_reference?.trim() || null,
     delivery_schedule: payload.delivery_schedule?.trim() || null,
-    fulfillment_type: cleanEnum(payload.fulfillment_type, ['delivery', 'transportadora'], 'delivery'),
+    fulfillment_type: cleanEnum(payload.fulfillment_type, ['delivery', 'shipping', 'pickup', 'transportadora'], 'delivery'),
     payment_method: cleanEnum(payload.payment_method, ['cash', 'transfer', 'qr', 'card', 'other'], 'cash'),
-    payment_timing: cleanEnum(payload.payment_timing, ['on_delivery', 'prepaid'], 'on_delivery')
+    payment_timing: cleanEnum(payload.payment_timing, ['on_delivery', 'prepaid'], 'on_delivery'),
+    customer_name: payload.customer_name?.trim() || null,
+    customer_phone: payload.customer_phone?.trim() || null,
+    customer_document: payload.customer_document?.trim() || null,
+    shipping_carrier_name: payload.shipping_carrier_name?.trim() || null
   }
+}
+
+function readableSaleError(error) {
+  const message = error?.message || ''
+  if (message.includes('invalid input syntax for type uuid')) return new Error('Hay un campo sin seleccionar. Revisá revendedor, cliente, producto o cuenta antes de guardar.')
+  if (message.includes('precio de venta no puede ser menor')) return new Error(message)
+  if (message.includes('Reseller sale requires an active reseller')) return new Error('Selecciona un revendedor activo.')
+  if (message.includes('Customer name is required')) return new Error('El nombre del cliente es obligatorio.')
+  if (message.includes('At least one sale item')) return new Error('Agrega al menos un producto.')
+  return error
 }
 
 function normalizeSale(row) {
@@ -142,9 +161,13 @@ export async function createSale(payload) {
     p_payment_method: clean.payment_method,
     p_payment_timing: clean.payment_timing,
     p_admin_notes: clean.admin_notes,
-    p_reseller_visible_notes: clean.reseller_visible_notes
+    p_reseller_visible_notes: clean.reseller_visible_notes,
+    p_customer_name: clean.customer_name,
+    p_customer_phone: clean.customer_phone,
+    p_customer_document: clean.customer_document,
+    p_shipping_carrier_name: clean.shipping_carrier_name
   })
-  if (error) throw error
+  if (error) throw readableSaleError(error)
   if (!data) throw new Error('La venta se guardo, pero Supabase no devolvio el registro.')
   return { id: data }
 }
@@ -168,9 +191,13 @@ export async function updateSale(id, payload) {
     p_payment_method: clean.payment_method,
     p_payment_timing: clean.payment_timing,
     p_admin_notes: clean.admin_notes,
-    p_reseller_visible_notes: clean.reseller_visible_notes
+    p_reseller_visible_notes: clean.reseller_visible_notes,
+    p_customer_name: clean.customer_name,
+    p_customer_phone: clean.customer_phone,
+    p_customer_document: clean.customer_document,
+    p_shipping_carrier_name: clean.shipping_carrier_name
   })
-  if (error) throw error
+  if (error) throw readableSaleError(error)
   if (!data) throw new Error('No se pudo confirmar la venta actualizada.')
   return { id: data }
 }
@@ -179,13 +206,13 @@ export async function updateSaleStatus(id, status, notes = '') {
   requireSupabase()
   const cleanNotes = typeof notes === 'string' ? notes.trim() : notes?.notes?.trim()
   const { data, error } = await supabase.rpc('admin_transition_sale_status', {
-    p_sale_id: id,
+    p_sale_id: uuidOrNull(id),
     p_status: status,
     p_notes: cleanNotes || null,
-    p_financial_account_id: notes?.financial_account_id || null,
+    p_financial_account_id: uuidOrNull(notes?.financial_account_id),
     p_payment_method: notes?.payment_method || null
   })
-  if (error) throw error
+  if (error) throw readableSaleError(error)
   const row = Array.isArray(data) ? data[0] : data
   if (!row?.id) throw new Error('No se pudo confirmar el cambio de estado. Revisa que la venta exista y sea visible para el admin.')
   return row

@@ -10,6 +10,11 @@ function money(value) {
   return number
 }
 
+function uuidOrNull(value) {
+  const clean = String(value || '').trim()
+  return clean || null
+}
+
 export async function getFinancialDashboard() {
   requireSupabase()
   const { data, error } = await supabase.rpc('get_admin_finance_dashboard')
@@ -27,7 +32,7 @@ export async function getFinancialAccounts() {
 export async function saveFinancialAccount(payload) {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_save_financial_account', {
-    p_account_id: payload.id || null,
+    p_account_id: uuidOrNull(payload.id),
     p_name: payload.name?.trim(),
     p_account_type: payload.account_type || 'cash',
     p_bank_name: payload.bank_name?.trim() || null,
@@ -69,7 +74,7 @@ export async function getFinancialMovements(filters = {}) {
 export async function createManualMovement(payload) {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_create_financial_movement', {
-    p_account_id: payload.account_id,
+    p_account_id: uuidOrNull(payload.account_id),
     p_direction: payload.direction,
     p_amount: money(payload.amount),
     p_description: payload.description?.trim(),
@@ -84,8 +89,8 @@ export async function createManualMovement(payload) {
 export async function createAccountTransfer(payload) {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_create_account_transfer', {
-    p_from_account_id: payload.from_account_id,
-    p_to_account_id: payload.to_account_id,
+    p_from_account_id: uuidOrNull(payload.from_account_id),
+    p_to_account_id: uuidOrNull(payload.to_account_id),
     p_amount: money(payload.amount),
     p_description: payload.description?.trim() || null,
     p_occurred_at: payload.occurred_at ? new Date(payload.occurred_at).toISOString() : null
@@ -98,7 +103,7 @@ export async function getCashSessions() {
   requireSupabase()
   const { data, error } = await supabase
     .from('cash_sessions')
-    .select('*,account:financial_accounts(id,name)')
+    .select('*,account:financial_accounts(id,name,current_balance)')
     .order('opened_at', { ascending: false })
     .limit(100)
   if (error) throw error
@@ -108,7 +113,7 @@ export async function getCashSessions() {
 export async function openCashSession(payload) {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_open_cash_session', {
-    p_financial_account_id: payload.financial_account_id,
+    p_financial_account_id: uuidOrNull(payload.financial_account_id),
     p_counted_balance: money(payload.counted_balance),
     p_register_difference: Boolean(payload.register_difference),
     p_notes: payload.notes?.trim() || null
@@ -120,7 +125,7 @@ export async function openCashSession(payload) {
 export async function closeCashSession(payload) {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_close_cash_session', {
-    p_session_id: payload.session_id,
+    p_session_id: uuidOrNull(payload.session_id),
     p_counted_balance: money(payload.counted_balance),
     p_register_difference: Boolean(payload.register_difference),
     p_notes: payload.notes?.trim() || null

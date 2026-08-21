@@ -10,6 +10,11 @@ function positive(value, label = 'El monto') {
   return number
 }
 
+function uuidOrNull(value) {
+  const clean = String(value || '').trim()
+  return clean || null
+}
+
 export async function getExpenseCategories({ includeInactive = false } = {}) {
   requireSupabase()
   let query = supabase.from('expense_categories').select('*').order('sort_order').order('name')
@@ -63,8 +68,8 @@ export async function getExpenses(filters = {}) {
 export async function createExpense(payload) {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_create_expense', {
-    p_category_id: payload.category_id,
-    p_account_id: payload.account_id,
+    p_category_id: uuidOrNull(payload.category_id),
+    p_account_id: uuidOrNull(payload.account_id),
     p_description: payload.description?.trim(),
     p_amount: positive(payload.amount),
     p_expense_date: payload.expense_date || null,
@@ -77,7 +82,7 @@ export async function createExpense(payload) {
 export async function cancelExpense(id, notes = '') {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_cancel_expense', {
-    p_expense_id: id,
+    p_expense_id: uuidOrNull(id),
     p_notes: notes?.trim() || null
   })
   if (error) throw error

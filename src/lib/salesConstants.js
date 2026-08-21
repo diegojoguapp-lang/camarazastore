@@ -11,9 +11,9 @@ export const SALE_STATUSES = [
 
 export const SALE_STATUS_LABELS = {
   pending_contact: 'Pendiente de coordinacion',
-  confirmed: 'Coordinado con el cliente',
+  confirmed: 'Coordinado',
   preparing: 'Preparando pedido',
-  out_for_delivery: 'Entrega en curso',
+  out_for_delivery: 'Pedido en camino',
   delivered_paid: 'Entregado y cobrado',
   cancelled: 'Cancelado',
   failed_delivery: 'Entrega fallida',
@@ -38,7 +38,9 @@ export const PAYMENT_TIMING_LABELS = {
 
 export const FULFILLMENT_TYPE_LABELS = {
   delivery: 'Delivery',
-  transportadora: 'Transportadora'
+  shipping: 'Encomienda',
+  transportadora: 'Encomienda',
+  pickup: 'Pasa a buscar'
 }
 
 export function saleStatusLabel(status) {

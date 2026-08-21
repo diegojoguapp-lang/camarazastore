@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout, AdminLayout } from './components/Layout'
-import { AdminRoute, CatalogRoute, ResellerRoute } from './components/ProtectedRoute'
+import { AdminRoute, ResellerRoute } from './components/ProtectedRoute'
 
 function lazyNamed(loader, exportName) {
   return lazy(() => loader().then((module) => ({ default: module[exportName] })))
@@ -66,9 +66,6 @@ function Admin({ children }) {
 function Panel({ children }) {
   return <ResellerRoute>{children}</ResellerRoute>
 }
-function PrivateCatalog({ children }) {
-  return <CatalogRoute><Layout>{children}</Layout></CatalogRoute>
-}
 
 function RouteFallback() {
   return <div className="page"><div className="container"><div className="ds-skeleton-card"><span /><strong /><p /></div></div></div>
@@ -81,8 +78,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/reventa" element={<Public><Reventa /></Public>} />
-          <Route path="/catalogo" element={<PrivateCatalog><Catalogo /></PrivateCatalog>} />
-          <Route path="/producto/:slug" element={<PrivateCatalog><ProductDetail /></PrivateCatalog>} />
+          <Route path="/catalogo" element={<Public><Catalogo /></Public>} />
+          <Route path="/producto/:slug" element={<Public><ProductDetail /></Public>} />
           <Route path="/materiales" element={<Public><Materiales /></Public>} />
           <Route path="/ayuda" element={<Public><Ayuda /></Public>} />
           <Route path="/reglas" element={<Public><Reglas /></Public>} />

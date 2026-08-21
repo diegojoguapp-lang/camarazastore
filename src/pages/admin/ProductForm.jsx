@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageHeader, MoneyCell, StickySummary } from '../../components/AdminUX'
 import { createProduct, getProductById, updateProduct } from '../../lib/api'
-import { getProductAdminDetails, getSuppliers, saveProductAdminDetails } from '../../lib/adminInventoryApi'
+import { createInventoryMovement, getProductAdminDetails, getSuppliers, saveProductAdminDetails, saveSupplier } from '../../lib/adminInventoryApi'
 import { calculateProfit, formatGs, imageFallback, slugify } from '../../lib/utils'
 
 const initial = {
@@ -13,7 +13,8 @@ const initial = {
   warranty: '48 horas por falla de fábrica', return_policy: '',
   long_description: '', whatsapp_status_text: '', marketplace_text: '',
   reseller_group_text: '', custom_whatsapp_message: '', drive_link: '', video_url: '', main_image_url: '',
-  is_featured: false, sort_priority: 0
+  is_featured: false, sort_priority: 0,
+  initial_stock: ''
 }
 
 const emptyFaq = { question: '', answer: '' }
@@ -92,6 +93,9 @@ export function ProductForm() {
   const [imageReplacements, setImageReplacements] = useState({})
   const [suppliers, setSuppliers] = useState([])
   const [adminDetails, setAdminDetails] = useState(emptyAdminDetails)
+  const [supplierModalOpen, setSupplierModalOpen] = useState(false)
+  const [supplierForm, setSupplierForm] = useState({ name: '', contact_name: '', phone: '', email: '', city: '' })
+  const [stockAdjustValue, setStockAdjustValue] = useState('')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -112,6 +116,7 @@ export function ProductForm() {
           reserved_stock_quantity: data.product.reserved_stock_quantity ?? 0,
           available_stock_quantity: data.product.available_stock_quantity ?? ((data.product.stock_quantity ?? 0) - (data.product.reserved_stock_quantity ?? 0))
         })
+        setStockAdjustValue(String(data.product.stock_quantity ?? 0))
         setAdminDetails({
           ...emptyAdminDetails,
           ...details,
@@ -153,6 +158,7 @@ export function ProductForm() {
   const setAdminField = (name, value) => setAdminDetails((prev) => ({ ...prev, [name]: value }))
 
   const validateAdminDetails = () => {
+    if (!adminDetails.sku?.trim()) return 'El codigo de producto es obligatorio.'
     if (adminDetails.retail_price !== '' && adminDetails.retail_price !== null && adminDetails.retail_price !== undefined) {
       const retailPrice = Number(adminDetails.retail_price)
       if (!Number.isFinite(retailPrice)) return 'El precio minorista debe ser numerico.'
@@ -170,6 +176,11 @@ export function ProductForm() {
     const threshold = Number(adminDetails.low_stock_threshold)
     if (!Number.isFinite(threshold) || !Number.isInteger(threshold)) return 'El stock minimo debe ser un numero entero.'
     if (threshold < 0) return 'El stock minimo no puede ser negativo.'
+    if (!editing && form.initial_stock !== '' && form.initial_stock !== null && form.initial_stock !== undefined) {
+      const initialStock = Number(form.initial_stock)
+      if (!Number.isFinite(initialStock) || !Number.isInteger(initialStock)) return 'El stock inicial debe ser un numero entero.'
+      if (initialStock < 0) return 'El stock inicial no puede ser negativo.'
+    }
     return ''
   }
 
@@ -205,12 +216,11 @@ export function ProductForm() {
       }
 
       const cleanFaqs = faqs.filter((faq) => faq.question.trim() && faq.answer.trim())
-      if (!adminDetails.publish_to_retail && !adminDetails.publish_to_resellers) {
-        const confirmed = window.confirm('Este producto quedara oculto en cliente final y revendedores. Queres guardarlo igual?')
-        if (!confirmed) return
-      }
       const productFields = { ...form }
       delete productFields.short_description
+      delete productFields.initial_stock
+      delete productFields.reserved_stock_quantity
+      delete productFields.available_stock_quantity
       const payload = {
         ...productFields,
         category: null,
@@ -239,6 +249,17 @@ export function ProductForm() {
         savedProduct = await createProduct(payload, { main: mainFile, gallery: galleryFiles })
         try {
           await saveProductAdminDetails(savedProduct.id, adminDetails)
+          const initialStock = Number(form.initial_stock || 0)
+          if (initialStock > 0 && adminDetails.track_inventory !== false) {
+            await createInventoryMovement({
+              product_id: savedProduct.id,
+              movement_type: 'opening_balance',
+              quantity: initialStock,
+              reason: 'Stock inicial',
+              notes: 'Creado desde formulario de producto',
+              unit_cost_snapshot: form.cost_price
+            })
+          }
         } catch {
           setError(internalDetailsError)
           window.alert(internalDetailsError)
@@ -280,6 +301,58 @@ export function ProductForm() {
       return next
     })
     if (file) setDeleteImages((prev) => prev.filter((item) => item !== imageId))
+  }
+
+  const createSupplierInline = async (event) => {
+    event.preventDefault()
+    try {
+      const supplier = await saveSupplier(supplierForm)
+      const supplierRows = await getSuppliers()
+      setSuppliers(supplierRows)
+      setAdminField('supplier_id', supplier.id)
+      setSupplierForm({ name: '', contact_name: '', phone: '', email: '', city: '' })
+      setSupplierModalOpen(false)
+    } catch (err) {
+      setError(err.message || 'No se pudo crear el proveedor.')
+    }
+  }
+
+  const adjustPhysicalStock = async () => {
+    const target = Number(stockAdjustValue)
+    const current = Number(form.stock_quantity || 0)
+    const reserved = Number(form.reserved_stock_quantity || 0)
+    if (!Number.isFinite(target) || !Number.isInteger(target) || target < 0) {
+      setError('El stock fisico real debe ser un numero entero no negativo.')
+      return
+    }
+    if (target < reserved) {
+      setError('No podes ajustar el stock fisico por debajo del stock reservado.')
+      return
+    }
+    const delta = target - current
+    if (delta === 0) {
+      setError('El stock fisico real es igual al actual.')
+      return
+    }
+    try {
+      setError('')
+      const movement = await createInventoryMovement({
+        product_id: id,
+        movement_type: delta > 0 ? 'adjustment_in' : 'adjustment_out',
+        quantity: Math.abs(delta),
+        reason: 'Ajuste desde producto',
+        notes: `Stock fisico real: ${target}`,
+        unit_cost_snapshot: form.cost_price
+      })
+      const stockAfter = Number(movement?.stock_after ?? target)
+      setForm((prev) => ({
+        ...prev,
+        stock_quantity: stockAfter,
+        available_stock_quantity: stockAfter - Number(prev.reserved_stock_quantity || 0)
+      }))
+    } catch (err) {
+      setError(err.message || 'No se pudo ajustar el stock.')
+    }
   }
 
   return (
@@ -326,26 +399,27 @@ export function ProductForm() {
           <h2>Precios</h2>
           <div className="form-grid">
             <PriceInput label="Costo" value={form.cost_price} onChange={(value) => setField('cost_price', value)} />
-            <PriceInput label="Precio mayorista" value={form.wholesale_price} onChange={(value) => setField('wholesale_price', value)} required />
+            <PriceInput label="Precio mayorista / Precio revendedor" value={form.wholesale_price} onChange={(value) => setField('wholesale_price', value)} required />
             <PriceInput label="Precio sugerido" value={form.suggested_price} onChange={(value) => setField('suggested_price', value)} required />
+            <OptionalPriceInput label="Precio minorista" value={adminDetails.retail_price} onChange={(value) => setAdminField('retail_price', value)} />
             <div className="calculated-box"><span>Posible ganancia</span><strong>{formatGs(profit)}</strong></div>
           </div>
+          <p className="ax-help-text">Precio mostrado en Camaraza Store para cliente final.</p>
         </section>
 
         <section className="form-section">
           <h2>Datos internos</h2>
-          <p className="ax-help-text">Precio minorista: Referencia interna para ventas directas. No visible para revendedores.</p>
           <div className="form-grid">
-            <label>SKU
-              <input value={adminDetails.sku || ''} onChange={(event) => setAdminField('sku', event.target.value)} placeholder="Ej: CAM-001" />
+            <label>Codigo de producto *
+              <input value={adminDetails.sku || ''} onChange={(event) => setAdminField('sku', event.target.value)} placeholder="Escanea o ingresa el codigo de barras" required />
             </label>
             <label>Proveedor principal
               <select value={adminDetails.supplier_id || ''} onChange={(event) => setAdminField('supplier_id', event.target.value)}>
                 <option value="">Sin proveedor asignado</option>
                 {suppliers.map((supplier) => <option key={supplier.id} value={supplier.id}>{supplier.name}</option>)}
               </select>
+              <button className="secondary-button compact-button" type="button" onClick={() => setSupplierModalOpen(true)}>+ Nuevo proveedor</button>
             </label>
-            <OptionalPriceInput label="Precio minorista" value={adminDetails.retail_price} onChange={(value) => setAdminField('retail_price', value)} />
             <OptionalPriceInput label="Comision revendedor" value={adminDetails.reseller_commission_amount} onChange={(value) => setAdminField('reseller_commission_amount', value || 0)} />
             <label className="checkbox-label"><input type="checkbox" checked={adminDetails.track_inventory !== false} onChange={(event) => setAdminField('track_inventory', event.target.checked)} /> Controlar inventario</label>
             <label>Stock minimo
@@ -357,6 +431,25 @@ export function ProductForm() {
               <small>{Number(form.reserved_stock_quantity || 0)} reservado - {Number(form.available_stock_quantity ?? form.stock_quantity ?? 0)} disponible</small>
               {editing ? <Link className="secondary-button" to={`/admin/inventario/${id}`}>Gestionar inventario</Link> : <small>Disponible despues de guardar el producto.</small>}
             </div>
+            {!editing && (
+              <label>Stock inicial
+                <input type="number" min="0" step="1" value={form.initial_stock || ''} onChange={(event) => setField('initial_stock', event.target.value)} placeholder="0" />
+                <small>Al guardar crea un movimiento opening_balance.</small>
+              </label>
+            )}
+            {editing && (
+              <div className="stock-adjust-box">
+                <div>
+                  <span>Stock fisico</span>
+                  <strong>{Number(form.stock_quantity || 0)}</strong>
+                  <small>{Number(form.reserved_stock_quantity || 0)} reservado - {Number(form.available_stock_quantity ?? form.stock_quantity ?? 0)} disponible</small>
+                </div>
+                <label>Stock fisico real
+                  <input type="number" min="0" step="1" value={stockAdjustValue} onChange={(event) => setStockAdjustValue(event.target.value)} />
+                </label>
+                <button className="secondary-button" type="button" onClick={adjustPhysicalStock}>Ajustar stock</button>
+              </div>
+            )}
           </div>
         </section>
 
@@ -379,8 +472,8 @@ export function ProductForm() {
         </section>
 
         <section className="form-section">
-          <h2>Descripción</h2>
-          <div className="form-grid single">
+          <h2>Descripcion del producto</h2>
+          <div className="form-grid single product-description-wide">
             <label>Descripción<textarea className="product-description-input" rows="10" value={form.long_description || ''} onChange={(e) => setField('long_description', e.target.value)} /></label>
           </div>
         </section>
@@ -413,7 +506,6 @@ export function ProductForm() {
           )}
           <div className="form-grid">
             <label>{editing ? 'Reemplazar imagen principal' : 'Imagen principal'}<input type="file" accept="image/*" onChange={(e) => setMainFile(e.target.files?.[0] || null)} /></label>
-            <label>URL imagen principal<input value={form.main_image_url || ''} onChange={(e) => setField('main_image_url', e.target.value)} /></label>
             <label>Imágenes secundarias<input type="file" accept="image/*" multiple onChange={(e) => setGalleryFiles(Array.from(e.target.files || []))} /></label>
             <label>Link carpeta Google Drive<input value={form.drive_link || ''} onChange={(e) => setField('drive_link', e.target.value)} /></label>
           </div>
@@ -477,6 +569,28 @@ export function ProductForm() {
           <button type="submit" className="primary-button big" disabled={saving}>{saving ? 'Guardando...' : 'Guardar producto'}</button>
         </StickySummary>
       </form>
+
+      {supplierModalOpen && (
+        <div className="ax-modal-backdrop" role="presentation">
+          <form className="ax-status-modal supplier-inline-modal" onSubmit={createSupplierInline} role="dialog" aria-modal="true" aria-label="Nuevo proveedor">
+            <header>
+              <h2>Nuevo proveedor</h2>
+              <button type="button" onClick={() => setSupplierModalOpen(false)}>Cerrar</button>
+            </header>
+            <div className="form-grid">
+              <label>Nombre *<input value={supplierForm.name} onChange={(event) => setSupplierForm((prev) => ({ ...prev, name: event.target.value }))} required /></label>
+              <label>Contacto<input value={supplierForm.contact_name} onChange={(event) => setSupplierForm((prev) => ({ ...prev, contact_name: event.target.value }))} /></label>
+              <label>Telefono<input value={supplierForm.phone} onChange={(event) => setSupplierForm((prev) => ({ ...prev, phone: event.target.value }))} /></label>
+              <label>Email<input value={supplierForm.email} onChange={(event) => setSupplierForm((prev) => ({ ...prev, email: event.target.value }))} /></label>
+              <label>Ciudad<input value={supplierForm.city} onChange={(event) => setSupplierForm((prev) => ({ ...prev, city: event.target.value }))} /></label>
+            </div>
+            <div className="ax-modal-actions">
+              <button className="secondary-button" type="button" onClick={() => setSupplierModalOpen(false)}>Cancelar</button>
+              <button className="primary-button" type="submit">Guardar proveedor</button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   )
 }

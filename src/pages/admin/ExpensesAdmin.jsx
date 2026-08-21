@@ -79,20 +79,21 @@ export function ExpensesAdmin() {
 
       <section className="ax-panel">
         <h2>Nuevo gasto</h2>
-        <form className="form-grid" onSubmit={submit}>
+        <form className="expense-form-pro" onSubmit={submit}>
           <label>Categoria<select value={form.category_id} onChange={(e) => setForm((p) => ({ ...p, category_id: e.target.value }))} required><option value="">Seleccionar</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
           <label>Cuenta<select value={form.account_id} onChange={(e) => setForm((p) => ({ ...p, account_id: e.target.value }))} required><option value="">Seleccionar</option>{accounts.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
-          <label>Descripcion<input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} required /></label>
           <label>Monto<input type="number" min="1" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} required /></label>
+          <label>Descripcion<input value={form.description} onChange={(e) => setForm((p) => ({ ...p, description: e.target.value }))} required /></label>
           <label>Fecha<input type="date" value={form.expense_date} onChange={(e) => setForm((p) => ({ ...p, expense_date: e.target.value }))} /></label>
-          <label>Nota<input value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} /></label>
-          <button className="primary-button" type="submit">Guardar gasto</button>
+          <label className="expense-note-field">Nota<textarea value={form.notes} onChange={(e) => setForm((p) => ({ ...p, notes: e.target.value }))} rows="3" /></label>
+          <div className="expense-actions"><button className="primary-button" type="submit">Guardar gasto</button></div>
         </form>
       </section>
 
       <FilterToolbar>
         <label className="ax-search-field"><Search size={15} /><input placeholder="Buscar gastos" value={filters.search} onChange={(e) => setFilters((p) => ({ ...p, search: e.target.value }))} /></label>
         <label>Categoria<select value={filters.category_id} onChange={(e) => setFilters((p) => ({ ...p, category_id: e.target.value }))}><option value="">Todas</option>{categories.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}</select></label>
+        <label>Estado<select value={filters.status} onChange={(e) => setFilters((p) => ({ ...p, status: e.target.value }))}><option value="">Todos</option><option value="confirmed">Confirmados</option><option value="cancelled">Anulados</option></select></label>
         <button className="secondary-button" type="button" onClick={load}>Filtrar</button>
       </FilterToolbar>
 

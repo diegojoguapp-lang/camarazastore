@@ -6,7 +6,9 @@ import { getFinancialAccounts } from '../../lib/adminFinanceApi'
 import { getAdminSaleById, getSaleEvents, updateSaleStatus } from '../../lib/adminSalesApi'
 import { formatDateTimePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
-import { SALE_STATUSES, fulfillmentTypeLabel, paymentMethodLabel, paymentTimingLabel, saleStatusLabel } from '../../lib/salesConstants'
+import { fulfillmentTypeLabel, paymentMethodLabel, paymentTimingLabel, saleStatusLabel } from '../../lib/salesConstants'
+
+const OPERATIONAL_STATUSES = ['confirmed', 'out_for_delivery', 'delivered_paid', 'cancelled']
 
 function DetailItem({ label, value }) {
   return <div><span>{label}</span><strong>{value || '-'}</strong></div>
@@ -185,7 +187,10 @@ export function SaleDetail() {
           ]}
         >
           <form className="ax-drawer-form" onSubmit={submitStatus}>
-            <label>Cambiar estado<select value={status} onChange={(e) => setStatus(e.target.value)}>{SALE_STATUSES.map((item) => <option key={item} value={item}>{saleStatusLabel(item)}</option>)}</select></label>
+            <label>Cambiar estado<select value={status} onChange={(e) => setStatus(e.target.value)}>
+              {OPERATIONAL_STATUSES.map((item) => <option key={item} value={item}>{saleStatusLabel(item)}</option>)}
+              {sale.status === 'delivered_paid' && <option value="returned">Registrar devolucion</option>}
+            </select></label>
             {status === 'delivered_paid' && sale.status !== 'delivered_paid' && (
               <>
                 <label>Metodo de pago

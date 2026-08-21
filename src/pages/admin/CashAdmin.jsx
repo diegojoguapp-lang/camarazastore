@@ -35,6 +35,13 @@ export function CashAdmin() {
   useEffect(() => { load() }, [])
 
   const openSession = sessions.find((session) => session.status === 'open')
+  const selectedOpenAccount = accounts.find((account) => account.id === form.financial_account_id)
+  const expectedOpenBalance = Number(selectedOpenAccount?.current_balance || 0)
+  const countedOpenBalance = Number(form.counted_balance || 0)
+  const openDifference = form.counted_balance === '' ? null : countedOpenBalance - expectedOpenBalance
+  const expectedCloseBalance = Number(openSession?.account?.current_balance ?? openSession?.expected_closing_balance ?? 0)
+  const countedCloseBalance = Number(closeForm.counted_balance || 0)
+  const closeDifference = closeForm.counted_balance === '' ? null : countedCloseBalance - expectedCloseBalance
   const todayMovements = useMemo(() => {
     const today = new Date().toISOString().slice(0, 10)
     return movements.filter((row) => row.occurred_at?.slice(0, 10) === today && (!openSession || row.account_id === openSession.financial_account_id))
@@ -92,16 +99,20 @@ export function CashAdmin() {
       <section className="ax-panel">
         <h2>{openSession ? 'Cerrar caja' : 'Abrir caja'}</h2>
         {!openSession ? (
-          <form className="form-grid" onSubmit={submitOpen}>
-            <label>Cuenta caja<select value={form.financial_account_id} onChange={(e) => setForm((p) => ({ ...p, financial_account_id: e.target.value }))} required><option value="">Seleccionar</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name} - esperado {account.current_balance}</option>)}</select></label>
+          <form className="cash-session-card" onSubmit={submitOpen}>
+            <label>Cuenta de caja<select value={form.financial_account_id} onChange={(e) => setForm((p) => ({ ...p, financial_account_id: e.target.value }))} required><option value="">Seleccionar</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+            <div className="cash-readout"><span>Saldo esperado</span><strong><MoneyCell value={expectedOpenBalance} /></strong></div>
             <label>Efectivo contado<input type="number" min="0" value={form.counted_balance} onChange={(e) => setForm((p) => ({ ...p, counted_balance: e.target.value }))} required /></label>
+            <div className={`cash-readout ${Number(openDifference || 0) < 0 ? 'negative' : ''}`}><span>Diferencia</span><strong>{openDifference === null ? '-' : <MoneyCell value={openDifference} />}</strong></div>
             <label className="checkbox-label"><input type="checkbox" checked={form.register_difference} onChange={(e) => setForm((p) => ({ ...p, register_difference: e.target.checked }))} /> Registrar diferencia como ajuste</label>
             <button className="primary-button" type="submit">Abrir caja</button>
           </form>
         ) : (
-          <form className="form-grid" onSubmit={submitClose}>
+          <form className="cash-session-card" onSubmit={submitClose}>
             <div className="ax-readonly-field"><span>Cuenta abierta</span><strong>{openSession.account?.name}</strong></div>
+            <div className="cash-readout"><span>Saldo esperado</span><strong><MoneyCell value={expectedCloseBalance} /></strong></div>
             <label>Efectivo contado<input type="number" min="0" value={closeForm.counted_balance} onChange={(e) => setCloseForm((p) => ({ ...p, counted_balance: e.target.value }))} required /></label>
+            <div className={`cash-readout ${Number(closeDifference || 0) < 0 ? 'negative' : ''}`}><span>Diferencia</span><strong>{closeDifference === null ? '-' : <MoneyCell value={closeDifference} />}</strong></div>
             <label className="checkbox-label"><input type="checkbox" checked={closeForm.register_difference} onChange={(e) => setCloseForm((p) => ({ ...p, register_difference: e.target.checked }))} /> Registrar diferencia como ajuste</label>
             <button className="primary-button" type="submit">Cerrar caja</button>
           </form>
