@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Eye, WalletCards } from 'lucide-react'
 import { AdminDataTable, AdminMetric, AdminPageHeader, AdminStatusBadge, MoneyCell, RowActions } from '../../components/AdminUX'
+import { getFinancialAccounts } from '../../lib/adminFinanceApi'
 import { createBulkCommissionPayments, getCommissionBatch, getCommissionBatchOverview, getPaymentsForBatch } from '../../lib/adminCommissionsApi'
 import { batchStatusLabel, paymentStatusLabel } from '../../lib/commissionConstants'
 import { formatDatePy } from '../../lib/dateUtils'
@@ -11,7 +12,9 @@ export function CommissionBatchDetail() {
   const [batch, setBatch] = useState(null)
   const [groups, setGroups] = useState([])
   const [payments, setPayments] = useState([])
+  const [accounts, setAccounts] = useState([])
   const [selected, setSelected] = useState([])
+  const [bulkAccountId, setBulkAccountId] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -28,7 +31,7 @@ export function CommissionBatchDetail() {
       try {
         setLoading(true)
         const batchData = await getCommissionBatch(id)
-        const [overview, paymentRows] = await Promise.all([getCommissionBatchOverview(id), getPaymentsForBatch(id)])
+        const [overview, paymentRows, accountRows] = await Promise.all([getCommissionBatchOverview(id), getPaymentsForBatch(id), getFinancialAccounts()])
         setBatch(batchData)
         setGroups(overview.map((row) => ({
           reseller: {
@@ -48,6 +51,7 @@ export function CommissionBatchDetail() {
           reason: row.reason
         })))
         setPayments(paymentRows)
+        setAccounts(accountRows.filter((account) => account.is_active))
       } catch (err) {
         setError(err.message || 'No se pudo cargar el lote.')
       } finally {
@@ -99,6 +103,7 @@ export function CommissionBatchDetail() {
         form: {
           payment_date: new Date().toISOString().slice(0, 10),
           payment_method: 'transferencia',
+          financial_account_id: bulkAccountId,
           notes: 'Pago multiple desde lote'
         }
       })
@@ -130,7 +135,7 @@ export function CommissionBatchDetail() {
         eyebrow="Comisiones"
         title="Lote semanal"
         description={`${formatDatePy(batch.period_start)} al ${formatDatePy(batch.period_end)} - ${batchStatusLabel(batch.status)}`}
-        actions={<><button className="primary-button" type="button" disabled={!selected.length || paying} onClick={paySelected}><WalletCards size={16} /> {paying ? 'Pagando...' : 'Pagar seleccionados'}</button><Link className="secondary-button" to="/admin/comisiones"><ArrowLeft size={16} /> Volver</Link></>}
+        actions={<><select value={bulkAccountId} onChange={(event) => setBulkAccountId(event.target.value)}><option value="">Cuenta de pago</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select><button className="primary-button" type="button" disabled={!selected.length || paying || !bulkAccountId} onClick={paySelected}><WalletCards size={16} /> {paying ? 'Pagando...' : 'Pagar seleccionados'}</button><Link className="secondary-button" to="/admin/comisiones"><ArrowLeft size={16} /> Volver</Link></>}
       />
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}

@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Check, Copy, Download } from 'lucide-react'
 import { getProductBySlug } from '../lib/api'
-import { calculateProfit, copyToClipboard, formatGs, getDisplayImageUrl, imageFallback, publicStatusLabel } from '../lib/utils'
+import { calculateProfit, catalogStockLabel, copyToClipboard, formatGs, getDisplayImageUrl, imageFallback } from '../lib/utils'
 
 const fallbackFaqs = [
   {
@@ -116,7 +116,7 @@ export function ProductDetail() {
         <div className="product-sale-info">
           <h1>{product.name}</h1>
           <span className={`stock-chip status-${product.public_stock_status || 'consultar_stock'}`}>
-            {publicStatusLabel(product.public_stock_status)}
+            {catalogStockLabel(product)}
           </span>
 
           <div className="sale-price-list product-price-stack">

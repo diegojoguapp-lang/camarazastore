@@ -35,7 +35,10 @@ const emptyDashboard = {
   total_customers: 0,
   pending_payments: 0,
   batches_open: 0,
-  resellers_without_bank: 0
+  resellers_without_bank: 0,
+  money_current: 0,
+  inventory_value: 0,
+  month_operating_profit: 0
 }
 
 function compareHint(current, previous) {
@@ -158,16 +161,16 @@ export function AdminDashboard() {
       ) : (
         <>
           <div className="admin-kpi-layout">
-            <MetricCard featured icon={ShoppingCart} label="Ventas hoy" value={dashboard.sales_today} hint={compareHint(dashboard.sales_today, dashboard.sales_yesterday)} />
-            <MetricCard icon={TrendingUp} label="Ventas esta semana" value={dashboard.sales_this_week} hint="Periodo lunes a sabado" />
-            <MetricCard icon={CalendarClock} label="Ventas este mes" value={dashboard.sales_this_month} hint="Segun fecha de venta" />
-            <MetricCard icon={CheckCircle2} label="Entregados hoy" value={dashboard.delivered_today} hint="Estado delivered_paid" />
+            <MetricCard featured icon={ShoppingCart} label="Ventas cobradas hoy" value={dashboard.delivered_today || dashboard.sales_today} hint={compareHint(dashboard.sales_today, dashboard.sales_yesterday)} />
+            <MetricCard icon={TrendingUp} label="Ganancia operativa hoy" value={formatGs(dashboard.net_profit || 0)} hint="Ventas entregadas/cobradas" />
+            <MetricCard icon={Banknote} label="Dinero actual" value={formatGs(dashboard.money_current || 0)} hint={<Link to="/admin/finanzas">Ver finanzas</Link>} />
+            <MetricCard icon={Package} label="Valor inventario" value={formatGs(dashboard.inventory_value || 0)} hint="Stock fisico por costo" />
+            <MetricCard icon={Banknote} label="Comisiones pendientes" value={formatGs(dashboard.pending_commissions)} />
           </div>
 
           <div className="ds-metric-grid">
             <MetricCard icon={Banknote} label="Facturacion bruta" value={formatGs(dashboard.gross_revenue)} />
-            <MetricCard icon={TrendingUp} label="Ganancia neta" value={formatGs(dashboard.net_profit)} />
-            <MetricCard icon={Banknote} label="Comisiones pendientes" value={formatGs(dashboard.pending_commissions)} />
+            <MetricCard icon={TrendingUp} label="Ganancia mes" value={formatGs(dashboard.month_operating_profit || dashboard.net_profit)} />
             <MetricCard icon={Banknote} label="Comisiones pagadas" value={formatGs(dashboard.paid_commissions)} />
             <MetricCard icon={Users} label="Revendedores activos" value={dashboard.active_resellers} />
             <MetricCard icon={Users} label="Con ventas esta semana" value={dashboard.resellers_with_sales_this_week} />

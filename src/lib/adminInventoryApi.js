@@ -91,7 +91,7 @@ export async function getInventoryProducts() {
       .order('name', { ascending: true }),
     supabase
       .from('product_admin_details')
-      .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,updated_at'),
+      .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,updated_at'),
     supabase
       .from('suppliers')
       .select('id,name,is_active')
@@ -113,7 +113,9 @@ export async function getInventoryProducts() {
       reseller_commission_amount: 0,
       supplier_id: null,
       track_inventory: true,
-      low_stock_threshold: 2
+      low_stock_threshold: 2,
+      publish_to_retail: false,
+      publish_to_resellers: true
     }
     return {
       ...product,
@@ -159,8 +161,19 @@ export async function getProductAdminDetails(productId) {
     reseller_commission_amount: 0,
     supplier_id: null,
     track_inventory: true,
-    low_stock_threshold: 2
+    low_stock_threshold: 2,
+    publish_to_retail: false,
+    publish_to_resellers: true
   }
+}
+
+export async function getProductAdminDetailsList() {
+  requireSupabase()
+  const { data, error } = await supabase
+    .from('product_admin_details')
+    .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,updated_at')
+  if (error) throw error
+  return data || []
 }
 
 export async function saveProductAdminDetails(productId, payload) {
@@ -174,6 +187,8 @@ export async function saveProductAdminDetails(productId, payload) {
     supplier_id: payload.supplier_id || null,
     track_inventory: payload.track_inventory !== false,
     low_stock_threshold: lowStockThreshold,
+    publish_to_retail: Boolean(payload.publish_to_retail),
+    publish_to_resellers: payload.publish_to_resellers !== false,
     updated_at: new Date().toISOString()
   }
   const { data, error } = await supabase

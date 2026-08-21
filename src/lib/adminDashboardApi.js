@@ -6,9 +6,12 @@ function requireSupabase() {
 
 export async function getAdminDashboard() {
   requireSupabase()
-  const { data, error } = await supabase.rpc('get_admin_dashboard')
+  const [{ data, error }, financeResult] = await Promise.all([
+    supabase.rpc('get_admin_dashboard'),
+    supabase.rpc('get_admin_finance_dashboard').catch(() => ({ data: {}, error: null }))
+  ])
   if (error) throw error
-  return data || {}
+  return { ...(data || {}), ...(financeResult.data || {}) }
 }
 
 export async function adminGlobalSearch(term) {

@@ -139,7 +139,7 @@ export function SaleForm() {
             items: saleItems,
             delivery_charged: sale.delivery_charged || 0,
             fulfillment_type: normalizeOption(sale.fulfillment_type, ['delivery', 'transportadora'], 'delivery'),
-            payment_method: normalizeOption(sale.payment_method, ['cash', 'transfer', 'card'], 'cash'),
+            payment_method: normalizeOption(sale.payment_method, ['cash', 'transfer', 'qr', 'card', 'other'], 'cash'),
             payment_timing: normalizeOption(sale.payment_timing, ['on_delivery', 'prepaid'], 'on_delivery')
           })
           setCommercialLocked(sale.status === 'delivered_paid' || sale.commission_paid === true)
@@ -389,7 +389,7 @@ export function SaleForm() {
                 </select>
               </label>
               <MoneyInput label="Envio cobrado" value={saleForm.delivery_charged} onChange={(value) => setSale('delivery_charged', value)} />
-              <label>Forma de pago<select value={saleForm.payment_method} onChange={(event) => setSale('payment_method', event.target.value)}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="card">Tarjeta</option></select></label>
+              <label>Forma de pago<select value={saleForm.payment_method} onChange={(event) => setSale('payment_method', event.target.value)}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option><option value="qr">QR</option><option value="card">Tarjeta</option><option value="other">Otro</option></select></label>
               <label>Momento del pago<select value={saleForm.payment_timing} onChange={(event) => setSale('payment_timing', event.target.value)}><option value="on_delivery">Contra entrega</option><option value="prepaid">Paga antes de enviar</option></select></label>
             </div>
           </section>

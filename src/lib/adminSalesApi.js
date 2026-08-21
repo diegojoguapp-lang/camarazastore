@@ -10,6 +10,7 @@ const SALE_SELECT = `
   customer:customers(id,full_name,phone,city,neighborhood,address,map_url,reference,requires_advance_payment,notes),
   reseller:profiles(id,reseller_code,full_name,email,city),
   product:products(id,name,model,main_image_url),
+  account:financial_accounts(id,name,account_type),
   items:sale_items(*)
 `
 
@@ -43,7 +44,7 @@ function cleanSalePayload(payload) {
     delivery_reference: payload.delivery_reference?.trim() || null,
     delivery_schedule: payload.delivery_schedule?.trim() || null,
     fulfillment_type: cleanEnum(payload.fulfillment_type, ['delivery', 'transportadora'], 'delivery'),
-    payment_method: cleanEnum(payload.payment_method, ['cash', 'transfer', 'card'], 'cash'),
+    payment_method: cleanEnum(payload.payment_method, ['cash', 'transfer', 'qr', 'card', 'other'], 'cash'),
     payment_timing: cleanEnum(payload.payment_timing, ['on_delivery', 'prepaid'], 'on_delivery')
   }
 }
@@ -176,10 +177,13 @@ export async function updateSale(id, payload) {
 
 export async function updateSaleStatus(id, status, notes = '') {
   requireSupabase()
+  const cleanNotes = typeof notes === 'string' ? notes.trim() : notes?.notes?.trim()
   const { data, error } = await supabase.rpc('admin_transition_sale_status', {
     p_sale_id: id,
     p_status: status,
-    p_notes: notes.trim() || null
+    p_notes: cleanNotes || null,
+    p_financial_account_id: notes?.financial_account_id || null,
+    p_payment_method: notes?.payment_method || null
   })
   if (error) throw error
   const row = Array.isArray(data) ? data[0] : data

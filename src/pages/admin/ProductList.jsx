@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { Eye, Pencil, Plus, Trash2 } from 'lucide-react'
 import { AdminDataTable, AdminPageHeader, MoneyCell, RowActions } from '../../components/AdminUX'
 import { deleteProduct, getProducts, updateProductStatus } from '../../lib/api'
+import { getProductAdminDetailsList } from '../../lib/adminInventoryApi'
 import { calculateProfit, imageFallback, internalStatusLabel } from '../../lib/utils'
 
 export function ProductList() {
@@ -10,11 +11,18 @@ export function ProductList() {
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
+  const [channelFilter, setChannelFilter] = useState('all')
 
   const load = () => {
     setLoading(true)
-    getProducts({ includeHidden: true })
-      .then(setProducts)
+    Promise.all([getProducts({ includeHidden: true }), getProductAdminDetailsList()])
+      .then(([productRows, detailRows]) => {
+        const detailMap = new Map(detailRows.map((detail) => [detail.product_id, detail]))
+        setProducts(productRows.map((product) => ({
+          ...product,
+          admin_details: detailMap.get(product.id) || { publish_to_retail: false, publish_to_resellers: true }
+        })))
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false))
   }
@@ -31,6 +39,25 @@ export function ProductList() {
     } catch (err) {
       setError(err.message)
     }
+  }
+
+  const filteredProducts = products.filter((product) => {
+    const retail = Boolean(product.admin_details?.publish_to_retail)
+    const resellers = product.admin_details?.publish_to_resellers !== false
+    if (channelFilter === 'retail') return retail
+    if (channelFilter === 'resellers') return resellers
+    if (channelFilter === 'both') return retail && resellers
+    if (channelFilter === 'none') return !retail && !resellers
+    return true
+  })
+
+  const channelLabel = (product) => {
+    const retail = Boolean(product.admin_details?.publish_to_retail)
+    const resellers = product.admin_details?.publish_to_resellers !== false
+    if (retail && resellers) return 'Cliente final + Revendedores'
+    if (retail) return 'Cliente final'
+    if (resellers) return 'Revendedores'
+    return 'No publicado'
   }
 
   const removeProduct = async (product) => {
@@ -57,9 +84,23 @@ export function ProductList() {
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
 
+      <div className="admin-inline-filters">
+        {[
+          ['all', 'Todos'],
+          ['retail', 'Cliente final'],
+          ['resellers', 'Revendedores'],
+          ['both', 'Ambos'],
+          ['none', 'No publicados']
+        ].map(([value, label]) => (
+          <button key={value} type="button" className={channelFilter === value ? 'active' : ''} onClick={() => setChannelFilter(value)}>
+            {label}
+          </button>
+        ))}
+      </div>
+
       <AdminDataTable
         loading={loading}
-        rows={products}
+        rows={filteredProducts}
         empty="Todavia no cargaste productos."
         columns={[
           { key: 'product', label: 'Producto', render: (product) => (
@@ -72,6 +113,7 @@ export function ProductList() {
           { key: 'wholesale', label: 'Mayorista', align: 'right', render: (product) => <MoneyCell value={product.wholesale_price} /> },
           { key: 'suggested', label: 'Sugerido', align: 'right', render: (product) => <MoneyCell value={product.suggested_price} /> },
           { key: 'profit', label: 'Ganancia', align: 'right', render: (product) => <MoneyCell value={calculateProfit(product)} /> },
+          { key: 'channels', label: 'Canales', render: (product) => <span className="channel-pill">{channelLabel(product)}</span> },
           { key: 'featured', label: 'Destacado', render: (product) => product.is_featured ? 'Si' : 'No' },
           { key: 'order', label: 'Orden', render: (product) => Number(product.sort_priority || 0) },
           { key: 'status', label: 'Estado', render: (product) => <span className="admin-status">{product.public_stock_status === 'agotado' ? 'Agotado' : internalStatusLabel(product.internal_status)}</span> },

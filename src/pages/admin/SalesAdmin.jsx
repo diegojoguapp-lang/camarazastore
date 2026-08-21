@@ -4,6 +4,7 @@ import { Eye, Pencil, Plus, Search } from 'lucide-react'
 import { AdminDataTable, AdminPageHeader, FilterToolbar, MoneyCell, RowActions } from '../../components/AdminUX'
 import { getAdminSales, updateSaleStatus } from '../../lib/adminSalesApi'
 import { getProducts } from '../../lib/api'
+import { getFinancialAccounts } from '../../lib/adminFinanceApi'
 import { getResellers } from '../../lib/resellerApi'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
@@ -60,6 +61,7 @@ export function SalesAdmin() {
   const [sales, setSales] = useState([])
   const [resellers, setResellers] = useState([])
   const [products, setProducts] = useState([])
+  const [accounts, setAccounts] = useState([])
   const [filters, setFilters] = useState(emptyFilters)
   const [advancedOpen, setAdvancedOpen] = useState(false)
   const [message, setMessage] = useState('')
@@ -68,6 +70,8 @@ export function SalesAdmin() {
   const [statusModalSale, setStatusModalSale] = useState(null)
   const [nextStatus, setNextStatus] = useState('')
   const [statusNote, setStatusNote] = useState('')
+  const [statusPaymentMethod, setStatusPaymentMethod] = useState('cash')
+  const [statusAccountId, setStatusAccountId] = useState('')
   const [statusSaving, setStatusSaving] = useState(false)
 
   const totals = useMemo(() => ({
@@ -79,14 +83,16 @@ export function SalesAdmin() {
     try {
       setLoading(true)
       setError('')
-      const [saleRows, resellerRows, productRows] = await Promise.all([
+      const [saleRows, resellerRows, productRows, accountRows] = await Promise.all([
         getAdminSales(nextFilters),
         getResellers(),
-        getProducts({ includeHidden: true })
+        getProducts({ includeHidden: true }),
+        getFinancialAccounts().catch(() => [])
       ])
       setSales(saleRows)
       setResellers(resellerRows)
       setProducts(productRows)
+      setAccounts(accountRows.filter((account) => account.is_active))
     } catch (err) {
       setError(err.message || 'No se pudieron cargar las ventas.')
     } finally {
@@ -118,6 +124,8 @@ export function SalesAdmin() {
     setStatusModalSale(sale)
     setNextStatus(sale.status)
     setStatusNote('')
+    setStatusPaymentMethod(sale.payment_method || 'cash')
+    setStatusAccountId(sale.financial_account_id || '')
     setError('')
     setMessage('')
   }
@@ -139,7 +147,11 @@ export function SalesAdmin() {
       setStatusSaving(true)
       setMessage('')
       setError('')
-      await updateSaleStatus(statusModalSale.id, nextStatus, statusNote)
+      await updateSaleStatus(statusModalSale.id, nextStatus, {
+        notes: statusNote,
+        payment_method: statusPaymentMethod,
+        financial_account_id: statusAccountId
+      })
       setMessage('Estado actualizado.')
       setStatusModalSale(null)
       setNextStatus('')
@@ -229,6 +241,26 @@ export function SalesAdmin() {
                 {SALE_STATUSES.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}
               </select>
             </label>
+            {nextStatus === 'delivered_paid' && statusModalSale.status !== 'delivered_paid' && (
+              <div className="form-grid">
+                <label>Metodo de pago
+                  <select value={statusPaymentMethod} onChange={(event) => setStatusPaymentMethod(event.target.value)} required>
+                    <option value="cash">Efectivo</option>
+                    <option value="transfer">Transferencia</option>
+                    <option value="qr">QR</option>
+                    <option value="card">Tarjeta</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </label>
+                <label>Cuenta donde ingreso
+                  <select value={statusAccountId} onChange={(event) => setStatusAccountId(event.target.value)} required>
+                    <option value="">Seleccionar cuenta</option>
+                    {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                  </select>
+                </label>
+                <div className="ax-readonly-field"><span>Monto</span><strong>{formatGs(statusModalSale.total_collected)}</strong></div>
+              </div>
+            )}
             <label>Nota
               <textarea value={statusNote} onChange={(event) => setStatusNote(event.target.value)} placeholder="Opcional" />
             </label>

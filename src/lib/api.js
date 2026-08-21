@@ -14,6 +14,11 @@ const defaultSocialLinks = {
 
 export async function getProducts({ includeHidden = false } = {}) {
   if (!isSupabaseConfigured) return [demoProduct]
+  if (!includeHidden) {
+    const { data, error } = await supabase.rpc('get_reseller_catalog')
+    if (error) throw error
+    return data || []
+  }
   let query = supabase
     .from('products')
     .select(includeHidden ? '*' : PRODUCT_LIST_FIELDS)
@@ -27,19 +32,13 @@ export async function getProducts({ includeHidden = false } = {}) {
 
 export async function getProductBySlug(slug) {
   if (!isSupabaseConfigured) return slug === demoProduct.slug ? { product: demoProduct, images: [] } : null
-  const { data: product, error } = await supabase
-    .from('products')
-    .select('*')
-    .eq('slug', slug)
-    .single()
+  const { data, error } = await supabase.rpc('get_reseller_product', { p_slug: slug })
   if (error) throw error
-  const { data: images, error: imageError } = await supabase
-    .from('product_images')
-    .select('*')
-    .eq('product_id', product.id)
-    .order('sort_order', { ascending: true })
-  if (imageError) throw imageError
-  return { product, images: images || [] }
+  const product = Array.isArray(data) ? data[0] : data
+  if (!product) return null
+  const images = Array.isArray(product.images) ? product.images : []
+  const { images: _images, ...cleanProduct } = product
+  return { product: cleanProduct, images }
 }
 
 export async function getProductById(id) {

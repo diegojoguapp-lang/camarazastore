@@ -90,6 +90,57 @@ export function ResellerRoute({ children }) {
   return <RoleRoute role={ROLES.reseller}>{children}</RoleRoute>
 }
 
+export function CatalogRoute({ children }) {
+  const [loading, setLoading] = useState(true)
+  const [session, setSession] = useState(null)
+  const [profile, setProfile] = useState(null)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    let active = true
+    if (!isSupabaseConfigured) {
+      setLoading(false)
+      return undefined
+    }
+
+    async function loadAccess() {
+      try {
+        const nextSession = await getCurrentSession()
+        if (!active) return
+        setSession(nextSession)
+        if (nextSession) {
+          const nextProfile = await getCurrentProfile()
+          if (!active) return
+          if (nextProfile && !nextProfile.is_active) {
+            await signOut()
+            if (!active) return
+            setSession(null)
+            setError('Tu cuenta esta inactiva. Contacta con soporte.')
+            return
+          }
+          setProfile(nextProfile)
+        }
+      } catch (err) {
+        if (active) setError(err.message || 'No se pudo validar el acceso.')
+      } finally {
+        if (active) setLoading(false)
+      }
+    }
+
+    loadAccess()
+    return () => { active = false }
+  }, [])
+
+  if (!isSupabaseConfigured) return <Navigate to="/login" replace />
+  if (loading) return <div className="page"><div className="container"><p>Cargando...</p></div></div>
+  if (!session) return <Navigate to="/login" replace />
+  if (error) return <div className="page"><div className="container"><div className="error-box">{error}</div></div></div>
+  if (!hasActiveRole(profile, ROLES.admin) && !hasActiveRole(profile, ROLES.reseller)) {
+    return <AccessDenied profile={profile} allowedRole={ROLES.reseller} />
+  }
+  return children
+}
+
 export function ProtectedRoute({ children }) {
   return <AdminRoute>{children}</AdminRoute>
 }

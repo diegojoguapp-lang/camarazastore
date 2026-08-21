@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeft, Save } from 'lucide-react'
 import { AdminDataTable, AdminPageHeader, DateCell, MoneyCell, StickySummary } from '../../components/AdminUX'
+import { getFinancialAccounts } from '../../lib/adminFinanceApi'
 import { createCommissionPayment, getBankAccountForReseller, getCommissionBatch, getCommissionBatchOverview, getCommissionBatchSales } from '../../lib/adminCommissionsApi'
 import { calculateNetPaid } from '../../lib/commissionConstants'
 import { formatDatePy } from '../../lib/dateUtils'
@@ -13,6 +14,7 @@ const emptyForm = {
   payment_date: new Date().toISOString().slice(0, 10),
   voucher_url: '',
   voucher_number: '',
+  financial_account_id: '',
   notes: ''
 }
 
@@ -23,6 +25,7 @@ export function CommissionPaymentForm() {
   const [sales, setSales] = useState([])
   const [overview, setOverview] = useState(null)
   const [bankAccount, setBankAccount] = useState(null)
+  const [accounts, setAccounts] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -37,15 +40,17 @@ export function CommissionPaymentForm() {
       try {
         setLoading(true)
         const batchData = await getCommissionBatch(batchId)
-        const [saleRows, overviewRows, bank] = await Promise.all([
+        const [saleRows, overviewRows, bank, accountRows] = await Promise.all([
           getCommissionBatchSales(batchId, resellerId),
           getCommissionBatchOverview(batchId),
-          getBankAccountForReseller(resellerId)
+          getBankAccountForReseller(resellerId),
+          getFinancialAccounts()
         ])
         setBatch(batchData)
         setSales(saleRows)
         setOverview(overviewRows.find((row) => row.reseller_id === resellerId) || null)
         setBankAccount(bank)
+        setAccounts(accountRows.filter((account) => account.is_active))
       } catch (err) {
         setError(err.message || 'No se pudo preparar el pago.')
       } finally {
@@ -135,6 +140,12 @@ export function CommissionPaymentForm() {
               <label>Descuento<input type="number" min="0" value={form.discounts} onChange={(e) => setField('discounts', e.target.value)} /></label>
               <label>Fecha<input type="date" value={form.payment_date} onChange={(e) => setField('payment_date', e.target.value)} /></label>
               <label>Metodo<input value={form.payment_method} onChange={(e) => setField('payment_method', e.target.value)} /></label>
+              <label>Cuenta Camaraza *
+                <select value={form.financial_account_id} onChange={(e) => setField('financial_account_id', e.target.value)} required>
+                  <option value="">Seleccionar cuenta</option>
+                  {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                </select>
+              </label>
               <label>Comprobante URL<input value={form.voucher_url} onChange={(e) => setField('voucher_url', e.target.value)} /></label>
               <label>Nro. transferencia<input value={form.voucher_number} onChange={(e) => setField('voucher_number', e.target.value)} /></label>
             </div>
@@ -153,7 +164,7 @@ export function CommissionPaymentForm() {
             { label: 'Neto a pagar', value: <MoneyCell value={net} /> }
           ]}
         >
-          <button className="primary-button big" type="submit" disabled={saving || !sales.length || !bankAccount}>
+          <button className="primary-button big" type="submit" disabled={saving || !sales.length || !bankAccount || !form.financial_account_id}>
             <Save size={18} /> {saving ? 'Guardando...' : 'Confirmar pago'}
           </button>
         </StickySummary>

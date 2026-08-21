@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, Pencil } from 'lucide-react'
 import { AdminPageHeader, AdminStatusBadge, MoneyCell, StickySummary } from '../../components/AdminUX'
+import { getFinancialAccounts } from '../../lib/adminFinanceApi'
 import { getAdminSaleById, getSaleEvents, updateSaleStatus } from '../../lib/adminSalesApi'
 import { formatDateTimePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
@@ -23,8 +24,11 @@ export function SaleDetail() {
   const { id } = useParams()
   const [sale, setSale] = useState(null)
   const [events, setEvents] = useState([])
+  const [accounts, setAccounts] = useState([])
   const [status, setStatus] = useState('')
   const [notes, setNotes] = useState('')
+  const [paymentMethod, setPaymentMethod] = useState('cash')
+  const [financialAccountId, setFinancialAccountId] = useState('')
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -33,10 +37,13 @@ export function SaleDetail() {
   const load = async () => {
     try {
       setLoading(true)
-      const [saleData, eventRows] = await Promise.all([getAdminSaleById(id), getSaleEvents(id)])
+      const [saleData, eventRows, accountRows] = await Promise.all([getAdminSaleById(id), getSaleEvents(id), getFinancialAccounts().catch(() => [])])
       setSale(saleData)
       setStatus(saleData.status)
+      setPaymentMethod(saleData.payment_method || 'cash')
+      setFinancialAccountId(saleData.financial_account_id || '')
       setEvents(eventRows)
+      setAccounts(accountRows.filter((account) => account.is_active))
     } catch (err) {
       setError(err.message || 'No se pudo cargar la venta.')
     } finally {
@@ -53,7 +60,11 @@ export function SaleDetail() {
       setSaving(true)
       setError('')
       setMessage('')
-      await updateSaleStatus(id, status, notes)
+      await updateSaleStatus(id, status, {
+        notes,
+        payment_method: paymentMethod,
+        financial_account_id: financialAccountId
+      })
       setNotes('')
       setMessage('Estado actualizado.')
       load()
@@ -138,6 +149,8 @@ export function SaleDetail() {
               <DetailItem label="Tipo de envio" value={fulfillmentTypeLabel(sale.fulfillment_type)} />
               <DetailItem label="Horario" value={sale.delivery_schedule} />
               <DetailItem label="Forma de pago" value={paymentMethodLabel(sale.payment_method)} />
+              <DetailItem label="Cuenta de cobro" value={sale.account?.name || accounts.find((account) => account.id === sale.financial_account_id)?.name} />
+              <DetailItem label="Monto cobrado" value={formatGs(sale.total_collected)} />
               <DetailItem label="Momento del pago" value={paymentTimingLabel(sale.payment_timing)} />
               <DetailItem label="Entregado" value={formatDateTimePy(sale.delivered_at)} />
             </div>
@@ -173,6 +186,25 @@ export function SaleDetail() {
         >
           <form className="ax-drawer-form" onSubmit={submitStatus}>
             <label>Cambiar estado<select value={status} onChange={(e) => setStatus(e.target.value)}>{SALE_STATUSES.map((item) => <option key={item} value={item}>{saleStatusLabel(item)}</option>)}</select></label>
+            {status === 'delivered_paid' && sale.status !== 'delivered_paid' && (
+              <>
+                <label>Metodo de pago
+                  <select value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value)}>
+                    <option value="cash">Efectivo</option>
+                    <option value="transfer">Transferencia</option>
+                    <option value="qr">QR</option>
+                    <option value="card">Tarjeta</option>
+                    <option value="other">Otro</option>
+                  </select>
+                </label>
+                <label>Cuenta donde ingreso
+                  <select value={financialAccountId} onChange={(e) => setFinancialAccountId(e.target.value)}>
+                    <option value="">Seleccionar cuenta</option>
+                    {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
+                  </select>
+                </label>
+              </>
+            )}
             <label>Nota opcional<textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
             <button className="primary-button" type="submit" disabled={saving || status === sale.status}>{saving ? 'Guardando...' : 'Actualizar estado'}</button>
           </form>

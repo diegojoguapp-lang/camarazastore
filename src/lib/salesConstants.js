@@ -26,6 +26,8 @@ export const COMMISSION_CONFIRMED_STATUS = 'delivered_paid'
 export const PAYMENT_METHOD_LABELS = {
   cash: 'Efectivo',
   transfer: 'Transferencia',
+  qr: 'QR',
+  other: 'Otro',
   card: 'Tarjeta'
 }
 

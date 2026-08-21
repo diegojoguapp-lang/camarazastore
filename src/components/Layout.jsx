@@ -2,6 +2,10 @@ import { Link, NavLink, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
   Boxes,
+  Building2,
+  ClipboardList,
+  CreditCard,
+  DollarSign,
   Package,
   Eye,
   FileVideo,
@@ -85,18 +89,25 @@ export function AdminLayout({ children }) {
     ['Operacion', [
       ['/admin', 'Dashboard', LayoutDashboard],
       ['/admin/ventas', 'Ventas', ShoppingCart],
-      ['/admin/clientes', 'Clientes', Users]
+      ['/admin/clientes', 'Clientes', Users],
+      ['/admin/inventario', 'Inventario', Package]
     ]],
     ['Finanzas', [
+      ['/admin/finanzas', 'Finanzas', DollarSign],
+      ['/admin/caja', 'Caja', CreditCard],
+      ['/admin/gastos', 'Gastos', ReceiptText],
       ['/admin/comisiones', 'Comisiones', ReceiptText]
     ]],
     ['Catalogo', [
       ['/admin/productos', 'Productos', Boxes],
-      ['/admin/inventario', 'Inventario', Package],
-      ['/admin/proveedores', 'Proveedores', Users]
+      ['/admin/proveedores', 'Proveedores', Users],
+      ['/admin/compras', 'Compras', Building2]
     ]],
     ['Equipo', [
       ['/admin/revendedores', 'Revendedores', UserRound]
+    ]],
+    ['Reportes', [
+      ['/admin/reportes', 'Reportes', ClipboardList]
     ]],
     ['Contenido', [
       ['/admin/videos', 'Videos', FileVideo],

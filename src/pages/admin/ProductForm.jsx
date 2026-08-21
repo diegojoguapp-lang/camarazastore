@@ -23,7 +23,9 @@ const emptyAdminDetails = {
   reseller_commission_amount: 0,
   supplier_id: '',
   track_inventory: true,
-  low_stock_threshold: 2
+  low_stock_threshold: 2,
+  publish_to_retail: false,
+  publish_to_resellers: true
 }
 const internalDetailsError = 'El producto se guardo correctamente, pero no se pudieron guardar los datos internos. Podes volver a intentarlo desde la edicion del producto.'
 
@@ -115,7 +117,9 @@ export function ProductForm() {
           ...details,
           retail_price: details.retail_price ?? '',
           reseller_commission_amount: details.reseller_commission_amount ?? 0,
-          supplier_id: details.supplier_id || ''
+          supplier_id: details.supplier_id || '',
+          publish_to_retail: Boolean(details.publish_to_retail),
+          publish_to_resellers: details.publish_to_resellers !== false
         })
         setFaqs(parseFaqs(data.product.reseller_group_text))
         setExistingImages(data.images || [])
@@ -153,6 +157,9 @@ export function ProductForm() {
       const retailPrice = Number(adminDetails.retail_price)
       if (!Number.isFinite(retailPrice)) return 'El precio minorista debe ser numerico.'
       if (retailPrice < 0) return 'El precio minorista no puede ser negativo.'
+    }
+    if (adminDetails.publish_to_retail && Number(adminDetails.retail_price || 0) <= 0) {
+      return 'Defini un precio minorista antes de publicar este producto para clientes finales.'
     }
     const resellerCommission = Number(adminDetails.reseller_commission_amount || 0)
     if (!Number.isFinite(resellerCommission)) return 'La comision del revendedor debe ser numerica.'
@@ -198,6 +205,10 @@ export function ProductForm() {
       }
 
       const cleanFaqs = faqs.filter((faq) => faq.question.trim() && faq.answer.trim())
+      if (!adminDetails.publish_to_retail && !adminDetails.publish_to_resellers) {
+        const confirmed = window.confirm('Este producto quedara oculto en cliente final y revendedores. Queres guardarlo igual?')
+        if (!confirmed) return
+      }
       const productFields = { ...form }
       delete productFields.short_description
       const payload = {
@@ -350,6 +361,24 @@ export function ProductForm() {
         </section>
 
         <section className="form-section">
+          <h2>Publicacion</h2>
+          <p className="ax-help-text">Elegi en que catalogos aparece este producto. El cliente final necesita precio minorista.</p>
+          <div className="channel-toggle-grid">
+            <label className="checkbox-label channel-toggle">
+              <input type="checkbox" checked={Boolean(adminDetails.publish_to_retail)} onChange={(event) => setAdminField('publish_to_retail', event.target.checked)} />
+              <span><strong>Cliente final</strong><small>Camaraza Store con precio minorista.</small></span>
+            </label>
+            <label className="checkbox-label channel-toggle">
+              <input type="checkbox" checked={adminDetails.publish_to_resellers !== false} onChange={(event) => setAdminField('publish_to_resellers', event.target.checked)} />
+              <span><strong>Revendedores</strong><small>Catalogo de reventa con mayorista y sugerido.</small></span>
+            </label>
+          </div>
+          {!adminDetails.publish_to_retail && !adminDetails.publish_to_resellers && (
+            <div className="warning-box compact-notice">Este producto no se vera en ningun catalogo publico.</div>
+          )}
+        </section>
+
+        <section className="form-section">
           <h2>Descripción</h2>
           <div className="form-grid single">
             <label>Descripción<textarea className="product-description-input" rows="10" value={form.long_description || ''} onChange={(e) => setField('long_description', e.target.value)} /></label>
@@ -427,6 +456,8 @@ export function ProductForm() {
             { label: 'Sugerido', value: <MoneyCell value={form.suggested_price} /> },
             { label: 'Posible ganancia', value: <MoneyCell value={profit} /> },
             { label: 'Precio minorista', value: adminDetails.retail_price ? <MoneyCell value={adminDetails.retail_price} /> : '-' },
+            { label: 'Cliente final', value: adminDetails.publish_to_retail ? 'Publicado' : 'Oculto' },
+            { label: 'Revendedores', value: adminDetails.publish_to_resellers !== false ? 'Publicado' : 'Oculto' },
             { label: 'Comision revendedor', value: <MoneyCell value={adminDetails.reseller_commission_amount || 0} /> },
             { label: 'Stock disponible', value: form.available_stock_quantity === undefined ? (form.stock_quantity === '' ? 'Sin definir' : form.stock_quantity) : form.available_stock_quantity },
             { label: 'FAQs', value: faqs.filter((faq) => faq.question.trim() && faq.answer.trim()).length }

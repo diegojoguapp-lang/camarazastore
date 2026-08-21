@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { calculateProfit, formatGs, getDisplayImageUrl, imageFallback, publicStatusLabel } from '../lib/utils'
+import { calculateProfit, catalogStockLabel, formatGs, getDisplayImageUrl, imageFallback } from '../lib/utils'
 
 export function ProductCard({ product }) {
   const profit = calculateProfit(product)
@@ -19,7 +19,7 @@ export function ProductCard({ product }) {
             onError={imageFallback}
           />
           <span className={`status-pill status-${product.public_stock_status || 'consultar_stock'}`}>
-            {publicStatusLabel(product.public_stock_status)}
+            {catalogStockLabel(product)}
           </span>
           {product.is_featured && <span className="featured-pill">⭐ Destacado</span>}
         </div>

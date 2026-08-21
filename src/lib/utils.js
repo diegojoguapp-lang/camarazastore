@@ -34,6 +34,16 @@ export function publicStatusLabel(status) {
   return labels[status] || '🟢 Hay stock'
 }
 
+export function catalogStockLabel(product) {
+  if (product?.track_inventory === false) return 'Disponible'
+  if (product?.stock_label) return product.stock_label
+  if (product?.available_stock_quantity !== undefined && product?.available_stock_quantity !== null) {
+    const available = Math.max(Number(product.available_stock_quantity || 0), 0)
+    return available > 0 ? `${available} disponibles` : 'Sin stock'
+  }
+  return publicStatusLabel(product?.public_stock_status)
+}
+
 export function internalStatusLabel(status) {
   const labels = {
     active: 'Activo',
@@ -44,6 +54,10 @@ export function internalStatusLabel(status) {
 }
 
 export function isSoldOut(product) {
+  if (product?.track_inventory === false) return product?.public_stock_status === 'agotado'
+  if (product?.available_stock_quantity !== undefined && product?.available_stock_quantity !== null) {
+    return Number(product.available_stock_quantity || 0) <= 0
+  }
   return product?.public_stock_status === 'agotado' || product?.internal_status === 'sold_out'
 }
 

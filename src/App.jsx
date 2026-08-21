@@ -1,7 +1,7 @@
 import { Suspense, lazy } from 'react'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { Layout, AdminLayout } from './components/Layout'
-import { AdminRoute, ResellerRoute } from './components/ProtectedRoute'
+import { AdminRoute, CatalogRoute, ResellerRoute } from './components/ProtectedRoute'
 
 function lazyNamed(loader, exportName) {
   return lazy(() => loader().then((module) => ({ default: module[exportName] })))
@@ -25,6 +25,13 @@ const ProductForm = lazyNamed(() => import('./pages/admin/ProductForm'), 'Produc
 const InventoryAdmin = lazyNamed(() => import('./pages/admin/InventoryAdmin'), 'InventoryAdmin')
 const InventoryHistory = lazyNamed(() => import('./pages/admin/InventoryHistory'), 'InventoryHistory')
 const SuppliersAdmin = lazyNamed(() => import('./pages/admin/SuppliersAdmin'), 'SuppliersAdmin')
+const FinanceAdmin = lazyNamed(() => import('./pages/admin/FinanceAdmin'), 'FinanceAdmin')
+const CashAdmin = lazyNamed(() => import('./pages/admin/CashAdmin'), 'CashAdmin')
+const ExpensesAdmin = lazyNamed(() => import('./pages/admin/ExpensesAdmin'), 'ExpensesAdmin')
+const PurchasesAdmin = lazyNamed(() => import('./pages/admin/PurchasesAdmin'), 'PurchasesAdmin')
+const PurchaseForm = lazyNamed(() => import('./pages/admin/PurchaseForm'), 'PurchaseForm')
+const PurchaseDetail = lazyNamed(() => import('./pages/admin/PurchaseDetail'), 'PurchaseDetail')
+const ReportsAdmin = lazyNamed(() => import('./pages/admin/ReportsAdmin'), 'ReportsAdmin')
 const HelpVideosAdmin = lazyNamed(() => import('./pages/admin/HelpVideosAdmin'), 'HelpVideosAdmin')
 const SocialLinksAdmin = lazyNamed(() => import('./pages/admin/SocialLinksAdmin'), 'SocialLinksAdmin')
 const ResellersAdmin = lazyNamed(() => import('./pages/admin/ResellersAdmin'), 'ResellersAdmin')
@@ -59,6 +66,9 @@ function Admin({ children }) {
 function Panel({ children }) {
   return <ResellerRoute>{children}</ResellerRoute>
 }
+function PrivateCatalog({ children }) {
+  return <CatalogRoute><Layout>{children}</Layout></CatalogRoute>
+}
 
 function RouteFallback() {
   return <div className="page"><div className="container"><div className="ds-skeleton-card"><span /><strong /><p /></div></div></div>
@@ -71,8 +81,8 @@ export default function App() {
         <Routes>
           <Route path="/" element={<Home />} />
           <Route path="/reventa" element={<Public><Reventa /></Public>} />
-          <Route path="/catalogo" element={<Public><Catalogo /></Public>} />
-          <Route path="/producto/:slug" element={<Public><ProductDetail /></Public>} />
+          <Route path="/catalogo" element={<PrivateCatalog><Catalogo /></PrivateCatalog>} />
+          <Route path="/producto/:slug" element={<PrivateCatalog><ProductDetail /></PrivateCatalog>} />
           <Route path="/materiales" element={<Public><Materiales /></Public>} />
           <Route path="/ayuda" element={<Public><Ayuda /></Public>} />
           <Route path="/reglas" element={<Public><Reglas /></Public>} />
@@ -97,6 +107,13 @@ export default function App() {
           <Route path="/admin/inventario" element={<Admin><InventoryAdmin /></Admin>} />
           <Route path="/admin/inventario/:productId" element={<Admin><InventoryHistory /></Admin>} />
           <Route path="/admin/proveedores" element={<Admin><SuppliersAdmin /></Admin>} />
+          <Route path="/admin/finanzas" element={<Admin><FinanceAdmin /></Admin>} />
+          <Route path="/admin/caja" element={<Admin><CashAdmin /></Admin>} />
+          <Route path="/admin/gastos" element={<Admin><ExpensesAdmin /></Admin>} />
+          <Route path="/admin/compras" element={<Admin><PurchasesAdmin /></Admin>} />
+          <Route path="/admin/compras/nueva" element={<Admin><PurchaseForm /></Admin>} />
+          <Route path="/admin/compras/:id" element={<Admin><PurchaseDetail /></Admin>} />
+          <Route path="/admin/reportes" element={<Admin><ReportsAdmin /></Admin>} />
           <Route path="/admin/ventas" element={<Admin><SalesAdmin /></Admin>} />
           <Route path="/admin/ventas/nueva" element={<Admin><SaleForm /></Admin>} />
           <Route path="/admin/ventas/:id" element={<Admin><SaleDetail /></Admin>} />

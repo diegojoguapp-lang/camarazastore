@@ -223,7 +223,8 @@ export async function createCommissionPayment({ batchId, resellerId, sales, bank
     p_payment_method: form.payment_method?.trim() || null,
     p_voucher_url: form.voucher_url?.trim() || null,
     p_voucher_number: form.voucher_number?.trim() || null,
-    p_notes: form.notes?.trim() || null
+    p_notes: form.notes?.trim() || null,
+    p_financial_account_id: form.financial_account_id || null
   })
   if (paidError) throw paidError
 
@@ -239,7 +240,8 @@ export async function createBulkCommissionPayments({ batchId, resellerIds, form 
     p_payment_method: form.payment_method?.trim() || null,
     p_voucher_url: form.voucher_url?.trim() || null,
     p_voucher_number: form.voucher_number?.trim() || null,
-    p_notes: form.notes?.trim() || null
+    p_notes: form.notes?.trim() || null,
+    p_financial_account_id: form.financial_account_id || null
   })
   if (error) throw error
   return data || []
