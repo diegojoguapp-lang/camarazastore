@@ -257,7 +257,9 @@ export function ProductForm() {
               quantity: initialStock,
               reason: 'Stock inicial',
               notes: 'Creado desde formulario de producto',
-              unit_cost_snapshot: form.cost_price
+              unit_cost_snapshot: form.cost_price,
+              source_type: 'product_form',
+              source_id: savedProduct.id
             })
           }
         } catch {
@@ -350,6 +352,7 @@ export function ProductForm() {
         stock_quantity: stockAfter,
         available_stock_quantity: stockAfter - Number(prev.reserved_stock_quantity || 0)
       }))
+      setStockAdjustValue(String(stockAfter))
     } catch (err) {
       setError(err.message || 'No se pudo ajustar el stock.')
     }

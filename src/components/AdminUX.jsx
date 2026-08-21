@@ -89,6 +89,22 @@ export function Drawer({ open, title, children, onClose }) {
   )
 }
 
+export function AdminModal({ open, title, children, footer, onClose, size = 'md' }) {
+  if (!open) return null
+  return (
+    <div className="ax-modal-backdrop" role="presentation">
+      <section className={`ax-admin-modal ax-admin-modal-${size}`} role="dialog" aria-modal="true" aria-label={title}>
+        <header>
+          <h2>{title}</h2>
+          {onClose && <button type="button" onClick={onClose} aria-label="Cerrar">Cerrar</button>}
+        </header>
+        <div className="ax-admin-modal-body">{children}</div>
+        {footer && <footer className="ax-admin-modal-footer">{footer}</footer>}
+      </section>
+    </div>
+  )
+}
+
 export function StickySummary({ title, items, children }) {
   return (
     <aside className="ax-sticky-summary">

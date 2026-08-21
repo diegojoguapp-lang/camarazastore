@@ -13,6 +13,8 @@ function readableError(error, fallback) {
   if (message.includes('below reserved')) return new Error('No podes bajar el stock fisico por debajo del stock reservado.')
   if (message.includes('Movement reason is required')) return new Error('El motivo es obligatorio.')
   if (message.includes('Producto no encontrado')) return new Error('Producto no encontrado.')
+  if (message.includes('Opening balance can only')) return new Error('El stock inicial solo puede usarse cuando el stock actual esta en cero.')
+  if (message.includes('column reference') && message.includes('ambiguous')) return new Error('No se pudo registrar el movimiento por una referencia ambigua de SQL. Ejecuta la migracion de correccion.')
   if (message.includes('Retail price cannot be negative')) return new Error('El precio minorista no puede ser negativo.')
   if (message.includes('Low stock threshold cannot be negative')) return new Error('El stock minimo no puede ser negativo.')
   return new Error(message || fallback)
@@ -250,8 +252,8 @@ export async function createInventoryMovement(payload) {
     p_notes: payload.notes?.trim() || null,
     p_location_id: payload.location_id || null,
     p_unit_cost_snapshot: normalizeMoney(payload.unit_cost_snapshot),
-    p_source_type: 'manual',
-    p_source_id: null
+    p_source_type: payload.source_type || 'manual',
+    p_source_id: payload.source_id || null
   })
   if (error) throw readableError(error, 'No se pudo registrar el movimiento.')
   return Array.isArray(data) ? data[0] : data

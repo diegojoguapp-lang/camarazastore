@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { ArrowDownLeft, ArrowUpRight, Landmark, Plus, Repeat, Search } from 'lucide-react'
-import { AdminDataTable, AdminMetric, AdminPageHeader, DateCell, FilterToolbar, MoneyCell } from '../../components/AdminUX'
+import { AdminDataTable, AdminMetric, AdminModal, AdminPageHeader, DateCell, FilterToolbar, MoneyCell } from '../../components/AdminUX'
 import { createAccountTransfer, createManualMovement, getFinancialAccounts, getFinancialDashboard, getFinancialMovements, saveFinancialAccount } from '../../lib/adminFinanceApi'
 import { formatGs } from '../../lib/utils'
 
@@ -16,7 +16,7 @@ export function FinanceAdmin() {
   const [accountForm, setAccountForm] = useState(emptyAccount)
   const [movementForm, setMovementForm] = useState(emptyMovement)
   const [transferForm, setTransferForm] = useState(emptyTransfer)
-  const [mode, setMode] = useState('movement')
+  const [modal, setModal] = useState('')
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
   const [loading, setLoading] = useState(true)
@@ -52,6 +52,7 @@ export function FinanceAdmin() {
       setError('')
       await saveFinancialAccount(accountForm)
       setAccountForm(emptyAccount)
+      setModal('')
       setMessage('Cuenta guardada correctamente.')
       await load()
     } catch (err) {
@@ -65,6 +66,7 @@ export function FinanceAdmin() {
       setError('')
       await createManualMovement(movementForm)
       setMovementForm(emptyMovement)
+      setModal('')
       setMessage('Movimiento registrado.')
       await load()
     } catch (err) {
@@ -78,6 +80,7 @@ export function FinanceAdmin() {
       setError('')
       await createAccountTransfer(transferForm)
       setTransferForm(emptyTransfer)
+      setModal('')
       setMessage('Transferencia registrada.')
       await load()
     } catch (err) {
@@ -122,38 +125,17 @@ export function FinanceAdmin() {
       </section>
 
       <section className="ax-panel">
-        <div className="ax-quick-filters">
-          <button type="button" className={mode === 'movement' ? 'active' : ''} onClick={() => setMode('movement')}><Plus size={14} /> Movimiento</button>
-          <button type="button" className={mode === 'transfer' ? 'active' : ''} onClick={() => setMode('transfer')}><Repeat size={14} /> Transferencia</button>
-          <button type="button" className={mode === 'account' ? 'active' : ''} onClick={() => setMode('account')}><Landmark size={14} /> Cuenta</button>
+        <div className="ax-panel-header">
+          <div>
+            <h2>Operaciones</h2>
+            <p>Registra movimientos solo cuando los necesites.</p>
+          </div>
+          <div className="ax-actions">
+            <button className="primary-button" type="button" onClick={() => setModal('movement')}><Plus size={14} /> Movimiento</button>
+            <button className="secondary-button" type="button" onClick={() => setModal('transfer')}><Repeat size={14} /> Transferir</button>
+            <button className="secondary-button" type="button" onClick={() => setModal('account')}><Landmark size={14} /> Nueva cuenta</button>
+          </div>
         </div>
-        {mode === 'movement' && (
-          <form className="form-grid" onSubmit={saveMovement}>
-            <label>Cuenta<select value={movementForm.account_id} onChange={(e) => setMovementForm((p) => ({ ...p, account_id: e.target.value }))} required><option value="">Seleccionar</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
-            <label>Tipo<select value={movementForm.direction} onChange={(e) => setMovementForm((p) => ({ ...p, direction: e.target.value }))}><option value="income">Ingreso</option><option value="expense">Egreso</option></select></label>
-            <label>Monto<input type="number" min="1" value={movementForm.amount} onChange={(e) => setMovementForm((p) => ({ ...p, amount: e.target.value }))} required /></label>
-            <label>Descripcion<input value={movementForm.description} onChange={(e) => setMovementForm((p) => ({ ...p, description: e.target.value }))} required /></label>
-            <button className="primary-button" type="submit">{movementForm.direction === 'income' ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />} Registrar</button>
-          </form>
-        )}
-        {mode === 'transfer' && (
-          <form className="form-grid" onSubmit={saveTransfer}>
-            <label>Origen<select value={transferForm.from_account_id} onChange={(e) => setTransferForm((p) => ({ ...p, from_account_id: e.target.value }))} required><option value="">Seleccionar</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
-            <label>Destino<select value={transferForm.to_account_id} onChange={(e) => setTransferForm((p) => ({ ...p, to_account_id: e.target.value }))} required><option value="">Seleccionar</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
-            <label>Monto<input type="number" min="1" value={transferForm.amount} onChange={(e) => setTransferForm((p) => ({ ...p, amount: e.target.value }))} required /></label>
-            <label>Descripcion<input value={transferForm.description} onChange={(e) => setTransferForm((p) => ({ ...p, description: e.target.value }))} /></label>
-            <button className="primary-button" type="submit"><Repeat size={16} /> Transferir</button>
-          </form>
-        )}
-        {mode === 'account' && (
-          <form className="form-grid" onSubmit={saveAccount}>
-            <label>Nombre<input value={accountForm.name} onChange={(e) => setAccountForm((p) => ({ ...p, name: e.target.value }))} required /></label>
-            <label>Tipo<select value={accountForm.account_type} onChange={(e) => setAccountForm((p) => ({ ...p, account_type: e.target.value, is_cash_account: e.target.value === 'cash' }))}><option value="cash">Caja efectivo</option><option value="bank">Banco</option><option value="wallet">Billetera</option><option value="other">Otra</option></select></label>
-            <label>Saldo inicial<input type="number" min="0" value={accountForm.initial_balance} onChange={(e) => setAccountForm((p) => ({ ...p, initial_balance: e.target.value }))} /></label>
-            <label>Banco<input value={accountForm.bank_name} onChange={(e) => setAccountForm((p) => ({ ...p, bank_name: e.target.value }))} /></label>
-            <button className="primary-button" type="submit">Guardar cuenta</button>
-          </form>
-        )}
       </section>
 
       <FilterToolbar>
@@ -164,6 +146,64 @@ export function FinanceAdmin() {
       </FilterToolbar>
 
       <AdminDataTable columns={movementColumns} rows={movements} loading={loading} empty="Todavia no hay movimientos financieros." />
+
+      <AdminModal
+        open={modal === 'movement'}
+        title="Registrar movimiento"
+        onClose={() => setModal('')}
+        footer={(
+          <>
+            <button className="secondary-button" type="button" onClick={() => setModal('')}>Cancelar</button>
+            <button className="primary-button" type="submit" form="finance-movement-form">{movementForm.direction === 'income' ? <ArrowUpRight size={16} /> : <ArrowDownLeft size={16} />} Registrar movimiento</button>
+          </>
+        )}
+      >
+        <form id="finance-movement-form" className="ax-modal-form-grid" onSubmit={saveMovement}>
+          <label>Cuenta<select value={movementForm.account_id} onChange={(e) => setMovementForm((p) => ({ ...p, account_id: e.target.value }))} required><option value="">Seleccionar</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+          <label>Tipo<select value={movementForm.direction} onChange={(e) => setMovementForm((p) => ({ ...p, direction: e.target.value }))}><option value="income">Ingreso</option><option value="expense">Egreso</option></select></label>
+          <label>Monto<input type="number" min="1" value={movementForm.amount} onChange={(e) => setMovementForm((p) => ({ ...p, amount: e.target.value }))} required /></label>
+          <label>Descripcion<input value={movementForm.description} onChange={(e) => setMovementForm((p) => ({ ...p, description: e.target.value }))} required /></label>
+        </form>
+      </AdminModal>
+
+      <AdminModal
+        open={modal === 'transfer'}
+        title="Transferir entre cuentas"
+        onClose={() => setModal('')}
+        footer={(
+          <>
+            <button className="secondary-button" type="button" onClick={() => setModal('')}>Cancelar</button>
+            <button className="primary-button" type="submit" form="finance-transfer-form"><Repeat size={16} /> Transferir</button>
+          </>
+        )}
+      >
+        <form id="finance-transfer-form" className="ax-modal-form-grid" onSubmit={saveTransfer}>
+          <label>Cuenta origen<select value={transferForm.from_account_id} onChange={(e) => setTransferForm((p) => ({ ...p, from_account_id: e.target.value }))} required><option value="">Seleccionar</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+          <label>Cuenta destino<select value={transferForm.to_account_id} onChange={(e) => setTransferForm((p) => ({ ...p, to_account_id: e.target.value }))} required><option value="">Seleccionar</option>{activeAccounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+          <label>Monto<input type="number" min="1" value={transferForm.amount} onChange={(e) => setTransferForm((p) => ({ ...p, amount: e.target.value }))} required /></label>
+          <label>Descripcion opcional<input value={transferForm.description} onChange={(e) => setTransferForm((p) => ({ ...p, description: e.target.value }))} /></label>
+          {transferForm.from_account_id && <div className="ax-readonly-field"><span>Saldo origen</span><strong>{formatGs(activeAccounts.find((account) => account.id === transferForm.from_account_id)?.current_balance || 0)}</strong></div>}
+        </form>
+      </AdminModal>
+
+      <AdminModal
+        open={modal === 'account'}
+        title="Nueva cuenta financiera"
+        onClose={() => setModal('')}
+        footer={(
+          <>
+            <button className="secondary-button" type="button" onClick={() => setModal('')}>Cancelar</button>
+            <button className="primary-button" type="submit" form="finance-account-form">Guardar cuenta</button>
+          </>
+        )}
+      >
+        <form id="finance-account-form" className="ax-modal-form-grid" onSubmit={saveAccount}>
+          <label>Nombre<input value={accountForm.name} onChange={(e) => setAccountForm((p) => ({ ...p, name: e.target.value }))} required /></label>
+          <label>Tipo<select value={accountForm.account_type} onChange={(e) => setAccountForm((p) => ({ ...p, account_type: e.target.value, is_cash_account: e.target.value === 'cash' }))}><option value="cash">Caja efectivo</option><option value="bank">Banco</option><option value="wallet">Billetera</option><option value="other">Otra</option></select></label>
+          <label>Saldo inicial<input type="number" min="0" value={accountForm.initial_balance} onChange={(e) => setAccountForm((p) => ({ ...p, initial_balance: e.target.value }))} /></label>
+          <label>Banco<input value={accountForm.bank_name} onChange={(e) => setAccountForm((p) => ({ ...p, bank_name: e.target.value }))} /></label>
+        </form>
+      </AdminModal>
     </div>
   )
 }

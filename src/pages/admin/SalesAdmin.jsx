@@ -25,9 +25,10 @@ const quickFilters = [
   ['yesterday', 'Ayer'],
   ['week', 'Esta semana'],
   ['month', 'Este mes'],
-  ['pending_contact', 'Pendientes'],
+  ['confirmed', 'Coordinado'],
   ['out_for_delivery', 'En reparto'],
-  ['delivered_paid', 'Entregadas']
+  ['delivered_paid', 'Entregado y cobrado'],
+  ['cancelled', 'Cancelado']
 ]
 const OPERATIONAL_STATUSES = ['confirmed', 'out_for_delivery', 'delivered_paid', 'cancelled']
 
@@ -54,8 +55,15 @@ function saleTypeLabel(sale) {
 }
 
 function unitsLabel(sale) {
-  const units = Number(sale.quantity || 0)
+  const units = (sale.items || []).reduce((sum, item) => sum + Number(item.quantity || 0), 0) || Number(sale.quantity || 0)
   return units === 1 ? '1 unidad' : `${units} unidades`
+}
+
+function productsLabel(sale) {
+  const items = sale.items || []
+  if (!items.length) return sale.product_name_snapshot || 'Venta'
+  if (items.length === 1) return items[0].product_name_snapshot
+  return `${items[0].product_name_snapshot} + ${items.length - 1} mas`
 }
 
 export function SalesAdmin() {
@@ -167,9 +175,9 @@ export function SalesAdmin() {
 
   const columns = [
     { key: 'date', label: 'Fecha', render: (sale) => formatDatePy(sale.created_at) },
-    { key: 'customer', label: 'Cliente', render: (sale) => sale.customer?.full_name || '-' },
+    { key: 'customer', label: 'Cliente', render: (sale) => sale.customer_display_name || '-' },
     { key: 'type', label: 'Tipo', render: (sale) => saleTypeLabel(sale) },
-    { key: 'product', label: 'Productos', render: (sale) => <div><strong>{sale.product_name_snapshot}</strong><span>{unitsLabel(sale)}</span></div> },
+    { key: 'product', label: 'Productos', render: (sale) => <div><strong>{productsLabel(sale)}</strong><span>{unitsLabel(sale)}</span></div> },
     { key: 'reseller', label: 'Revendedor', render: (sale) => sale.sale_type === 'direct' ? '-' : `${sale.reseller?.reseller_code || '-'} ${sale.reseller?.full_name || ''}` },
     { key: 'status', label: 'Estado', render: (sale) => <span className={`sale-status status-${sale.status}`}>{saleStatusLabel(sale.status)}</span> },
     { key: 'price', label: 'Precio', align: 'right', render: (sale) => <MoneyCell value={sale.product_sale_price} /> },
@@ -234,7 +242,7 @@ export function SalesAdmin() {
             </header>
             <div className="ax-status-modal-info">
               <div><span>Producto</span><strong>{statusModalSale.product_name_snapshot}</strong></div>
-              <div><span>Cliente</span><strong>{statusModalSale.customer?.full_name || '-'}</strong></div>
+              <div><span>Cliente</span><strong>{statusModalSale.customer_display_name || '-'}</strong></div>
               <div><span>Estado actual</span><strong>{saleStatusLabel(statusModalSale.status)}</strong></div>
             </div>
             <label>Nuevo estado

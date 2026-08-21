@@ -85,7 +85,7 @@ export function SaleDetail() {
       <AdminPageHeader
         eyebrow="Venta"
         title={sale.product_name_snapshot}
-        description={`${sale.customer?.full_name || 'Cliente'} - ${sale.reseller?.full_name || 'Revendedor'}`}
+        description={`${sale.customer_display_name || 'Cliente'} - ${sale.sale_type === 'direct' ? 'Cliente final' : sale.reseller?.full_name || 'Revendedor'}`}
         actions={(
           <>
             <Link className="secondary-button" to="/admin/ventas"><ArrowLeft size={16} /> Volver</Link>
@@ -102,9 +102,9 @@ export function SaleDetail() {
           <section className="ax-panel">
             <h2>Cliente</h2>
             <div className="ax-info-grid">
-              <DetailItem label="Nombre" value={sale.customer?.full_name} />
-              <DetailItem label="Telefono" value={sale.customer?.phone} />
-              <DetailItem label="Ciudad" value={sale.customer?.city} />
+              <DetailItem label="Nombre" value={sale.customer?.full_name || sale.customer_name_snapshot} />
+              <DetailItem label="Telefono" value={sale.customer?.phone || sale.customer_phone_snapshot} />
+              <DetailItem label="Ciudad" value={sale.customer?.city || sale.delivery_city} />
               <DetailItem label="Direccion" value={sale.customer?.address} />
               <DetailItem label="Referencia" value={sale.customer?.reference} />
               <DetailItem label="Pago adelantado" value={sale.customer?.requires_advance_payment ? 'Si' : 'No'} />

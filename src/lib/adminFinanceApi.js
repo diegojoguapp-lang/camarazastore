@@ -103,11 +103,19 @@ export async function getCashSessions() {
   requireSupabase()
   const { data, error } = await supabase
     .from('cash_sessions')
-    .select('*,account:financial_accounts(id,name,current_balance)')
+    .select('*,account:financial_accounts(id,name,account_type)')
     .order('opened_at', { ascending: false })
     .limit(100)
   if (error) throw error
-  return data || []
+  const accounts = await getFinancialAccounts()
+  const balanceMap = new Map(accounts.map((account) => [account.id, account]))
+  return (data || []).map((session) => ({
+    ...session,
+    account: {
+      ...(session.account || {}),
+      current_balance: balanceMap.get(session.financial_account_id)?.current_balance
+    }
+  }))
 }
 
 export async function openCashSession(payload) {

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { AdminDataTable, AdminMetric, AdminPageHeader, DateCell, MoneyCell } from '../../components/AdminUX'
 import { closeCashSession, getCashSessions, getFinancialAccounts, getFinancialMovements, openCashSession } from '../../lib/adminFinanceApi'
 
@@ -98,8 +99,14 @@ export function CashAdmin() {
 
       <section className="ax-panel">
         <h2>{openSession ? 'Cerrar caja' : 'Abrir caja'}</h2>
-        {!openSession ? (
-          <form className="cash-session-card" onSubmit={submitOpen}>
+        {!accounts.length && !openSession ? (
+          <div className="ax-empty-state-pro">
+            <strong>Todavia no configuraste una cuenta de efectivo.</strong>
+            <p>Crea una cuenta financiera de tipo Caja/Efectivo para comenzar a utilizar Caja diaria.</p>
+            <Link className="primary-button" to="/admin/finanzas">Crear cuenta</Link>
+          </div>
+        ) : !openSession ? (
+          <form className="cash-session-card cash-session-card-pro" onSubmit={submitOpen}>
             <label>Cuenta de caja<select value={form.financial_account_id} onChange={(e) => setForm((p) => ({ ...p, financial_account_id: e.target.value }))} required><option value="">Seleccionar</option>{accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
             <div className="cash-readout"><span>Saldo esperado</span><strong><MoneyCell value={expectedOpenBalance} /></strong></div>
             <label>Efectivo contado<input type="number" min="0" value={form.counted_balance} onChange={(e) => setForm((p) => ({ ...p, counted_balance: e.target.value }))} required /></label>
@@ -108,7 +115,7 @@ export function CashAdmin() {
             <button className="primary-button" type="submit">Abrir caja</button>
           </form>
         ) : (
-          <form className="cash-session-card" onSubmit={submitClose}>
+          <form className="cash-session-card cash-session-card-pro" onSubmit={submitClose}>
             <div className="ax-readonly-field"><span>Cuenta abierta</span><strong>{openSession.account?.name}</strong></div>
             <div className="cash-readout"><span>Saldo esperado</span><strong><MoneyCell value={expectedCloseBalance} /></strong></div>
             <label>Efectivo contado<input type="number" min="0" value={closeForm.counted_balance} onChange={(e) => setCloseForm((p) => ({ ...p, counted_balance: e.target.value }))} required /></label>

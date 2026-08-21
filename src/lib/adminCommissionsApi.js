@@ -119,6 +119,29 @@ export async function getCommissionBatchSales(batchId, resellerId) {
   return data || []
 }
 
+export async function getResellerCommissionOverview(filters = {}) {
+  requireSupabase()
+  const { data, error } = await supabase.rpc('admin_get_reseller_commission_overview', {
+    p_period: filters.period || 'this_week',
+    p_date_from: filters.date_from || null,
+    p_date_to: filters.date_to || null
+  })
+  if (error) throw error
+  return data || []
+}
+
+export async function getResellerCommissionDetail(resellerId, filters = {}) {
+  requireSupabase()
+  const { data, error } = await supabase.rpc('admin_get_reseller_commission_detail', {
+    p_reseller_id: resellerId,
+    p_period: filters.period || 'this_week',
+    p_date_from: filters.date_from || null,
+    p_date_to: filters.date_to || null
+  })
+  if (error) throw error
+  return data || []
+}
+
 export async function getSundayCommissionWarnings() {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_get_sunday_commission_warnings')

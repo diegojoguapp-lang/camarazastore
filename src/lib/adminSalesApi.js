@@ -65,12 +65,24 @@ function readableSaleError(error) {
   if (message.includes('Reseller sale requires an active reseller')) return new Error('Selecciona un revendedor activo.')
   if (message.includes('Customer name is required')) return new Error('El nombre del cliente es obligatorio.')
   if (message.includes('At least one sale item')) return new Error('Agrega al menos un producto.')
+  if (message.includes('Stock can be reserved only for open sales')) return new Error('No se pudo reservar el stock necesario para reactivar esta venta.')
+  if (message.includes('Stock insuficiente') || message.includes('No hay stock suficiente')) return new Error(message)
+  if (message.includes('La venta debe estar confirmada')) return new Error('Para entregar esta venta, primero debe tener stock reservado o reactivarse con stock disponible.')
+  if (message.includes('Delivered sales can only move to returned')) return new Error('Una venta entregada solo puede pasar a devolucion.')
+  if (message.includes('Returned sales cannot be reopened')) return new Error('Una venta devuelta no puede reabrirse.')
+  if (message.includes('Para entregar y cobrar')) return new Error('Para entregar y cobrar selecciona metodo de pago y cuenta financiera.')
   return error
 }
 
 function normalizeSale(row) {
   const items = [...(row.items || [])].sort((a, b) => (a.sort_order ?? 0) - (b.sort_order ?? 0))
-  return { ...row, items }
+  return {
+    ...row,
+    customer_display_name: row.customer?.full_name || row.customer_name_snapshot || '',
+    customer_display_phone: row.customer?.phone || row.customer_phone_snapshot || '',
+    customer_display_city: row.customer?.city || row.delivery_city || '',
+    items
+  }
 }
 
 export async function getAdminSales(filters = {}) {
@@ -107,10 +119,12 @@ export async function getAdminSales(filters = {}) {
       ...(sale.items || []).map((item) => item.product_name_snapshot),
       sale.customer?.full_name,
       sale.customer?.phone,
+      sale.customer_name_snapshot,
+      sale.customer_phone_snapshot,
       sale.reseller?.full_name,
       sale.reseller?.reseller_code
     ].join(' ').toLowerCase()
-    const cityMatch = !city || String(sale.customer?.city || sale.delivery_city || '').toLowerCase().includes(city)
+    const cityMatch = !city || String(sale.customer_display_city || '').toLowerCase().includes(city)
     return (!search || haystack.includes(search)) && cityMatch
   })
 }

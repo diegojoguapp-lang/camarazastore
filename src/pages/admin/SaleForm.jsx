@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { ArrowLeft, Plus, Save, Trash2 } from 'lucide-react'
+import { ArrowLeft, Check, Plus, Save, Trash2, X } from 'lucide-react'
 import { MoneyInput } from '../../components/MoneyInput'
-import { AdminPageHeader, MoneyCell, StickySummary } from '../../components/AdminUX'
+import { AdminModal, AdminPageHeader, AdminStatusBadge } from '../../components/AdminUX'
 import { createCustomer, getCustomerByPhone } from '../../lib/customerApi'
 import { getInventoryProducts } from '../../lib/adminInventoryApi'
 import { createSale, getAdminSaleById, updateSale } from '../../lib/adminSalesApi'
@@ -10,15 +10,7 @@ import { getResellers } from '../../lib/resellerApi'
 import { saleStatusLabel } from '../../lib/salesConstants'
 import { formatGs } from '../../lib/utils'
 
-const emptyCustomer = {
-  id: '',
-  full_name: '',
-  phone: '',
-  city: '',
-  customer_document: '',
-  shipping_carrier_name: ''
-}
-
+const emptyCustomer = { id: '', full_name: '', phone: '', city: '', customer_document: '', shipping_carrier_name: '' }
 const emptySale = {
   sale_type: 'reseller',
   reseller_id: '',
@@ -35,30 +27,32 @@ const emptySale = {
   admin_notes: '',
   reseller_visible_notes: ''
 }
-
 const visibleStatuses = ['confirmed', 'out_for_delivery', 'cancelled']
 
-function numberValue(value) {
-  return Number(value || 0)
+function numberValue(value) { return Number(value || 0) }
+function normalizeText(value) {
+  return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
 }
-
+function matchesWords(source, query) {
+  const text = normalizeText(source)
+  return normalizeText(query).split(/\s+/).filter(Boolean).every((word) => text.includes(word))
+}
 function normalizeFulfillment(value) {
   if (value === 'transportadora') return 'shipping'
   return ['delivery', 'shipping', 'pickup'].includes(value) ? value : 'delivery'
 }
-
 function resellerSearchText(reseller) {
   return [reseller.reseller_code, reseller.full_name, reseller.phone, reseller.whatsapp, reseller.city].filter(Boolean).join(' ')
 }
-
 function productSearchText(product) {
-  return [product.name, product.brand, product.model, product.admin_details?.sku].filter(Boolean).join(' ')
+  return [product.admin_details?.sku, product.name, product.brand, product.model].filter(Boolean).join(' ')
 }
-
 function productCode(product) {
-  return product.admin_details?.sku || product.slug || product.id?.slice(0, 8) || '-'
+  return product.admin_details?.sku || product.id?.slice(0, 8) || '-'
 }
-
+function productAvailable(product) {
+  return Number(product.available_stock_quantity ?? (Number(product.stock_quantity || 0) - Number(product.reserved_stock_quantity || 0)))
+}
 function itemFromProduct(product, saleType) {
   const details = product.admin_details || {}
   const retailPrice = details.retail_price
@@ -76,30 +70,87 @@ function itemFromProduct(product, saleType) {
     retail_missing: saleType === 'direct' && (retailPrice === null || retailPrice === undefined || retailPrice === '')
   }
 }
-
 function itemTotals(item, saleType) {
   const quantity = numberValue(item.quantity)
   const subtotal = numberValue(item.unit_sale_price) * quantity
   const cost = numberValue(item.unit_cost_snapshot) * quantity
   const unitCommission = saleType === 'direct' ? 0 : Math.max(numberValue(item.unit_sale_price) - numberValue(item.wholesale_price_snapshot), 0)
-  const commission = unitCommission * quantity
-  return { subtotal, cost, unitCommission, commission }
+  return { subtotal, cost, unitCommission, commission: unitCommission * quantity }
 }
 
-function Combobox({ id, label, value, onChange, options, placeholder, disabled }) {
+function Autocomplete({ label, placeholder, query, setQuery, results, renderResult, onSelect, selected, selectedLabel, disabled, onClear, emptyText }) {
+  const [open, setOpen] = useState(false)
+  const [activeIndex, setActiveIndex] = useState(0)
+  const inputRef = useRef(null)
+  const choose = (item) => {
+    onSelect(item)
+    setQuery('')
+    setOpen(false)
+    setActiveIndex(0)
+  }
   return (
-    <label>{label}
-      <input
-        list={id}
-        value={value}
-        onChange={(event) => onChange(event.target.value)}
-        placeholder={placeholder}
-        disabled={disabled}
-      />
-      <datalist id={id}>
-        {options.map((option) => <option key={option.value} value={option.label} />)}
-      </datalist>
-    </label>
+    <div className="ax-autocomplete">
+      <label>{label}
+        <input
+          ref={inputRef}
+          value={query}
+          onFocus={() => setOpen(true)}
+          onChange={(event) => {
+            setQuery(event.target.value)
+            setOpen(true)
+            setActiveIndex(0)
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Escape') {
+              setOpen(false)
+              return
+            }
+            if (!open || !results.length) return
+            if (event.key === 'ArrowDown') {
+              event.preventDefault()
+              setActiveIndex((index) => Math.min(index + 1, results.length - 1))
+            }
+            if (event.key === 'ArrowUp') {
+              event.preventDefault()
+              setActiveIndex((index) => Math.max(index - 1, 0))
+            }
+            if (event.key === 'Enter') {
+              event.preventDefault()
+              choose(results[activeIndex])
+            }
+          }}
+          placeholder={placeholder}
+          disabled={disabled}
+          autoComplete="off"
+        />
+      </label>
+      {open && query.trim() && (
+        <div className="ax-autocomplete-menu">
+          {results.length ? results.map((item, index) => (
+            <button
+              key={item.id}
+              type="button"
+              className={index === activeIndex ? 'active' : ''}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => choose(item)}
+            >
+              {renderResult(item)}
+            </button>
+          )) : <div className="ax-autocomplete-empty">{emptyText || 'Sin resultados.'}</div>}
+        </div>
+      )}
+      {selected && (
+        <div className="ax-selected-card">
+          <span>{selectedLabel}</span>
+          <strong>{selected.title}</strong>
+          {selected.subtitle && <small>{selected.subtitle}</small>}
+          <div>
+            <button type="button" onClick={() => inputRef.current?.focus()} disabled={disabled}>Cambiar</button>
+            <button type="button" onClick={onClear} disabled={disabled} aria-label="Quitar seleccion"><X size={14} /></button>
+          </div>
+        </div>
+      )}
+    </div>
   )
 }
 
@@ -113,7 +164,9 @@ export function SaleForm() {
   const [saleForm, setSaleForm] = useState(emptySale)
   const [resellerQuery, setResellerQuery] = useState('')
   const [productQuery, setProductQuery] = useState('')
+  const [selectedProductId, setSelectedProductId] = useState('')
   const [customerStatus, setCustomerStatus] = useState('')
+  const [confirmOpen, setConfirmOpen] = useState(false)
   const [message, setMessage] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
@@ -121,26 +174,27 @@ export function SaleForm() {
   const [commercialLocked, setCommercialLocked] = useState(false)
 
   const selectedReseller = resellers.find((item) => item.id === saleForm.reseller_id)
-  const resellerOptions = useMemo(() => resellers.map((item) => ({
-    value: item.id,
-    label: `${item.reseller_code || 'REV'} · ${item.full_name || 'Sin nombre'}`
-  })), [resellers])
-  const productOptions = useMemo(() => products.map((item) => ({
-    value: item.id,
-    label: `${productCode(item)} · ${item.name}${item.model ? ` · ${item.model}` : ''}`
-  })), [products])
-
-  const totals = useMemo(() => {
-    return saleForm.items.reduce((acc, item) => {
-      const line = itemTotals(item, saleForm.sale_type)
-      acc.subtotal += line.subtotal
-      acc.cost += line.cost
-      acc.commission += line.commission
-      return acc
-    }, { subtotal: 0, cost: 0, commission: 0 })
-  }, [saleForm.items, saleForm.sale_type])
+  const selectedProduct = products.find((item) => item.id === selectedProductId)
+  const resellerResults = useMemo(() => {
+    const query = resellerQuery.trim()
+    if (!query) return []
+    return resellers.filter((item) => matchesWords(resellerSearchText(item), query)).slice(0, 8)
+  }, [resellerQuery, resellers])
+  const productResults = useMemo(() => {
+    const query = productQuery.trim()
+    if (!query) return []
+    return products.filter((item) => matchesWords(productSearchText(item), query)).slice(0, 10)
+  }, [productQuery, products])
+  const totals = useMemo(() => saleForm.items.reduce((acc, item) => {
+    const line = itemTotals(item, saleForm.sale_type)
+    acc.subtotal += line.subtotal
+    acc.cost += line.cost
+    acc.commission += line.commission
+    return acc
+  }, { subtotal: 0, cost: 0, commission: 0 }), [saleForm.items, saleForm.sale_type])
   const totalCollected = totals.subtotal + numberValue(saleForm.delivery_charged)
   const netProfit = totals.subtotal - totals.cost - totals.commission
+  const totalUnits = saleForm.items.reduce((sum, item) => sum + numberValue(item.quantity), 0)
 
   useEffect(() => {
     async function load() {
@@ -148,10 +202,8 @@ export function SaleForm() {
         const [productRows, resellerRows] = await Promise.all([getInventoryProducts(), getResellers()])
         setProducts(productRows)
         setResellers(resellerRows.filter((item) => item.is_active))
-
         if (editing) {
           const sale = await getAdminSaleById(id)
-          const saleType = sale.sale_type || 'reseller'
           const saleItems = (sale.items || []).map((item) => ({
             product_id: item.product_id || '',
             product_code_snapshot: item.product_sku_snapshot || '',
@@ -166,7 +218,7 @@ export function SaleForm() {
           setSaleForm({
             ...emptySale,
             ...sale,
-            sale_type: saleType,
+            sale_type: sale.sale_type || 'reseller',
             reseller_id: sale.reseller_id || '',
             customer_id: sale.customer_id || '',
             items: saleItems,
@@ -176,8 +228,6 @@ export function SaleForm() {
             payment_method: sale.payment_method || 'cash',
             payment_timing: sale.payment_timing || 'on_delivery'
           })
-          const reseller = resellerRows.find((item) => item.id === sale.reseller_id)
-          if (reseller) setResellerQuery(`${reseller.reseller_code || 'REV'} · ${reseller.full_name}`)
           if (sale.customer || sale.customer_name_snapshot) {
             setCustomerForm({
               ...emptyCustomer,
@@ -210,19 +260,6 @@ export function SaleForm() {
       setSale('customer_id', '')
     }
   }
-
-  const selectReseller = (label) => {
-    setResellerQuery(label)
-    const exact = resellerOptions.find((item) => item.label === label)
-    if (exact) {
-      setSale('reseller_id', exact.value)
-      return
-    }
-    const term = label.toLowerCase()
-    const match = resellers.find((item) => resellerSearchText(item).toLowerCase().includes(term))
-    setSale('reseller_id', match?.id || '')
-  }
-
   const changeSaleType = (saleType) => {
     if (commercialLocked) return
     setSaleForm((prev) => ({
@@ -238,7 +275,6 @@ export function SaleForm() {
     }))
     if (saleType === 'direct') setResellerQuery('')
   }
-
   const findCustomer = async () => {
     const phone = customerForm.phone.trim()
     if (!phone) {
@@ -260,45 +296,31 @@ export function SaleForm() {
       setError(err.message || 'No se pudo buscar el cliente.')
     }
   }
-
   const addSelectedProduct = () => {
     if (commercialLocked) return
     setError('')
-    const exact = productOptions.find((item) => item.label === productQuery)
-    const term = productQuery.trim().toLowerCase()
-    const product = exact
-      ? products.find((item) => item.id === exact.value)
-      : products.find((item) => productSearchText(item).toLowerCase().includes(term))
-    if (!product) {
+    if (!selectedProduct) {
       setError('Selecciona un producto primero.')
       return
     }
     setSaleForm((prev) => {
-      const existingIndex = prev.items.findIndex((item) => item.product_id === product.id)
+      const existingIndex = prev.items.findIndex((item) => item.product_id === selectedProduct.id)
       if (existingIndex >= 0) {
-        return {
-          ...prev,
-          items: prev.items.map((item, index) => index === existingIndex ? { ...item, quantity: numberValue(item.quantity) + 1 } : item)
-        }
+        return { ...prev, items: prev.items.map((item, index) => index === existingIndex ? { ...item, quantity: numberValue(item.quantity) + 1 } : item) }
       }
-      return { ...prev, items: [...prev.items, itemFromProduct(product, prev.sale_type)] }
+      return { ...prev, items: [...prev.items, itemFromProduct(selectedProduct, prev.sale_type)] }
     })
+    setSelectedProductId('')
     setProductQuery('')
   }
-
   const updateItem = (index, field, value) => {
     if (commercialLocked) return
-    setSaleForm((prev) => ({
-      ...prev,
-      items: prev.items.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value, retail_missing: false } : item)
-    }))
+    setSaleForm((prev) => ({ ...prev, items: prev.items.map((item, itemIndex) => itemIndex === index ? { ...item, [field]: value, retail_missing: false } : item) }))
   }
-
   const removeItem = (index) => {
     if (commercialLocked) return
     setSaleForm((prev) => ({ ...prev, items: prev.items.filter((_, itemIndex) => itemIndex !== index) }))
   }
-
   const validate = () => {
     if (commercialLocked) return 'Esta venta ya esta finalizada o tiene comision pagada. No se pueden editar datos comerciales.'
     if (saleForm.sale_type === 'reseller' && !saleForm.reseller_id) return 'Selecciona un revendedor.'
@@ -318,22 +340,28 @@ export function SaleForm() {
       const quantity = Number(item.quantity)
       if (!Number.isInteger(quantity) || quantity <= 0) return 'La cantidad debe ser un numero entero mayor a cero.'
       if (numberValue(item.unit_sale_price) < 0) return 'El precio no puede ser negativo.'
-      if (saleForm.sale_type === 'reseller' && numberValue(item.unit_sale_price) < numberValue(item.wholesale_price_snapshot)) {
-        return `El precio de venta no puede ser menor al precio mayorista de ${formatGs(item.wholesale_price_snapshot)}.`
-      }
+      if (saleForm.sale_type === 'reseller' && numberValue(item.unit_sale_price) < numberValue(item.wholesale_price_snapshot)) return `El precio de venta no puede ser menor al precio mayorista de ${formatGs(item.wholesale_price_snapshot)}.`
       if (item.retail_missing) return 'Hay productos sin precio minorista interno. Carga un precio o revisa el producto.'
     }
     return ''
   }
-
-  const submit = async (event) => {
+  const requestConfirmation = (event) => {
     event.preventDefault()
     const validation = validate()
     if (validation) {
       setError(validation)
       return
     }
-
+    setError('')
+    setConfirmOpen(true)
+  }
+  const confirmSave = async () => {
+    const validation = validate()
+    if (validation) {
+      setError(validation)
+      setConfirmOpen(false)
+      return
+    }
     try {
       setSaving(true)
       setError('')
@@ -351,7 +379,6 @@ export function SaleForm() {
         })
         customerId = customer.id
       }
-
       const fulfillmentType = normalizeFulfillment(saleForm.fulfillment_type)
       const payload = {
         ...saleForm,
@@ -373,141 +400,210 @@ export function SaleForm() {
       navigate(`/admin/ventas/${result.id || id}`)
     } catch (err) {
       setError(err.message || 'No se pudo guardar la venta.')
+      setConfirmOpen(false)
     } finally {
       setSaving(false)
     }
   }
 
-  if (loading) return <div className="admin-page"><p>Cargando...</p></div>
+  if (loading) return <div className="admin-page ax-page"><p>Cargando...</p></div>
 
   return (
-    <div className="admin-page ax-page">
+    <div className="admin-page ax-page ax-sale-desktop-page">
       <AdminPageHeader
         title={editing ? 'Editar venta' : 'Nueva venta'}
-        description="Pedido compacto con productos, entrega y comision calculada por precio real."
+        description="Carga de pedido multiproducto optimizada para administracion de escritorio."
         actions={<Link className="secondary-button" to="/admin/ventas"><ArrowLeft size={16} /> Volver</Link>}
       />
-
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
       {commercialLocked && <div className="warning-box">Venta finalizada o con comision pagada. Los datos comerciales quedan solo lectura.</div>}
 
-      <form className="ax-sale-form ax-sale-form-pro" onSubmit={submit}>
-        <div className="ax-form-main">
-          <section className="form-section ax-erp-section">
+      <form className="ax-sale-form ax-sale-form-full" onSubmit={requestConfirmation}>
+        <section className="form-section ax-erp-section">
+          <div className="ax-section-heading">
             <h2>Tipo y revendedor</h2>
             <div className="ax-quick-filters">
               <button type="button" className={saleForm.sale_type === 'direct' ? 'active' : ''} disabled={commercialLocked} onClick={() => changeSaleType('direct')}>Cliente final</button>
               <button type="button" className={saleForm.sale_type === 'reseller' ? 'active' : ''} disabled={commercialLocked} onClick={() => changeSaleType('reseller')}>Revendedor</button>
             </div>
-            {saleForm.sale_type === 'reseller' && (
-              <>
-                <Combobox id="reseller-options" label="Buscar revendedor" value={resellerQuery} onChange={selectReseller} options={resellerOptions} placeholder="Codigo, nombre o WhatsApp" disabled={commercialLocked} />
-                {selectedReseller && <div className="ax-selection-pill">{selectedReseller.reseller_code} · {selectedReseller.full_name}</div>}
-              </>
-            )}
-          </section>
+          </div>
+          {saleForm.sale_type === 'reseller' && (
+            <Autocomplete
+              label="Buscar revendedor"
+              placeholder="Buscar revendedor por nombre, codigo o WhatsApp"
+              query={resellerQuery}
+              setQuery={setResellerQuery}
+              results={resellerResults}
+              disabled={commercialLocked}
+              onSelect={(reseller) => setSale('reseller_id', reseller.id)}
+              onClear={() => {
+                setSale('reseller_id', '')
+                setResellerQuery('')
+              }}
+              selected={selectedReseller ? { title: `${selectedReseller.reseller_code || 'REV'} - ${selectedReseller.full_name || 'Sin nombre'}`, subtitle: selectedReseller.city || selectedReseller.phone || '' } : null}
+              selectedLabel="Revendedor seleccionado"
+              emptyText="No hay revendedores con esa busqueda."
+              renderResult={(item) => (
+                <>
+                  <strong>{item.reseller_code || 'REV'} - {item.full_name || 'Sin nombre'}</strong>
+                  <span>{item.phone || item.whatsapp || item.city || 'Sin contacto'}</span>
+                </>
+              )}
+            />
+          )}
+        </section>
 
-          <section className="form-section ax-erp-section">
-            <h2>Datos del cliente y envio</h2>
+        <section className="form-section ax-erp-section">
+          <div className="ax-section-heading">
+            <h2>Cliente y entrega</h2>
             <div className="ax-fulfillment-tabs">
-              {[
-                ['delivery', 'Delivery'],
-                ['shipping', 'Encomienda'],
-                ['pickup', 'Pasa a buscar']
-              ].map(([value, label]) => (
+              {[['delivery', 'Delivery'], ['shipping', 'Encomienda'], ['pickup', 'Pasa a buscar']].map(([value, label]) => (
                 <button key={value} type="button" className={saleForm.fulfillment_type === value ? 'active' : ''} onClick={() => setSale('fulfillment_type', value)}>{label}</button>
               ))}
             </div>
-
-            <div className="form-grid ax-dense-grid">
-              <label>Nombre del cliente *<input value={customerForm.full_name || ''} onChange={(event) => setCustomer('full_name', event.target.value)} disabled={commercialLocked} required /></label>
-              {saleForm.fulfillment_type !== 'pickup' && (
-                <>
-                  <label>WhatsApp *<input value={customerForm.phone || ''} onBlur={findCustomer} onChange={(event) => setCustomer('phone', event.target.value)} disabled={commercialLocked} required /></label>
-                  <label>Ciudad *<input value={customerForm.city || ''} onChange={(event) => setCustomer('city', event.target.value)} disabled={commercialLocked} required /></label>
-                </>
-              )}
-              {saleForm.fulfillment_type === 'delivery' && (
-                <>
-                  <MoneyInput label="Precio del delivery" value={saleForm.delivery_charged} onChange={(value) => setSale('delivery_charged', value)} />
-                  <label>Forma de pago<select value={saleForm.payment_method} onChange={(event) => setSale('payment_method', event.target.value)}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select></label>
-                </>
-              )}
-              {saleForm.fulfillment_type === 'shipping' && (
-                <>
-                  <label>Cedula *<input value={customerForm.customer_document || ''} onChange={(event) => setCustomer('customer_document', event.target.value)} disabled={commercialLocked} required /></label>
-                  <label>Transportadora *<input value={customerForm.shipping_carrier_name || ''} onChange={(event) => setCustomer('shipping_carrier_name', event.target.value)} disabled={commercialLocked} required /></label>
-                  <MoneyInput label="Precio del envio" value={saleForm.delivery_charged} onChange={(value) => setSale('delivery_charged', value)} />
-                </>
-              )}
-            </div>
-            {customerStatus && <p className="ax-help-text">{customerStatus}</p>}
-          </section>
-
-          <section className="form-section ax-erp-section">
-            <h2>Buscar y agregar producto</h2>
-            {!commercialLocked && (
-              <div className="ax-add-product-row">
-                <Combobox id="product-options" label="Producto" value={productQuery} onChange={setProductQuery} options={productOptions} placeholder="Nombre, marca, modelo o codigo" />
-                <button className="primary-button" type="button" onClick={addSelectedProduct}><Plus size={16} /> Agregar producto</button>
-              </div>
+          </div>
+          <div className="form-grid ax-dense-grid">
+            <label>Nombre del cliente *<input value={customerForm.full_name || ''} onChange={(event) => setCustomer('full_name', event.target.value)} disabled={commercialLocked} required /></label>
+            {saleForm.fulfillment_type !== 'pickup' && (
+              <>
+                <label>WhatsApp *<input value={customerForm.phone || ''} onBlur={findCustomer} onChange={(event) => setCustomer('phone', event.target.value)} disabled={commercialLocked} required /></label>
+                <label>Ciudad *<input value={customerForm.city || ''} onChange={(event) => setCustomer('city', event.target.value)} disabled={commercialLocked} required /></label>
+              </>
             )}
-          </section>
+            {saleForm.fulfillment_type === 'delivery' && (
+              <>
+                <MoneyInput label="Precio del delivery" value={saleForm.delivery_charged} onChange={(value) => setSale('delivery_charged', value)} />
+                <label>Forma de pago<select value={saleForm.payment_method} onChange={(event) => setSale('payment_method', event.target.value)}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select></label>
+              </>
+            )}
+            {saleForm.fulfillment_type === 'shipping' && (
+              <>
+                <label>Cedula *<input value={customerForm.customer_document || ''} onChange={(event) => setCustomer('customer_document', event.target.value)} disabled={commercialLocked} required /></label>
+                <label>Transportadora *<input value={customerForm.shipping_carrier_name || ''} onChange={(event) => setCustomer('shipping_carrier_name', event.target.value)} disabled={commercialLocked} required /></label>
+                <MoneyInput label="Precio del envio" value={saleForm.delivery_charged} onChange={(value) => setSale('delivery_charged', value)} />
+              </>
+            )}
+          </div>
+          {customerStatus && <p className="ax-help-text">{customerStatus}</p>}
+        </section>
 
-          <section className="form-section ax-erp-section">
+        <section className="form-section ax-erp-section">
+          <h2>Buscar y agregar producto</h2>
+          {!commercialLocked && (
+            <div className="ax-add-product-row">
+              <Autocomplete
+                label="Producto"
+                placeholder="Buscar por codigo, nombre, marca o modelo"
+                query={productQuery}
+                setQuery={setProductQuery}
+                results={productResults}
+                onSelect={(product) => setSelectedProductId(product.id)}
+                onClear={() => {
+                  setSelectedProductId('')
+                  setProductQuery('')
+                }}
+                selected={selectedProduct ? { title: selectedProduct.name, subtitle: `${productCode(selectedProduct)} - Disponible: ${productAvailable(selectedProduct)}` } : null}
+                selectedLabel="Producto seleccionado"
+                emptyText="No hay productos con esa busqueda."
+                renderResult={(item) => (
+                  <>
+                    <strong>{productCode(item)}</strong>
+                    <span>{item.name}</span>
+                    <small>{[item.brand, item.model].filter(Boolean).join(' - ') || 'Sin marca/modelo'} - Disponible: {productAvailable(item)} - {saleForm.sale_type === 'direct' ? formatGs(item.admin_details?.retail_price || item.suggested_price) : formatGs(item.wholesale_price)}</small>
+                  </>
+                )}
+              />
+              <button className="primary-button" type="button" onClick={addSelectedProduct}><Plus size={16} /> Agregar</button>
+            </div>
+          )}
+        </section>
+
+        <section className="form-section ax-erp-section">
+          <div className="ax-section-heading">
             <h2>Productos de la venta</h2>
-            <div className="ax-sale-items-table">
-              <div className="ax-sale-items-head">
-                <span>Producto</span><span>Codigo</span><span>Cant.</span><span>Precio unit.</span><span>Comision</span><span>Subtotal</span><span />
-              </div>
-              {saleForm.items.map((item, index) => {
-                const line = itemTotals(item, saleForm.sale_type)
-                return (
-                  <div className="ax-sale-item-line" key={`${item.product_id}-${index}`}>
-                    <div><strong>{item.product_name_snapshot}</strong><small>{item.product_model_snapshot || '-'}</small></div>
-                    <span>{item.product_code_snapshot || '-'}</span>
-                    <label><input type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} disabled={commercialLocked} /></label>
-                    <MoneyInput value={item.unit_sale_price} onChange={(value) => updateItem(index, 'unit_sale_price', value)} disabled={commercialLocked} />
-                    <strong>{formatGs(line.commission)}</strong>
-                    <strong>{formatGs(line.subtotal)}</strong>
-                    {!commercialLocked && <button className="icon-button" type="button" onClick={() => removeItem(index)} aria-label="Eliminar producto"><Trash2 size={16} /></button>}
-                  </div>
-                )
-              })}
-              {!saleForm.items.length && <div className="empty-state">Agrega productos para guardar la venta.</div>}
-            </div>
-          </section>
+            <div className="ax-mini-total"><span>{saleForm.items.length} productos / {totalUnits} unidades</span><strong>{formatGs(totalCollected)}</strong></div>
+          </div>
+          <div className="ax-sale-items-table ax-sale-items-table-pro">
+            <div className="ax-sale-items-head"><span>Producto</span><span>Codigo</span><span>Cant.</span><span>Precio unit.</span><span>Precio base</span><span>Comision</span><span>Subtotal</span><span /></div>
+            {saleForm.items.map((item, index) => {
+              const line = itemTotals(item, saleForm.sale_type)
+              return (
+                <div className="ax-sale-item-line" key={`${item.product_id}-${index}`}>
+                  <div><strong>{item.product_name_snapshot}</strong><small>{item.product_model_snapshot || '-'}</small></div>
+                  <span>{item.product_code_snapshot || '-'}</span>
+                  <label><input type="number" min="1" step="1" value={item.quantity} onChange={(event) => updateItem(index, 'quantity', event.target.value)} disabled={commercialLocked} /></label>
+                  <MoneyInput value={item.unit_sale_price} onChange={(value) => updateItem(index, 'unit_sale_price', value)} disabled={commercialLocked} />
+                  <strong>{formatGs(item.wholesale_price_snapshot)}</strong>
+                  <strong>{formatGs(line.commission)}</strong>
+                  <strong>{formatGs(line.subtotal)}</strong>
+                  {!commercialLocked && <button className="icon-button" type="button" onClick={() => removeItem(index)} aria-label="Eliminar producto"><Trash2 size={16} /></button>}
+                </div>
+              )
+            })}
+            {!saleForm.items.length && <div className="empty-state">Agrega productos para guardar la venta.</div>}
+          </div>
+        </section>
 
-          <section className="form-section ax-erp-section">
-            <h2>Estado y notas</h2>
-            <div className="form-grid ax-dense-grid">
-              <label>Estado<select value={saleForm.status} onChange={(event) => setSale('status', event.target.value)}>{visibleStatuses.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
-              <label>Horario<input type="time" value={saleForm.delivery_schedule || ''} onChange={(event) => setSale('delivery_schedule', event.target.value)} disabled={saleForm.fulfillment_type === 'pickup'} /></label>
-            </div>
-            <label>Notas internas<textarea value={saleForm.admin_notes || ''} onChange={(event) => setSale('admin_notes', event.target.value)} /></label>
-            <label>Notas visibles para revendedor<textarea value={saleForm.reseller_visible_notes || ''} onChange={(event) => setSale('reseller_visible_notes', event.target.value)} /></label>
-          </section>
-        </div>
+        <section className="form-section ax-erp-section">
+          <h2>Estado y notas</h2>
+          <div className="form-grid ax-dense-grid">
+            <label>Estado inicial<select value={saleForm.status} onChange={(event) => setSale('status', event.target.value)}>{visibleStatuses.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
+            <label>Horario<input type="time" value={saleForm.delivery_schedule || ''} onChange={(event) => setSale('delivery_schedule', event.target.value)} disabled={saleForm.fulfillment_type === 'pickup'} /></label>
+          </div>
+          <label>Notas internas<textarea value={saleForm.admin_notes || ''} onChange={(event) => setSale('admin_notes', event.target.value)} /></label>
+          <label>Notas visibles para revendedor<textarea value={saleForm.reseller_visible_notes || ''} onChange={(event) => setSale('reseller_visible_notes', event.target.value)} /></label>
+        </section>
 
-        <StickySummary
-          title="Resumen"
-          items={[
-            { label: 'Tipo', value: saleForm.sale_type === 'direct' ? 'Cliente final' : 'Revendedor' },
-            { label: 'Productos', value: `${saleForm.items.length} productos / ${saleForm.items.reduce((sum, item) => sum + numberValue(item.quantity), 0)} unidades` },
-            { label: 'Subtotal productos', value: formatGs(totals.subtotal) },
-            { label: 'Envio', value: formatGs(saleForm.delivery_charged) },
-            { label: 'Total a cobrar', value: formatGs(totalCollected) },
-            ...(saleForm.sale_type === 'reseller' ? [{ label: 'Comision total', value: formatGs(totals.commission) }] : []),
-            { label: 'Ganancia operativa', value: formatGs(netProfit) },
-            { label: 'Estado', value: saleStatusLabel(saleForm.status) }
-          ]}
-        >
-          {error && <div className="error-box">{error}</div>}
-          <button className="primary-button" type="submit" disabled={saving || commercialLocked}><Save size={18} /> {saving ? 'Guardando...' : 'Guardar venta'}</button>
+        <div className="ax-form-footer">
           <Link className="secondary-button" to="/admin/ventas">Cancelar</Link>
-        </StickySummary>
+          <button className="primary-button" type="submit" disabled={saving || commercialLocked}><Save size={18} /> Guardar venta</button>
+        </div>
       </form>
+
+      <AdminModal
+        open={confirmOpen}
+        title="Confirmar venta"
+        size="lg"
+        onClose={() => !saving && setConfirmOpen(false)}
+        footer={(
+          <>
+            <button className="secondary-button" type="button" onClick={() => setConfirmOpen(false)} disabled={saving}>Volver a editar</button>
+            <button className="primary-button" type="button" onClick={confirmSave} disabled={saving}><Check size={16} /> {saving ? 'Guardando...' : 'Confirmar y guardar'}</button>
+          </>
+        )}
+      >
+        <div className="ax-confirm-grid">
+          <div><span>Tipo</span><strong>{saleForm.sale_type === 'direct' ? 'Cliente final' : 'Revendedor'}</strong></div>
+          {saleForm.sale_type === 'reseller' && <div><span>Revendedor</span><strong>{selectedReseller ? `${selectedReseller.reseller_code || 'REV'} - ${selectedReseller.full_name}` : '-'}</strong></div>}
+          <div><span>Cliente</span><strong>{customerForm.full_name || '-'}</strong></div>
+          <div><span>Tipo de entrega</span><strong>{saleForm.fulfillment_type === 'shipping' ? 'Encomienda' : saleForm.fulfillment_type === 'pickup' ? 'Pasa a buscar' : 'Delivery'}</strong></div>
+          <div><span>Estado inicial</span><strong>{saleStatusLabel(saleForm.status)}</strong></div>
+        </div>
+        <div className="ax-confirm-table">
+          <div className="ax-confirm-head"><span>Producto</span><span>Cant.</span><span>Unitario</span><span>Subtotal</span><span>Comision</span></div>
+          {saleForm.items.map((item, index) => {
+            const line = itemTotals(item, saleForm.sale_type)
+            return (
+              <div key={`${item.product_id}-${index}`}>
+                <span>{item.product_name_snapshot}</span>
+                <span>{item.quantity}</span>
+                <span>{formatGs(item.unit_sale_price)}</span>
+                <span>{formatGs(line.subtotal)}</span>
+                <span>{saleForm.sale_type === 'reseller' ? formatGs(line.commission) : '-'}</span>
+              </div>
+            )
+          })}
+        </div>
+        <div className="ax-confirm-totals">
+          <div><span>Subtotal productos</span><strong>{formatGs(totals.subtotal)}</strong></div>
+          <div><span>Envio</span><strong>{formatGs(saleForm.delivery_charged)}</strong></div>
+          <div><span>Total a cobrar</span><strong>{formatGs(totalCollected)}</strong></div>
+          {saleForm.sale_type === 'reseller' && <div><span>Comision total</span><strong>{formatGs(totals.commission)}</strong></div>}
+          <div><span>Ganancia operativa</span><strong className={netProfit < 0 ? 'ax-negative' : ''}>{formatGs(netProfit)}</strong></div>
+        </div>
+        <AdminStatusBadge tone="success">Estado inicial: Coordinado</AdminStatusBadge>
+      </AdminModal>
     </div>
   )
 }
