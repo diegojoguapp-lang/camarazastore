@@ -14,6 +14,11 @@ function readableError(error, fallback) {
   if (message.includes('Movement reason is required')) return new Error('El motivo es obligatorio.')
   if (message.includes('Producto no encontrado')) return new Error('Producto no encontrado.')
   if (message.includes('Opening balance can only')) return new Error('El stock inicial solo puede usarse cuando el stock actual esta en cero.')
+  if (message.includes('Opening balance already exists')) return new Error('Este producto ya tiene un saldo inicial registrado. Usa un ajuste de stock.')
+  if (message.includes('Quantity must be greater')) return new Error('La cantidad debe ser mayor que cero.')
+  if (message.includes('Invalid manual inventory movement type')) return new Error('Tipo de movimiento de inventario invalido.')
+  if (message.includes('Active inventory location not found')) return new Error('No hay una ubicacion de inventario activa.')
+  if (message.includes('No inventory changes were provided')) return new Error('No hay cambios de inventario para guardar.')
   if (message.includes('column reference') && message.includes('ambiguous')) return new Error('No se pudo registrar el movimiento por una referencia ambigua de SQL. Ejecuta la migracion de correccion.')
   if (message.includes('Retail price cannot be negative')) return new Error('El precio minorista no puede ser negativo.')
   if (message.includes('Low stock threshold cannot be negative')) return new Error('El stock minimo no puede ser negativo.')
@@ -44,6 +49,11 @@ function normalizePositiveInteger(value, label) {
   const number = normalizeNonNegativeInteger(value, label)
   if (number <= 0) throw new Error(`${label} debe ser mayor que cero.`)
   return number
+}
+
+function uuidOrNull(value) {
+  const clean = String(value || '').trim()
+  return clean || null
 }
 
 async function currentUserId() {
@@ -93,10 +103,10 @@ export async function getInventoryProducts() {
       .order('name', { ascending: true }),
     supabase
       .from('product_admin_details')
-      .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,updated_at'),
+      .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,inventory_hidden,updated_at'),
     supabase
       .from('suppliers')
-      .select('id,name,is_active')
+      .select('id,name,contact_name,phone,email,city,is_active')
       .order('name', { ascending: true })
   ])
 
@@ -117,7 +127,8 @@ export async function getInventoryProducts() {
       track_inventory: true,
       low_stock_threshold: 2,
       publish_to_retail: false,
-      publish_to_resellers: true
+      publish_to_resellers: true,
+      inventory_hidden: false
     }
     return {
       ...product,
@@ -165,7 +176,8 @@ export async function getProductAdminDetails(productId) {
     track_inventory: true,
     low_stock_threshold: 2,
     publish_to_retail: false,
-    publish_to_resellers: true
+    publish_to_resellers: true,
+    inventory_hidden: false
   }
 }
 
@@ -173,7 +185,7 @@ export async function getProductAdminDetailsList() {
   requireSupabase()
   const { data, error } = await supabase
     .from('product_admin_details')
-    .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,updated_at')
+    .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,inventory_hidden,updated_at')
   if (error) throw error
   return data || []
 }
@@ -191,6 +203,7 @@ export async function saveProductAdminDetails(productId, payload) {
     low_stock_threshold: lowStockThreshold,
     publish_to_retail: Boolean(payload.publish_to_retail),
     publish_to_resellers: payload.publish_to_resellers !== false,
+    inventory_hidden: Boolean(payload.inventory_hidden),
     updated_at: new Date().toISOString()
   }
   const { data, error } = await supabase
@@ -245,18 +258,34 @@ export async function getProductReservations(productId) {
 export async function createInventoryMovement(payload) {
   requireSupabase()
   const { data, error } = await supabase.rpc('admin_create_inventory_movement', {
-    p_product_id: payload.product_id,
+    p_product_id: uuidOrNull(payload.product_id),
     p_movement_type: payload.movement_type,
     p_quantity: normalizePositiveInteger(payload.quantity, 'La cantidad'),
     p_reason: payload.reason?.trim() || '',
     p_notes: payload.notes?.trim() || null,
-    p_location_id: payload.location_id || null,
+    p_location_id: uuidOrNull(payload.location_id),
     p_unit_cost_snapshot: normalizeMoney(payload.unit_cost_snapshot),
     p_source_type: payload.source_type || 'manual',
-    p_source_id: payload.source_id || null
+    p_source_id: uuidOrNull(payload.source_id)
   })
   if (error) throw readableError(error, 'No se pudo registrar el movimiento.')
   return Array.isArray(data) ? data[0] : data
+}
+
+export async function bulkUpdateInventoryProducts(items) {
+  requireSupabase()
+  const cleanItems = (items || []).map((item) => ({
+    product_id: uuidOrNull(item.product_id),
+    sku: normalizeSku(item.sku),
+    supplier_id: uuidOrNull(item.supplier_id),
+    target_stock: normalizeNonNegativeInteger(item.target_stock, 'El stock fisico'),
+    inventory_hidden: Boolean(item.inventory_hidden)
+  }))
+  const { data, error } = await supabase.rpc('admin_bulk_update_inventory_products', {
+    p_items: cleanItems
+  })
+  if (error) throw readableError(error, 'No se pudieron guardar los cambios de inventario.')
+  return data || []
 }
 
 export async function getInventoryLocations() {

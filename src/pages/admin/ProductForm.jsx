@@ -26,9 +26,11 @@ const emptyAdminDetails = {
   track_inventory: true,
   low_stock_threshold: 2,
   publish_to_retail: false,
-  publish_to_resellers: true
+  publish_to_resellers: true,
+  inventory_hidden: false
 }
 const internalDetailsError = 'El producto se guardo correctamente, pero no se pudieron guardar los datos internos. Podes volver a intentarlo desde la edicion del producto.'
+const stockMovementError = 'El producto se guardo, pero no se pudo registrar el stock. Reintenta el ajuste desde Inventario.'
 
 function parseFaqs(value) {
   try {
@@ -157,6 +159,22 @@ export function ProductForm() {
   }
   const setAdminField = (name, value) => setAdminDetails((prev) => ({ ...prev, [name]: value }))
 
+  const refreshProductStock = async (productId) => {
+    const data = await getProductById(productId)
+    const product = data.product
+    const stock = Number(product.stock_quantity ?? 0)
+    const reserved = Number(product.reserved_stock_quantity ?? 0)
+    const available = Number(product.available_stock_quantity ?? (stock - reserved))
+    setForm((prev) => ({
+      ...prev,
+      stock_quantity: stock,
+      reserved_stock_quantity: reserved,
+      available_stock_quantity: available
+    }))
+    setStockAdjustValue(String(stock))
+    return { stock, reserved, available }
+  }
+
   const validateAdminDetails = () => {
     if (!adminDetails.sku?.trim()) return 'El codigo de producto es obligatorio.'
     if (adminDetails.retail_price !== '' && adminDetails.retail_price !== null && adminDetails.retail_price !== undefined) {
@@ -180,6 +198,7 @@ export function ProductForm() {
       const initialStock = Number(form.initial_stock)
       if (!Number.isFinite(initialStock) || !Number.isInteger(initialStock)) return 'El stock inicial debe ser un numero entero.'
       if (initialStock < 0) return 'El stock inicial no puede ser negativo.'
+      if (initialStock > 0 && adminDetails.track_inventory === false) return 'Para cargar stock inicial, activa Controlar inventario.'
     }
     return ''
   }
@@ -249,8 +268,16 @@ export function ProductForm() {
         savedProduct = await createProduct(payload, { main: mainFile, gallery: galleryFiles })
         try {
           await saveProductAdminDetails(savedProduct.id, adminDetails)
-          const initialStock = Number(form.initial_stock || 0)
-          if (initialStock > 0 && adminDetails.track_inventory !== false) {
+        } catch {
+          setError(internalDetailsError)
+          window.alert(internalDetailsError)
+          navigate(`/admin/productos/${savedProduct.id}/editar`)
+          return
+        }
+
+        const initialStock = Number(form.initial_stock || 0)
+        if (initialStock > 0 && adminDetails.track_inventory !== false) {
+          try {
             await createInventoryMovement({
               product_id: savedProduct.id,
               movement_type: 'opening_balance',
@@ -261,12 +288,13 @@ export function ProductForm() {
               source_type: 'product_form',
               source_id: savedProduct.id
             })
+          } catch (err) {
+            const message = `${stockMovementError}${err.message ? ` Detalle: ${err.message}` : ''}`
+            setError(message)
+            window.alert(message)
+            navigate(`/admin/productos/${savedProduct.id}/editar`)
+            return
           }
-        } catch {
-          setError(internalDetailsError)
-          window.alert(internalDetailsError)
-          navigate(`/admin/productos/${savedProduct.id}/editar`)
-          return
         }
       }
       const imageWasReplaced = editing && (Boolean(mainFile) || replacements.length > 0)
@@ -338,7 +366,7 @@ export function ProductForm() {
     }
     try {
       setError('')
-      const movement = await createInventoryMovement({
+      await createInventoryMovement({
         product_id: id,
         movement_type: delta > 0 ? 'adjustment_in' : 'adjustment_out',
         quantity: Math.abs(delta),
@@ -346,13 +374,7 @@ export function ProductForm() {
         notes: `Stock fisico real: ${target}`,
         unit_cost_snapshot: form.cost_price
       })
-      const stockAfter = Number(movement?.stock_after ?? target)
-      setForm((prev) => ({
-        ...prev,
-        stock_quantity: stockAfter,
-        available_stock_quantity: stockAfter - Number(prev.reserved_stock_quantity || 0)
-      }))
-      setStockAdjustValue(String(stockAfter))
+      await refreshProductStock(id)
     } catch (err) {
       setError(err.message || 'No se pudo ajustar el stock.')
     }
