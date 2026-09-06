@@ -7,6 +7,8 @@ import { getAdminSaleById, getSaleEvents, updateSaleStatus } from '../../lib/adm
 import { formatDateTimePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
 import { fulfillmentTypeLabel, paymentMethodLabel, paymentTimingLabel, saleStatusLabel } from '../../lib/salesConstants'
+import { CancellationFields } from '../../components/CancellationFields'
+import { saleCode, cancellationLabel } from '../../lib/businessOperations'
 
 const OPERATIONAL_STATUSES = ['confirmed', 'out_for_delivery', 'delivered_paid', 'cancelled']
 
@@ -29,6 +31,7 @@ export function SaleDetail() {
   const [accounts, setAccounts] = useState([])
   const [status, setStatus] = useState('')
   const [notes, setNotes] = useState('')
+  const [cancellationReason, setCancellationReason] = useState('')
   const [paymentMethod, setPaymentMethod] = useState('cash')
   const [financialAccountId, setFinancialAccountId] = useState('')
   const [message, setMessage] = useState('')
@@ -64,6 +67,7 @@ export function SaleDetail() {
       setMessage('')
       await updateSaleStatus(id, status, {
         notes,
+        cancellation_reason: cancellationReason,
         payment_method: paymentMethod,
         financial_account_id: financialAccountId
       })
@@ -84,7 +88,7 @@ export function SaleDetail() {
     <div className="admin-page ax-page">
       <AdminPageHeader
         eyebrow="Venta"
-        title={sale.product_name_snapshot}
+        title={`${saleCode(sale)} · ${sale.product_name_snapshot}`}
         description={`${sale.customer_display_name || 'Cliente'} - ${sale.sale_type === 'direct' ? 'Cliente final' : sale.reseller?.full_name || 'Revendedor'}`}
         actions={(
           <>
@@ -155,6 +159,12 @@ export function SaleDetail() {
               <DetailItem label="Monto cobrado" value={formatGs(sale.total_collected)} />
               <DetailItem label="Momento del pago" value={paymentTimingLabel(sale.payment_timing)} />
               <DetailItem label="Entregado" value={formatDateTimePy(sale.delivered_at)} />
+              <DetailItem label="Coordinado" value={formatDateTimePy(sale.confirmed_at)} />
+              <DetailItem label="En camino" value={formatDateTimePy(sale.dispatched_at)} />
+              {sale.cancelled_at && <DetailItem label="Cancelado" value={formatDateTimePy(sale.cancelled_at)} />}
+              {sale.returned_at && <DetailItem label="Devuelto" value={formatDateTimePy(sale.returned_at)} />}
+              {sale.status === 'cancelled' && <DetailItem label="Motivo" value={cancellationLabel(sale.cancellation_reason)} />}
+              {sale.cancellation_note && <DetailItem label="Nota de cancelacion" value={sale.cancellation_note} />}
             </div>
           </section>
 
@@ -210,6 +220,7 @@ export function SaleDetail() {
                 </label>
               </>
             )}
+            {status === 'cancelled' && sale.status !== 'cancelled' && <CancellationFields reason={cancellationReason} onChange={setCancellationReason} />}
             <label>Nota opcional<textarea value={notes} onChange={(e) => setNotes(e.target.value)} /></label>
             <button className="primary-button" type="submit" disabled={saving || status === sale.status}>{saving ? 'Guardando...' : 'Actualizar estado'}</button>
           </form>

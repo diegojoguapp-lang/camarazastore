@@ -18,7 +18,7 @@ export async function adminGlobalSearch(term) {
   requireSupabase()
   const clean = String(term || '').trim()
   if (clean.length < 2) return []
-  const { data, error } = await supabase.rpc('admin_global_search', { p_term: clean })
+  const { data, error } = await supabase.rpc('admin_business_search', { p_term: clean })
   if (error) throw error
   return data || []
 }

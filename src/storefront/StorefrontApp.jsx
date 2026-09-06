@@ -15,7 +15,7 @@ function StoreHeader({ cartCount, onOpenCart }) {
   return (
     <header className="store-header">
       <Link className="store-brand" to="/">
-        <span>CS</span>
+        <img src="/favicon.png" alt="" width="40" height="40" />
         <strong>Camaraza Store</strong>
       </Link>
       <button className="store-cart-button" type="button" onClick={onOpenCart} aria-label="Abrir carrito">
@@ -74,7 +74,7 @@ function CatalogPage({ onAdd }) {
   const [category, setCategory] = useState('Todos')
 
   useEffect(() => {
-    document.title = 'Camaraza Store | Catalogo'
+        document.title = 'Camaraza Store | Electronica, tecnologia y mas'
     getRetailProducts()
       .then(setProducts)
       .catch((err) => setError(err.message))
@@ -94,8 +94,8 @@ function CatalogPage({ onAdd }) {
   return (
     <main className="store-page">
       <section className="store-hero">
-        <p>Camaraza Store</p>
-        <h1>Productos listos para comprar desde tu celular.</h1>
+        <h1>Camaraza Store</h1>
+        <p>Electronica, tecnologia y mas</p>
         <label className="store-search">
           <Search size={18} />
           <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Buscar producto" />
@@ -112,7 +112,7 @@ function CatalogPage({ onAdd }) {
         </div>
       </section>
 
-      {featured.length > 0 && (
+      {featured.length > 0 && !search.trim() && category === 'Todos' && (
         <section className="store-section">
           <h2>Destacados</h2>
           <div className="store-grid">
@@ -125,7 +125,7 @@ function CatalogPage({ onAdd }) {
         <h2>Catalogo</h2>
         {loading && <p className="store-muted">Cargando productos...</p>}
         {error && <div className="error-box">{error}</div>}
-        {!loading && !filtered.length && <div className="empty-state">No hay productos disponibles.</div>}
+        {!loading && !error && !filtered.length && <div className="empty-state">No hay productos disponibles.</div>}
         <div className="store-grid">
           {filtered.map((product) => <ProductCard key={product.id} product={product} onAdd={onAdd} />)}
         </div>
@@ -142,15 +142,23 @@ function ProductPage({ onAdd }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [buying, setBuying] = useState(false)
+  const [activeImage, setActiveImage] = useState('')
 
   useEffect(() => {
+    let active = true
+    setLoading(true)
+    setError('')
+    setNotice('')
     getRetailProductBySlug(slug)
       .then((data) => {
+        if (!active) return
         setProduct(data)
+        setActiveImage(data?.main_image_url || '')
         document.title = data ? `${data.name} | Camaraza Store` : 'Producto no encontrado | Camaraza Store'
       })
-      .catch((err) => setError(err.message))
-      .finally(() => setLoading(false))
+      .catch((err) => { if (active) setError(err.message) })
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [slug])
 
   if (loading) return <main className="store-page"><p className="store-muted">Cargando producto...</p></main>
@@ -185,10 +193,9 @@ function ProductPage({ onAdd }) {
         '',
         `Total: ${formatGs(current.retail_price)}`,
         '',
-        'El delivery se coordina por WhatsApp.',
-        'Esta disponible?'
+        'El delivery se coordina por WhatsApp.'
       ].join('\n')
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+      window.location.assign(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`)
     } catch (err) {
       setNotice(err.message || 'No se pudo validar el producto.')
     } finally {
@@ -205,7 +212,7 @@ function ProductPage({ onAdd }) {
       <section className="store-detail-grid">
         <div className="store-detail-media">
           <img
-            src={getDisplayImageUrl(product.main_image_url, { width: 900, height: 760, resize: 'contain' })}
+            src={getDisplayImageUrl(activeImage, { width: 900, height: 760, resize: 'contain' })}
             alt={product.name}
             width="900"
             height="760"
@@ -215,7 +222,7 @@ function ProductPage({ onAdd }) {
           {images.length > 1 && (
             <div className="store-thumbs">
               {images.map((url, index) => (
-                <img key={`${url}-${index}`} src={getDisplayImageUrl(url, { width: 180, height: 180, resize: 'contain' })} alt={`${product.name} ${index + 1}`} width="180" height="180" loading="lazy" decoding="async" onError={imageFallback} />
+                <button key={`${url}-${index}`} type="button" aria-label={`Ver imagen ${index + 1}`} aria-pressed={activeImage === url} onClick={() => setActiveImage(url)}><img src={getDisplayImageUrl(url, { width: 180, height: 180, resize: 'contain' })} alt={`${product.name} ${index + 1}`} width="180" height="180" loading="lazy" decoding="async" onError={imageFallback} /></button>
               ))}
             </div>
           )}
@@ -256,7 +263,8 @@ function CartDrawer({ cart, setCart, open, onClose }) {
     setMessage('')
     setCart((items) => items.map((item) => {
       if (item.id !== id) return item
-      const nextQuantity = Math.max(1, Number(quantity || 1))
+      const nextQuantity = Math.max(1, Math.floor(Number(quantity || 1)))
+      if (!Number.isSafeInteger(nextQuantity)) return item
       if (item.track_inventory !== false && nextQuantity > Number(item.available_stock_quantity || 0)) {
         setMessage(`Solo quedan ${item.available_stock_quantity} unidades disponibles.`)
         return item
@@ -278,11 +286,11 @@ function CartDrawer({ cart, setCart, open, onClose }) {
         const current = checkedMap.get(item.id)
         return current ? { ...item, ...current, quantity: Math.min(item.quantity, current.track_inventory === false ? item.quantity : current.available_stock_quantity) } : item
       })
-      const blocked = checked.find((item) => !item.is_available)
+      const blocked = checked.find((item) => item.is_available !== true)
       const priceChanged = nextCart.some((item) => Number(item.retail_price) !== Number(cart.find((old) => old.id === item.id)?.retail_price))
       setCart(nextCart.filter((item) => item.quantity > 0))
       if (blocked) {
-        setMessage(`${blocked.name}: ${blocked.issue || 'No disponible'}.`)
+        setMessage(`${blocked.name}: ${blocked.issue || 'No disponible'}. ${blocked.available_stock_quantity > 0 ? `Quedan ${blocked.available_stock_quantity} unidades. Revisa la cantidad ajustada.` : ''}`)
         return
       }
       if (priceChanged) {
@@ -302,10 +310,9 @@ function CartDrawer({ cart, setCart, open, onClose }) {
         '',
         `Total: ${formatGs(nextCart.reduce((sum, item) => sum + item.retail_price * item.quantity, 0))}`,
         '',
-        'El delivery se coordina por WhatsApp.',
-        'Esta disponible?'
+        'El delivery se coordina por WhatsApp.'
       ].join('\n')
-      window.open(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`, '_blank', 'noopener,noreferrer')
+      window.location.assign(`https://wa.me/${phone}?text=${encodeURIComponent(text)}`)
     } catch (err) {
       setMessage(err.message || 'No se pudo validar el carrito.')
     } finally {
@@ -317,11 +324,11 @@ function CartDrawer({ cart, setCart, open, onClose }) {
 
   return (
     <div className="store-cart-overlay" role="dialog" aria-modal="true" aria-label="Carrito">
-      <button className="store-cart-backdrop" type="button" onClick={onClose} aria-label="Cerrar carrito" />
+      <button className="store-cart-backdrop" type="button" disabled={checking} onClick={onClose} aria-label="Cerrar carrito" />
       <aside className="store-cart-panel">
         <header>
           <h2>Carrito</h2>
-          <button type="button" onClick={onClose}>Cerrar</button>
+          <button type="button" disabled={checking} onClick={onClose}>Cerrar</button>
         </header>
         {message && <div className="warning-box">{message}</div>}
         {!cart.length ? (
@@ -334,12 +341,12 @@ function CartDrawer({ cart, setCart, open, onClose }) {
                 <div>
                   <strong>{item.name}</strong>
                   <span>{formatGs(item.retail_price)}</span>
-                  <div className="store-qty">
-                    <button type="button" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus size={15} /></button>
-                    <input value={item.quantity} inputMode="numeric" onChange={(event) => updateQuantity(item.id, Number(event.target.value || 1))} />
-                    <button type="button" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus size={15} /></button>
-                    <button type="button" onClick={() => removeItem(item.id)}><Trash2 size={15} /></button>
-                  </div>
+                  <fieldset className="store-qty" disabled={checking}>
+                    <button type="button" aria-label="Reducir cantidad" onClick={() => updateQuantity(item.id, item.quantity - 1)}><Minus size={15} /></button>
+                    <input type="number" min="1" step="1" aria-label={`Cantidad de ${item.name}`} value={item.quantity} inputMode="numeric" onChange={(event) => updateQuantity(item.id, Number(event.target.value || 1))} />
+                    <button type="button" aria-label="Aumentar cantidad" onClick={() => updateQuantity(item.id, item.quantity + 1)}><Plus size={15} /></button>
+                    <button type="button" aria-label={`Eliminar ${item.name}`} onClick={() => removeItem(item.id)}><Trash2 size={15} /></button>
+                  </fieldset>
                 </div>
               </article>
             ))}
@@ -350,7 +357,7 @@ function CartDrawer({ cart, setCart, open, onClose }) {
           <button className="store-whatsapp big" type="button" onClick={buy} disabled={!cart.length || checking}>
             {checking ? 'Validando...' : 'Comprar por WhatsApp'}
           </button>
-          {cart.length > 0 && <button className="store-secondary" type="button" onClick={() => setCart([])}>Vaciar carrito</button>}
+          {cart.length > 0 && <button disabled={checking} className="store-secondary" type="button" onClick={() => setCart([])}>Vaciar carrito</button>}
         </footer>
       </aside>
     </div>

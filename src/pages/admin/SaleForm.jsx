@@ -9,6 +9,7 @@ import { createSale, getAdminSaleById, updateSale } from '../../lib/adminSalesAp
 import { getResellers } from '../../lib/resellerApi'
 import { saleStatusLabel } from '../../lib/salesConstants'
 import { formatGs } from '../../lib/utils'
+import { CancellationFields } from '../../components/CancellationFields'
 
 const emptyCustomer = { id: '', full_name: '', phone: '', city: '', customer_document: '', shipping_carrier_name: '' }
 const emptySale = {
@@ -17,6 +18,8 @@ const emptySale = {
   customer_id: '',
   items: [],
   status: 'confirmed',
+  cancellation_reason: '',
+  cancellation_note: '',
   delivery_charged: 0,
   payment_method: 'cash',
   payment_timing: 'on_delivery',
@@ -223,6 +226,8 @@ export function SaleForm() {
             customer_id: sale.customer_id || '',
             items: saleItems,
             status: visibleStatuses.includes(sale.status) ? sale.status : 'confirmed',
+            cancellation_reason: sale.cancellation_reason || '',
+            cancellation_note: sale.cancellation_note || '',
             delivery_charged: sale.delivery_charged || 0,
             fulfillment_type: normalizeFulfillment(sale.fulfillment_type),
             payment_method: sale.payment_method || 'cash',
@@ -549,6 +554,7 @@ export function SaleForm() {
           <h2>Estado y notas</h2>
           <div className="form-grid ax-dense-grid">
             <label>Estado inicial<select value={saleForm.status} onChange={(event) => setSale('status', event.target.value)}>{visibleStatuses.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
+            {saleForm.status === 'cancelled' && <><CancellationFields reason={saleForm.cancellation_reason} onChange={(value) => setSale('cancellation_reason', value)} /><label>Nota de cancelacion<textarea value={saleForm.cancellation_note} onChange={(event) => setSale('cancellation_note', event.target.value)} /></label></>}
             <label>Horario<input type="time" value={saleForm.delivery_schedule || ''} onChange={(event) => setSale('delivery_schedule', event.target.value)} disabled={saleForm.fulfillment_type === 'pickup'} /></label>
           </div>
           <label>Notas internas<textarea value={saleForm.admin_notes || ''} onChange={(event) => setSale('admin_notes', event.target.value)} /></label>

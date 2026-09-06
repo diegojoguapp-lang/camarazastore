@@ -9,6 +9,8 @@ import { getResellers } from '../../lib/resellerApi'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
 import { saleStatusLabel } from '../../lib/salesConstants'
+import { CancellationFields } from '../../components/CancellationFields'
+import { saleCode } from '../../lib/businessOperations'
 
 const emptyFilters = {
   date_from: '',
@@ -79,6 +81,7 @@ export function SalesAdmin() {
   const [statusModalSale, setStatusModalSale] = useState(null)
   const [nextStatus, setNextStatus] = useState('')
   const [statusNote, setStatusNote] = useState('')
+  const [cancellationReason, setCancellationReason] = useState('')
   const [statusPaymentMethod, setStatusPaymentMethod] = useState('cash')
   const [statusAccountId, setStatusAccountId] = useState('')
   const [statusSaving, setStatusSaving] = useState(false)
@@ -130,6 +133,7 @@ export function SalesAdmin() {
   }
 
   const openStatusModal = (sale) => {
+    setCancellationReason('')
     setStatusModalSale(sale)
     setNextStatus(sale.status)
     setStatusNote('')
@@ -158,6 +162,7 @@ export function SalesAdmin() {
       setError('')
       await updateSaleStatus(statusModalSale.id, nextStatus, {
         notes: statusNote,
+        cancellation_reason: cancellationReason,
         payment_method: statusPaymentMethod,
         financial_account_id: statusAccountId
       })
@@ -174,6 +179,7 @@ export function SalesAdmin() {
   }
 
   const columns = [
+    { key: 'number', label: 'Pedido', render: (sale) => <Link to={`/admin/ventas/${sale.id}`}>{saleCode(sale)}</Link> },
     { key: 'date', label: 'Fecha', render: (sale) => formatDatePy(sale.created_at) },
     { key: 'customer', label: 'Cliente', render: (sale) => sale.customer_display_name || '-' },
     { key: 'type', label: 'Tipo', render: (sale) => saleTypeLabel(sale) },
@@ -271,7 +277,8 @@ export function SalesAdmin() {
                 <div className="ax-readonly-field"><span>Monto</span><strong>{formatGs(statusModalSale.total_collected)}</strong></div>
               </div>
             )}
-            <label>Nota
+            {nextStatus === 'cancelled' && <CancellationFields reason={cancellationReason} onChange={setCancellationReason} />}
+            <label>Nota adicional
               <textarea value={statusNote} onChange={(event) => setStatusNote(event.target.value)} placeholder="Opcional" />
             </label>
             <div className="ax-modal-actions">

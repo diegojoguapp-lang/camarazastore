@@ -1,115 +1,70 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { AdminDataTable, AdminMetric, AdminPageHeader, MoneyCell } from '../../components/AdminUX'
-import { getAdminReports } from '../../lib/adminReportsApi'
+import { getBusinessReport } from '../../lib/adminBusinessApi'
+import { cancellationLabel } from '../../lib/businessOperations'
+import '../../styles/business.css'
 
 export function ReportsAdmin() {
-  const [filters, setFilters] = useState({
-    date_from: new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString().slice(0, 10),
-    date_to: new Date().toISOString().slice(0, 10)
-  })
-  const [data, setData] = useState({ sales: [], items: [], payments: [], movements: [], products: [] })
+  const [filters, setFilters] = useState({ period: 'month', from: '', to: '' })
+  const [data, setData] = useState(null)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(true)
-
-  const load = async () => {
+  const request = useRef(0)
+  async function load(next = filters) {
+    const version = ++request.current
+    setLoading(true)
+    setError('')
     try {
-      setLoading(true)
-      setData(await getAdminReports(filters))
-    } catch (err) {
-      setError(err.message || 'No se pudieron cargar los reportes.')
-    } finally {
-      setLoading(false)
-    }
+      const result = await getBusinessReport(next)
+      if (version !== request.current) return
+      setData(result)
+      setFilters({ ...next, from: result.date_from, to: result.date_to })
+    } catch (err) { if (version === request.current) { setData(null); setError(err.message) } }
+    finally { if (version === request.current) setLoading(false) }
   }
-
-  useEffect(() => { load() }, [])
-
-  const summary = useMemo(() => {
-    const revenue = data.sales.reduce((sum, sale) => sum + Number(sale.total_collected || 0), 0)
-    const profit = data.sales.reduce((sum, sale) => sum + Number(sale.camaraza_net_profit || 0), 0)
-    const expenses = data.movements.filter((row) => row.direction === 'expense' && !['transfer_out', 'purchase_payment', 'commission_payment'].includes(row.movement_type)).reduce((sum, row) => sum + Number(row.amount || 0), 0)
-    const income = data.movements.filter((row) => row.direction === 'income' && !['transfer_in', 'opening_balance'].includes(row.movement_type)).reduce((sum, row) => sum + Number(row.amount || 0), 0)
-    const expenseFlow = data.movements.filter((row) => row.direction === 'expense' && row.movement_type !== 'transfer_out').reduce((sum, row) => sum + Number(row.amount || 0), 0)
-    return { revenue, profit, expenses, income, expenseFlow, netProfit: profit - expenses, avgTicket: data.sales.length ? revenue / data.sales.length : 0 }
-  }, [data])
-
-  const byType = useMemo(() => ['direct', 'reseller'].map((type) => {
-    const rows = data.sales.filter((sale) => sale.sale_type === type)
-    return {
-      type: type === 'direct' ? 'Cliente final' : 'Revendedores',
-      sales: rows.length,
-      revenue: rows.reduce((sum, sale) => sum + Number(sale.total_collected || 0), 0),
-      profit: rows.reduce((sum, sale) => sum + Number(sale.camaraza_net_profit || 0), 0),
-      commissions: rows.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0)
-    }
-  }), [data])
-
-  const productRanking = useMemo(() => {
-    const map = new Map()
-    data.items.forEach((item) => {
-      const current = map.get(item.product_id) || { product: item.product_name_snapshot, units: 0, revenue: 0, profit: 0, stock: data.products.find((p) => p.id === item.product_id)?.stock_quantity || 0 }
-      current.units += Number(item.quantity || 0)
-      current.revenue += Number(item.line_subtotal || 0)
-      current.profit += Number(item.line_subtotal || 0) - Number(item.line_cost_total || 0) - Number(item.line_commission_total || 0)
-      map.set(item.product_id, current)
-    })
-    return Array.from(map.values()).sort((a, b) => b.units - a.units).slice(0, 20)
-  }, [data])
-
-  const resellerRanking = useMemo(() => {
-    const map = new Map()
-    data.sales.filter((sale) => sale.sale_type === 'reseller').forEach((sale) => {
-      const key = sale.reseller?.id || sale.reseller_id
-      const current = map.get(key) || { reseller: `${sale.reseller?.reseller_code || ''} ${sale.reseller?.full_name || 'Revendedor'}`, sales: 0, revenue: 0, commission: 0, paid: 0 }
-      current.sales += 1
-      current.revenue += Number(sale.total_collected || 0)
-      current.commission += Number(sale.reseller_commission || 0)
-      current.paid = data.payments.filter((payment) => payment.reseller_id === key).reduce((sum, payment) => sum + Number(payment.net_paid || 0), 0)
-      map.set(key, current)
-    })
-    return Array.from(map.values()).sort((a, b) => b.revenue - a.revenue).slice(0, 20)
-  }, [data])
-
-  return (
-    <div className="admin-page ax-page">
-      <AdminPageHeader eyebrow="Reportes" title="Reportes" description="Ventas, productos, revendedores y finanzas por periodo." />
-      {error && <div className="error-box">{error}</div>}
-      <form className="ax-filter-drawer" onSubmit={(e) => { e.preventDefault(); load() }}>
-        <label>Desde<input type="date" value={filters.date_from} onChange={(e) => setFilters((p) => ({ ...p, date_from: e.target.value }))} /></label>
-        <label>Hasta<input type="date" value={filters.date_to} onChange={(e) => setFilters((p) => ({ ...p, date_to: e.target.value }))} /></label>
-        <button className="primary-button" type="submit">Aplicar</button>
-      </form>
+  useEffect(() => { load(); return () => { request.current += 1 } }, [])
+  return <div className="admin-page ax-page business-page">
+    <AdminPageHeader title="Reportes" />
+    <form className="business-toolbar" onSubmit={e => { e.preventDefault(); load() }}>
+      <label>Periodo<select value={filters.period} onChange={e => {
+        const next = { ...filters, period: e.target.value }; setFilters(next)
+        if (next.period !== 'custom') load(next)
+      }}><option value="today">Hoy</option><option value="week">Esta semana</option><option value="month">Este mes</option><option value="custom">Rango personalizado</option></select></label>
+      {filters.period === 'custom' && <><label>Desde<input type="date" required value={filters.from} onChange={e=>setFilters({...filters,from:e.target.value})}/></label><label>Hasta<input type="date" required min={filters.from} value={filters.to} onChange={e=>setFilters({...filters,to:e.target.value})}/></label><button className="primary-button" disabled={loading}>Aplicar</button></>}
+    </form>
+    {error && <div role="alert" className="error-box">{error}</div>}
+    {loading && <div className="business-loading">Cargando reportes...</div>}
+    {!loading && data && <>
       <div className="ax-metric-grid">
-        <AdminMetric label="Ventas" value={data.sales.length} />
-        <AdminMetric label="Facturacion" value={<MoneyCell value={summary.revenue} />} featured />
-        <AdminMetric label="Ticket promedio" value={<MoneyCell value={summary.avgTicket} />} />
-        <AdminMetric label="Ganancia operativa" value={<MoneyCell value={summary.profit} />} />
-        <AdminMetric label="Gastos operativos" value={<MoneyCell value={summary.expenses} />} />
-        <AdminMetric label="Ganancia neta" value={<MoneyCell value={summary.netProfit} />} />
-        <AdminMetric label="Ingresos flujo" value={<MoneyCell value={summary.income} />} />
-        <AdminMetric label="Egresos flujo" value={<MoneyCell value={summary.expenseFlow} />} />
+        <AdminMetric label="Pedidos entregados" value={data.delivered_count}/>
+        <AdminMetric label="Cancelados" value={data.cancelled_count}/>
+        <AdminMetric label="Facturacion" value={<MoneyCell value={data.revenue}/>}/>
+        <AdminMetric label="Ticket promedio" value={<MoneyCell value={data.delivered_count ? data.revenue / data.delivered_count : 0}/>}/>
+        <AdminMetric label="Ganancia operativa" value={<MoneyCell value={data.operating_profit}/>}/>
+        <AdminMetric label="Gastos operativos" value={<MoneyCell value={data.expenses}/>}/>
+        <AdminMetric label="Ganancia neta" value={<MoneyCell value={data.net_profit}/>}/>
+        <AdminMetric label="Ingresos flujo" value={<MoneyCell value={data.cash_income}/>}/>
+        <AdminMetric label="Egresos flujo" value={<MoneyCell value={data.cash_expense}/>}/>
       </div>
-      <section className="ax-panel"><h2>Cliente final vs revendedores</h2><AdminDataTable columns={[
-        { key: 'type', label: 'Canal' },
-        { key: 'sales', label: 'Ventas', align: 'right' },
-        { key: 'revenue', label: 'Facturacion', align: 'right', render: (row) => <MoneyCell value={row.revenue} /> },
-        { key: 'profit', label: 'Ganancia', align: 'right', render: (row) => <MoneyCell value={row.profit} /> },
-        { key: 'commissions', label: 'Comisiones', align: 'right', render: (row) => <MoneyCell value={row.commissions} /> }
-      ]} rows={byType} loading={loading} /></section>
-      <section className="ax-panel"><h2>Productos</h2><AdminDataTable columns={[
-        { key: 'product', label: 'Producto' },
-        { key: 'units', label: 'Unidades', align: 'right' },
-        { key: 'revenue', label: 'Facturacion', align: 'right', render: (row) => <MoneyCell value={row.revenue} /> },
-        { key: 'profit', label: 'Ganancia', align: 'right', render: (row) => <MoneyCell value={row.profit} /> },
-        { key: 'stock', label: 'Stock', align: 'right' }
-      ]} rows={productRanking} loading={loading} empty="Sin productos vendidos." /></section>
-      <section className="ax-panel"><h2>Revendedores</h2><AdminDataTable columns={[
-        { key: 'reseller', label: 'Revendedor' },
-        { key: 'sales', label: 'Ventas', align: 'right' },
-        { key: 'revenue', label: 'Facturacion', align: 'right', render: (row) => <MoneyCell value={row.revenue} /> },
-        { key: 'commission', label: 'Comision generada', align: 'right', render: (row) => <MoneyCell value={row.commission} /> },
-        { key: 'paid', label: 'Comision pagada', align: 'right', render: (row) => <MoneyCell value={row.paid} /> }
-      ]} rows={resellerRanking} loading={loading} empty="Sin ventas de revendedores." /></section>
-    </div>
-  )
+      <section className="business-section"><h2>Cliente final y revendedores</h2><AdminDataTable rows={data.channels} columns={[
+        {key:'kind',label:'Canal',render:r=>r.kind === 'direct' ? 'Cliente final' : 'Revendedores'},
+        {key:'delivered_count',label:'Entregados'},
+        {key:'revenue',label:'Facturacion',render:r=><MoneyCell value={r.revenue}/>},
+        {key:'operating_profit',label:'Ganancia',render:r=><MoneyCell value={r.operating_profit}/>},
+        {key:'commissions_generated',label:'Comisiones',render:r=><MoneyCell value={r.commissions_generated}/>}
+      ]}/></section>
+      <section className="business-section"><h2>Rendimiento por producto</h2><AdminDataTable rows={data.products} columns={[
+        {key:'name',label:'Producto'}, {key:'units',label:'Unidades entregadas'},
+        {key:'revenue',label:'Facturacion',render:r=><MoneyCell value={r.revenue}/>},
+        {key:'profit',label:'Ganancia',render:r=><MoneyCell value={r.profit}/>},
+        {key:'stock',label:'Stock disponible'}, {key:'units_30',label:'Vendidas ultimos 30 dias'}
+      ]}/></section>
+      <section className="business-section"><h2>Revendedores del periodo</h2><AdminDataTable rows={data.resellers || []} columns={[
+        {key:'name',label:'Revendedor'}, {key:'delivered_count',label:'Entregados'},
+        {key:'revenue',label:'Facturacion',render:r=><MoneyCell value={r.revenue}/>},
+        {key:'commission',label:'Comision generada',render:r=><MoneyCell value={r.commission}/>}
+      ]}/></section>
+      <section className="business-section"><h2>Motivos de cancelacion</h2><p>Tasa: {data.cancellation_rate || 0}%</p><AdminDataTable rows={data.cancellation_reasons} columns={[{key:'reason',label:'Motivo',render:r=>cancellationLabel(r.reason)},{key:'count',label:'Cancelados'}]}/></section>
+    </>}
+  </div>
 }

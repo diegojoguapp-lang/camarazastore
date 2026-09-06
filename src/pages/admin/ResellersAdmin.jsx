@@ -3,6 +3,8 @@ import { Copy, KeyRound, Plus, RefreshCw, UserCheck, UserX } from 'lucide-react'
 import { AdminDataTable, AdminPageHeader, Drawer, RowActions } from '../../components/AdminUX'
 import { createReseller, getResellers, resetResellerPassword, setResellerActive } from '../../lib/resellerApi'
 import { copyToClipboard } from '../../lib/utils'
+import { MoneyCell } from '../../components/AdminUX'
+import { getBusinessResellers } from '../../lib/adminBusinessApi'
 
 const emptyCreate = { fullName: '', email: '', temporaryPassword: '', confirmPassword: '', phone: '', city: '' }
 const emptyReset = { userId: '', name: '', email: '', resellerCode: '', password: '', confirmPassword: '' }
@@ -22,6 +24,8 @@ function formatDate(value) {
 
 export function ResellersAdmin() {
   const [resellers, setResellers] = useState([])
+  const [performance, setPerformance] = useState([])
+  const [performanceError, setPerformanceError] = useState('')
   const [form, setForm] = useState(emptyCreate)
   const [resetForm, setResetForm] = useState(emptyReset)
   const [created, setCreated] = useState(null)
@@ -35,6 +39,8 @@ export function ResellersAdmin() {
   const sortedResellers = useMemo(() => resellers, [resellers])
 
   const load = () => {
+    setPerformanceError('')
+    getBusinessResellers().then(setPerformance).catch((err) => { setPerformance([]); setPerformanceError(err.message) })
     setLoading(true)
     getResellers()
       .then(setResellers)
@@ -182,6 +188,19 @@ export function ResellersAdmin() {
         ]}
       />
 
+      <section className="ax-panel">
+        <h2>Rendimiento y ranking del mes</h2>
+        {performanceError && <div className="error-box">{performanceError}</div>}
+        <AdminDataTable rows={performance} columns={[
+          {key:'name',label:'Revendedor'}, {key:'delivered_today',label:'Hoy'}, {key:'delivered_week',label:'Semana'}, {key:'delivered_month',label:'Mes'},
+          {key:'cancelled_month',label:'Cancelados mes'},
+          {key:'revenue_month',label:'Facturacion mes',render:r=><MoneyCell value={r.revenue_month}/>},
+          {key:'commission_month',label:'Generada mes',render:r=><MoneyCell value={r.commission_month}/>},
+          {key:'commission_paid',label:'Pagada historica',render:r=><MoneyCell value={r.commission_paid}/>},
+          {key:'commission_pending',label:'Pendiente total',render:r=><MoneyCell value={r.commission_pending}/>},
+          {key:'last_sale_at',label:'Ultima venta',render:r=>formatDate(r.last_sale_at)}
+        ]}/>
+      </section>
       <Drawer open={drawerOpen} title="Nuevo revendedor" onClose={() => setDrawerOpen(false)}>
         {created && (
           <section className="ax-created-box">

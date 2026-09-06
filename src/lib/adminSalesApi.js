@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { getCurrentSession } from './roles'
+import { saleCode } from './businessOperations'
 
 function requireSupabase() {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
@@ -42,6 +43,8 @@ function cleanSalePayload(payload) {
     customer_id: uuidOrNull(payload.customer_id),
     items,
     status,
+    cancellation_reason: payload.cancellation_reason || null,
+    cancellation_note: payload.cancellation_note?.trim() || null,
     admin_notes: payload.admin_notes?.trim() || null,
     reseller_visible_notes: payload.reseller_visible_notes?.trim() || null,
     delivery_charged: cleanNumber(payload.delivery_charged),
@@ -115,6 +118,7 @@ export async function getAdminSales(filters = {}) {
   return (data || []).map(normalizeSale).filter((sale) => {
     if (productSaleIds && !productSaleIds.has(sale.id)) return false
     const haystack = [
+      saleCode(sale),
       sale.product_name_snapshot,
       ...(sale.items || []).map((item) => item.product_name_snapshot),
       sale.customer?.full_name,
@@ -160,6 +164,7 @@ export async function createSale(payload) {
 
   const clean = cleanSalePayload(payload)
   if (!clean.items.length) throw new Error('Agrega al menos un producto.')
+  if (clean.status === 'cancelled') return saveCancelledSale(null, clean)
   const { data, error } = await supabase.rpc('admin_save_sale', {
     p_sale_id: null,
     p_sale_type: clean.sale_type,
@@ -190,6 +195,7 @@ export async function updateSale(id, payload) {
   requireSupabase()
   const clean = cleanSalePayload(payload)
   if (!clean.items.length) throw new Error('Agrega al menos un producto.')
+  if (clean.status === 'cancelled') return saveCancelledSale(id, clean)
   const { data, error } = await supabase.rpc('admin_save_sale', {
     p_sale_id: id,
     p_sale_type: clean.sale_type,
@@ -216,16 +222,28 @@ export async function updateSale(id, payload) {
   return { id: data }
 }
 
+async function saveCancelledSale(id, payload) {
+  const { data, error } = await supabase.rpc('admin_save_cancelled_sale', { p_sale_id: id, p_payload: payload })
+  if (error) throw readableSaleError(error)
+  if (!data) throw new Error('No se pudo confirmar el pedido cancelado.')
+  return { id: data }
+}
+
 export async function updateSaleStatus(id, status, notes = '') {
   requireSupabase()
   const cleanNotes = typeof notes === 'string' ? notes.trim() : notes?.notes?.trim()
-  const { data, error } = await supabase.rpc('admin_transition_sale_status', {
+  const parameters = status === 'cancelled' ? {
+    p_sale_id: uuidOrNull(id),
+    p_reason: notes?.cancellation_reason || null,
+    p_note: cleanNotes || null
+  } : {
     p_sale_id: uuidOrNull(id),
     p_status: status,
     p_notes: cleanNotes || null,
     p_financial_account_id: uuidOrNull(notes?.financial_account_id),
     p_payment_method: notes?.payment_method || null
-  })
+  }
+  const { data, error } = await supabase.rpc(status === 'cancelled' ? 'admin_cancel_sale' : 'admin_transition_sale_status', parameters)
   if (error) throw readableSaleError(error)
   const row = Array.isArray(data) ? data[0] : data
   if (!row?.id) throw new Error('No se pudo confirmar el cambio de estado. Revisa que la venta exista y sea visible para el admin.')
