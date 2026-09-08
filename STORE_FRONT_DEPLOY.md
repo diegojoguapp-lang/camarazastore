@@ -58,11 +58,15 @@ npx --no-install vite --config vite.store.config.js --host 127.0.0.1 --port 5174
 
 Ambos deployments usan el mismo Supabase y las mismas tablas de productos, imagenes e inventario.
 
-El storefront cliente final consume RPCs publicas sanitizadas:
+El storefront cliente final V2 consume RPCs publicas sanitizadas:
 
-- `public.get_retail_catalog()`
-- `public.get_retail_product(text)`
+- `public.get_retail_home_v2()`
+- `public.get_retail_categories_v2()`
+- `public.get_retail_catalog_v2(text, text, numeric, numeric, boolean, text)`
+- `public.get_retail_product_v2(text)`
 - `public.validate_retail_cart(jsonb)`
+
+Las RPC anteriores se conservan para compatibilidad. La metadata de producto y categoria se actualiza en el navegador por ser una SPA; algunos crawlers sociales que no ejecutan JavaScript solo veran la metadata general de `storefront.html`. El build retail emite `robots.txt` y un sitemap base. Las URLs dinamicas necesitan un generador conectado a datos reales para incorporarse al sitemap sin inventar registros.
 
 El catalogo de reventa consume RPCs sanitizadas separadas:
 
@@ -80,7 +84,7 @@ Antes de desplegar el segundo dominio, ejecutar en Supabase la migracion:
 supabase/20260820_macro_phase_3_storefront_channels.sql
 ```
 
-La nueva macrofase requiere ademas `supabase/20260906_business_goals_daily_operations.sql`, despues de todas las migraciones anteriores. Debe ser revisada y ejecutada manualmente ANTES de publicar el frontend Admin nuevo. No se ejecuto aqui.
+La experiencia Storefront V2 requiere ejecutar manualmente `supabase/20260908_storefront_v2.sql` despues de las migraciones anteriores y antes de publicar el frontend nuevo. No se ejecuto aqui.
 
 Solo variables `VITE_*` publicas indicadas arriba; jamas service role, contrasenas o claves privadas en frontend. No se modifico `.env`.
 

@@ -2,15 +2,25 @@ import { supabase, isSupabaseConfigured } from './supabase'
 import { whatsappNumber } from './utils'
 
 const CART_STORAGE_KEY = 'camaraza_store_cart_v1'
+const CUSTOMER_STORAGE_KEY = 'camaraza_store_customer_v1'
+
+function requireStore() {
+  if (!isSupabaseConfigured) throw new Error('La tienda no esta disponible en este momento.')
+}
 
 function normalizeRetailProduct(product) {
   return {
     ...product,
     retail_price: Number(product?.retail_price || 0),
+    retail_compare_at_price: product?.retail_compare_at_price == null ? null : Number(product.retail_compare_at_price),
     available_stock_quantity: Number(product?.available_stock_quantity || 0),
     track_inventory: product?.track_inventory !== false,
     gallery_images: Array.isArray(product?.gallery_images) ? product.gallery_images : []
   }
+}
+
+function isMissingV2(error) {
+  return ['PGRST202', '42883'].includes(error?.code) || /function .* does not exist|schema cache/i.test(error?.message || '')
 }
 
 export function getStoredCart() {
@@ -19,7 +29,8 @@ export function getStoredCart() {
     if (!Array.isArray(parsed)) return []
     const seen = new Set()
     return parsed.filter((item) => {
-      if (!item || typeof item.id !== 'string' || seen.has(item.id) || !Number.isSafeInteger(item.quantity) || item.quantity < 1) return false
+      if (!item || typeof item.id !== 'string' || seen.has(item.id)) return false
+      if (!Number.isSafeInteger(item.quantity) || item.quantity < 1) return false
       seen.add(item.id)
       return true
     }).map(normalizeRetailProduct)
@@ -29,42 +40,88 @@ export function getStoredCart() {
 }
 
 export function saveStoredCart(items) {
-  try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items)) } catch { /* El carrito sigue disponible en esta sesion. */ }
+  try { localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(items)) } catch { /* Storage can be disabled. */ }
 }
 
-export async function getRetailProducts() {
-  if (!isSupabaseConfigured) throw new Error('La tienda no esta disponible en este momento.')
-  const { data, error } = await supabase.rpc('get_retail_catalog')
-  if (error) throw error
-  return (data || []).map(normalizeRetailProduct)
+export function getStoredCustomer() {
+  try {
+    const value = JSON.parse(localStorage.getItem(CUSTOMER_STORAGE_KEY) || '{}')
+    return { name: String(value.name || ''), city: String(value.city || '') }
+  } catch {
+    return { name: '', city: '' }
+  }
 }
 
-export async function getFeaturedRetailProducts() {
+export function saveStoredCustomer({ name, city }) {
+  try { localStorage.setItem(CUSTOMER_STORAGE_KEY, JSON.stringify({ name: name.trim(), city: city.trim() })) } catch { /* Optional convenience only. */ }
+}
+
+export async function getRetailHome() {
+  requireStore()
+  const { data, error } = await supabase.rpc('get_retail_home_v2')
+  if (!error) {
+    return {
+      categories: Array.isArray(data?.categories) ? data.categories : [],
+      featured: (data?.featured || []).map(normalizeRetailProduct),
+      new_products: (data?.new_products || []).map(normalizeRetailProduct),
+      sections: (data?.sections || []).map((section) => ({ ...section, products: (section.products || []).map(normalizeRetailProduct) }))
+    }
+  }
+  if (!isMissingV2(error)) throw error
   const products = await getRetailProducts()
-  return products.filter((product) => product.is_featured).slice(0, 6)
+  return { categories: [], featured: products.filter((item) => item.is_featured).slice(0, 12), new_products: products.slice(0, 12), sections: [] }
+}
+
+export async function getRetailCategories() {
+  requireStore()
+  const { data, error } = await supabase.rpc('get_retail_categories_v2')
+  if (error) {
+    if (isMissingV2(error)) return []
+    throw error
+  }
+  return Array.isArray(data) ? data : []
+}
+
+export async function getRetailProducts(filters = {}) {
+  requireStore()
+  const params = {
+    p_category_slug: filters.categorySlug || null,
+    p_search: filters.search?.trim().slice(0, 80) || null,
+    p_min_price: filters.minPrice === '' || filters.minPrice == null ? null : Number(filters.minPrice),
+    p_max_price: filters.maxPrice === '' || filters.maxPrice == null ? null : Number(filters.maxPrice),
+    p_available_only: Boolean(filters.availableOnly),
+    p_order: filters.order || 'relevant'
+  }
+  const { data, error } = await supabase.rpc('get_retail_catalog_v2', params)
+  if (!error) return (Array.isArray(data) ? data : []).map(normalizeRetailProduct)
+  if (!isMissingV2(error)) throw error
+  const legacy = await supabase.rpc('get_retail_catalog')
+  if (legacy.error) throw legacy.error
+  const term = params.p_search?.toLowerCase()
+  return (legacy.data || []).map(normalizeRetailProduct).filter((item) => !term || [item.name, item.brand, item.model, item.category].join(' ').toLowerCase().includes(term))
 }
 
 export async function getRetailProductBySlug(slug) {
-  if (!isSupabaseConfigured) throw new Error('La tienda no esta disponible en este momento.')
-  const { data, error } = await supabase.rpc('get_retail_product', { p_slug: slug })
-  if (error) throw error
-  const product = Array.isArray(data) ? data[0] : data
-  return product ? normalizeRetailProduct(product) : null
+  requireStore()
+  const { data, error } = await supabase.rpc('get_retail_product_v2', { p_slug: slug })
+  if (!error) return data?.product ? { product: normalizeRetailProduct(data.product), related: (data.related || []).map(normalizeRetailProduct) } : null
+  if (!isMissingV2(error)) throw error
+  const legacy = await supabase.rpc('get_retail_product', { p_slug: slug })
+  if (legacy.error) throw legacy.error
+  const product = Array.isArray(legacy.data) ? legacy.data[0] : legacy.data
+  return product ? { product: normalizeRetailProduct(product), related: [] } : null
 }
 
 export async function validateRetailCart(items) {
   if (!items.length || items.length > 100 || items.some((item) => !Number.isSafeInteger(item.quantity) || item.quantity < 1)) throw new Error('Revisa las cantidades del carrito.')
   if (new Set(items.map((item) => item.id)).size !== items.length) throw new Error('Hay productos repetidos en el carrito.')
-  const cleanItems = items.map((item) => ({
-    product_id: item.id,
-    quantity: Number(item.quantity || 0)
-  }))
-  if (!isSupabaseConfigured) throw new Error('No se pudo verificar el stock. Intenta nuevamente.')
-  const { data, error } = await supabase.rpc('validate_retail_cart', { p_items: cleanItems })
+  requireStore()
+  const requested = items.map((item) => ({ product_id: item.id, quantity: item.quantity }))
+  const { data, error } = await supabase.rpc('validate_retail_cart', { p_items: requested })
   if (error) throw error
   const rows = (data || []).map(normalizeRetailProduct)
   return items.map((item) => rows.find((row) => row.id === item.id) || {
-    id: item.id, name: item.name, is_available: false, issue: 'Producto no disponible',
+    ...item, is_available: false, issue: 'Este producto ya no esta disponible.',
     available_stock_quantity: 0, track_inventory: true, retail_price: 0
   })
 }
@@ -75,8 +132,8 @@ function extractPhone(value) {
   if (/^https?:\/\//i.test(raw)) {
     try {
       const url = new URL(raw)
-      if (url.hostname === 'wa.me' || url.hostname === 'www.wa.me') return url.pathname.replace(/\D/g, '')
-      if (url.hostname === 'api.whatsapp.com' || url.hostname === 'web.whatsapp.com') return (url.searchParams.get('phone') || '').replace(/\D/g, '')
+      if (['wa.me', 'www.wa.me'].includes(url.hostname)) return url.pathname.replace(/\D/g, '')
+      if (['api.whatsapp.com', 'web.whatsapp.com'].includes(url.hostname)) return (url.searchParams.get('phone') || '').replace(/\D/g, '')
       return ''
     } catch { return '' }
   }
@@ -85,11 +142,6 @@ function extractPhone(value) {
 
 export async function getStorefrontWhatsapp() {
   if (!isSupabaseConfigured) return extractPhone(whatsappNumber)
-  const { data, error } = await supabase
-    .from('social_links')
-    .select('url')
-    .eq('network', 'whatsapp')
-    .maybeSingle()
-  if (error) return extractPhone(whatsappNumber)
-  return extractPhone(data?.url || whatsappNumber)
+  const { data, error } = await supabase.from('social_links').select('url').eq('network', 'whatsapp').maybeSingle()
+  return extractPhone(error ? whatsappNumber : data?.url || whatsappNumber)
 }

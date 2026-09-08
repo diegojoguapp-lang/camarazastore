@@ -3,6 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageHeader, MoneyCell, StickySummary } from '../../components/AdminUX'
 import { createProduct, getProductById, updateProduct } from '../../lib/api'
 import { createInventoryMovement, getProductAdminDetails, getSuppliers, saveProductAdminDetails, saveSupplier } from '../../lib/adminInventoryApi'
+import { getAdminRetailCategories } from '../../lib/adminRetailApi'
 import { calculateProfit, formatGs, imageFallback, slugify } from '../../lib/utils'
 
 const initial = {
@@ -27,7 +28,11 @@ const emptyAdminDetails = {
   low_stock_threshold: 2,
   publish_to_retail: false,
   publish_to_resellers: true,
-  inventory_hidden: false
+  inventory_hidden: false,
+  retail_category_id: '',
+  retail_featured: false,
+  retail_compare_at_price: '',
+  retail_sort_order: 0
 }
 const internalDetailsError = 'El producto se guardo correctamente, pero no se pudieron guardar los datos internos. Podes volver a intentarlo desde la edicion del producto.'
 const stockMovementError = 'El producto se guardo, pero no se pudo registrar el stock. Reintenta el ajuste desde Inventario.'
@@ -94,6 +99,7 @@ export function ProductForm() {
   const [deleteImages, setDeleteImages] = useState([])
   const [imageReplacements, setImageReplacements] = useState({})
   const [suppliers, setSuppliers] = useState([])
+  const [retailCategories, setRetailCategories] = useState([])
   const [adminDetails, setAdminDetails] = useState(emptyAdminDetails)
   const [supplierModalOpen, setSupplierModalOpen] = useState(false)
   const [supplierForm, setSupplierForm] = useState({ name: '', contact_name: '', phone: '', email: '', city: '' })
@@ -104,8 +110,9 @@ export function ProductForm() {
   useEffect(() => {
     async function load() {
       try {
-        const supplierRows = await getSuppliers()
+        const [supplierRows, categoryRows] = await Promise.all([getSuppliers(), getAdminRetailCategories()])
         setSuppliers(supplierRows)
+        setRetailCategories(categoryRows)
         if (!editing) return
         const [data, details] = await Promise.all([
           getProductById(id),
@@ -126,7 +133,11 @@ export function ProductForm() {
           reseller_commission_amount: details.reseller_commission_amount ?? 0,
           supplier_id: details.supplier_id || '',
           publish_to_retail: Boolean(details.publish_to_retail),
-          publish_to_resellers: details.publish_to_resellers !== false
+          publish_to_resellers: details.publish_to_resellers !== false,
+          retail_category_id: details.retail_category_id || '',
+          retail_featured: Boolean(details.retail_featured),
+          retail_compare_at_price: details.retail_compare_at_price ?? '',
+          retail_sort_order: details.retail_sort_order ?? 0
         })
         setFaqs(parseFaqs(data.product.reseller_group_text))
         setExistingImages(data.images || [])
@@ -184,6 +195,9 @@ export function ProductForm() {
     }
     if (adminDetails.publish_to_retail && Number(adminDetails.retail_price || 0) <= 0) {
       return 'Defini un precio minorista antes de publicar este producto para clientes finales.'
+    }
+    if (adminDetails.retail_compare_at_price !== '' && Number(adminDetails.retail_compare_at_price) < 0) {
+      return 'El precio comparativo no puede ser negativo.'
     }
     const resellerCommission = Number(adminDetails.reseller_commission_amount || 0)
     if (!Number.isFinite(resellerCommission)) return 'La comision del revendedor debe ser numerica.'
@@ -494,6 +508,21 @@ export function ProductForm() {
           {!adminDetails.publish_to_retail && !adminDetails.publish_to_resellers && (
             <div className="warning-box compact-notice">Este producto no se vera en ningun catalogo publico.</div>
           )}
+          <div className="form-grid retail-product-settings">
+            <label>Categoria de Camaraza Store
+              <select value={adminDetails.retail_category_id} onChange={(event) => setAdminField('retail_category_id', event.target.value)}>
+                <option value="">Otros / sin clasificar</option>
+                {retailCategories.filter((item) => item.is_active).map((item) => {
+                  const parent = retailCategories.find((row) => row.id === item.parent_id)
+                  return <option key={item.id} value={item.id}>{parent ? parent.name + ' / ' : ''}{item.name}</option>
+                })}
+              </select>
+            </label>
+            <OptionalPriceInput label="Precio anterior retail" value={adminDetails.retail_compare_at_price} onChange={(value) => setAdminField('retail_compare_at_price', value)} />
+            <label>Orden retail<input type="number" step="1" value={adminDetails.retail_sort_order} onChange={(event) => setAdminField('retail_sort_order', event.target.value)} /></label>
+            <label className="checkbox-label"><input type="checkbox" checked={Boolean(adminDetails.retail_featured)} onChange={(event) => setAdminField('retail_featured', event.target.checked)} /> Destacado en Camaraza Store</label>
+          </div>
+          <p className="ax-help-text"><Link to="/admin/categorias-retail">Administrar categorias de la tienda</Link></p>
         </section>
 
         <section className="form-section">

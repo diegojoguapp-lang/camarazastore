@@ -103,7 +103,7 @@ export async function getInventoryProducts() {
       .order('name', { ascending: true }),
     supabase
       .from('product_admin_details')
-      .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,inventory_hidden,updated_at'),
+      .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,inventory_hidden,retail_category_id,retail_featured,retail_compare_at_price,retail_sort_order,updated_at'),
     supabase
       .from('suppliers')
       .select('id,name,contact_name,phone,email,city,is_active')
@@ -128,7 +128,11 @@ export async function getInventoryProducts() {
       low_stock_threshold: 2,
       publish_to_retail: false,
       publish_to_resellers: true,
-      inventory_hidden: false
+      inventory_hidden: false,
+      retail_category_id: null,
+      retail_featured: false,
+      retail_compare_at_price: null,
+      retail_sort_order: 0
     }
     return {
       ...product,
@@ -177,7 +181,11 @@ export async function getProductAdminDetails(productId) {
     low_stock_threshold: 2,
     publish_to_retail: false,
     publish_to_resellers: true,
-    inventory_hidden: false
+    inventory_hidden: false,
+    retail_category_id: null,
+    retail_featured: false,
+    retail_compare_at_price: null,
+    retail_sort_order: 0
   }
 }
 
@@ -185,7 +193,7 @@ export async function getProductAdminDetailsList() {
   requireSupabase()
   const { data, error } = await supabase
     .from('product_admin_details')
-    .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,inventory_hidden,updated_at')
+    .select('product_id,sku,retail_price,reseller_commission_amount,supplier_id,track_inventory,low_stock_threshold,publish_to_retail,publish_to_resellers,inventory_hidden,retail_category_id,retail_featured,retail_compare_at_price,retail_sort_order,updated_at')
   if (error) throw error
   return data || []
 }
@@ -204,6 +212,10 @@ export async function saveProductAdminDetails(productId, payload) {
     publish_to_retail: Boolean(payload.publish_to_retail),
     publish_to_resellers: payload.publish_to_resellers !== false,
     inventory_hidden: Boolean(payload.inventory_hidden),
+    retail_category_id: payload.retail_category_id || null,
+    retail_featured: Boolean(payload.retail_featured),
+    retail_compare_at_price: normalizeMoney(payload.retail_compare_at_price),
+    retail_sort_order: Number.isFinite(Number(payload.retail_sort_order)) ? Math.trunc(Number(payload.retail_sort_order)) : 0,
     updated_at: new Date().toISOString()
   }
   const { data, error } = await supabase

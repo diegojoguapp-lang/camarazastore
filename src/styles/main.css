@@ -768,6 +768,19 @@ textarea:focus-visible {
   }
 }
 
+.retail-category-admin-list { display: grid; gap: 10px; }
+.retail-category-admin-list article { display: grid; grid-template-columns: 64px minmax(0,1fr) 40px 40px; align-items: center; gap: 12px; padding: 12px; border: 1px solid var(--border, #dbe2de); border-radius: 6px; background: #fff; }
+.retail-category-admin-list article > img { width: 64px; height: 64px; object-fit: contain; border: 1px solid #e7ece9; border-radius: 5px; }
+.retail-category-admin-list article > div { min-width: 0; display: grid; gap: 3px; }
+.retail-category-admin-list article span, .retail-category-admin-list article small { color: #637068; }
+.retail-category-modal { width: min(94vw, 680px); }
+.retail-product-settings { margin-top: 18px; padding-top: 18px; border-top: 1px solid #e0e6e2; }
+@media (max-width: 600px) {
+  .retail-category-admin-list article { grid-template-columns: 52px minmax(0,1fr) 38px; gap: 8px; }
+  .retail-category-admin-list article > img { width: 52px; height: 52px; }
+  .retail-category-admin-list article > button:last-child { grid-column: 3; }
+}
+
 /* Reseller UX redesign */
 .rx-page {
   width: min(980px, 100%);
