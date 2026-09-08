@@ -51,6 +51,7 @@ export function StorefrontApp() {
     <StoreHeader cartCount={count} onOpenCart={() => setCartOpen(true)} />
     <Routes>
       <Route path="/" element={<HomePage onAdd={addToCart} />} />
+      <Route path="/productos" element={<CategoryPage onAdd={addToCart} allProducts />} />
       <Route path="/categoria/:slug" element={<CategoryPage onAdd={addToCart} />} />
       <Route path="/producto/:slug" element={<ProductPage onAdd={addToCart} onOpenCart={() => setCartOpen(true)} />} />
       <Route path="*" element={<HomePage onAdd={addToCart} />} />

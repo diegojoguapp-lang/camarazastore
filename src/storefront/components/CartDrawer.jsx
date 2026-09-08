@@ -63,7 +63,7 @@ export function CartDrawer({ cart, setCart, open, onClose }) {
       const slugChanged = adjusted.find((item) => item.slug && item.slug !== oldById.get(item.id)?.slug)
       setCart(adjusted)
       if (stockChanged) {
-        setMessage(`Solo quedan ${stockChanged.available_stock_quantity} unidades de ${stockChanged.name}. Ajustamos la cantidad; revisa el carrito.`)
+        setMessage(`El stock de ${stockChanged.name} cambio. Ajustamos la cantidad disponible; revisa el carrito.`)
         return
       }
       if (priceChanged) {

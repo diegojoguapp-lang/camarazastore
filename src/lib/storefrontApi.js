@@ -9,17 +9,24 @@ function requireStore() {
 }
 
 function normalizeRetailProduct(product) {
+  const categories = Array.isArray(product?.categories) ? product.categories : []
+  const primaryCategory = categories[0]
   return {
     ...product,
     retail_price: Number(product?.retail_price || 0),
     retail_compare_at_price: product?.retail_compare_at_price == null ? null : Number(product.retail_compare_at_price),
     available_stock_quantity: Number(product?.available_stock_quantity || 0),
     track_inventory: product?.track_inventory !== false,
-    gallery_images: Array.isArray(product?.gallery_images) ? product.gallery_images : []
+    gallery_images: Array.isArray(product?.gallery_images) ? product.gallery_images : [],
+    categories,
+    category_name: product?.category_name || primaryCategory?.name || null,
+    category_slug: product?.category_slug || primaryCategory?.slug || null,
+    parent_category_name: product?.parent_category_name || primaryCategory?.parent_name || null,
+    parent_category_slug: product?.parent_category_slug || primaryCategory?.parent_slug || null
   }
 }
 
-function isMissingV2(error) {
+function isMissingRpc(error) {
   return ['PGRST202', '42883'].includes(error?.code) || /function .* does not exist|schema cache/i.test(error?.message || '')
 }
 
@@ -58,25 +65,31 @@ export function saveStoredCustomer({ name, city }) {
 
 export async function getRetailHome() {
   requireStore()
-  const { data, error } = await supabase.rpc('get_retail_home_v2')
+  const { data, error } = await supabase.rpc('get_retail_home_v3')
   if (!error) {
     return {
+      banner: data?.banner || null,
       categories: Array.isArray(data?.categories) ? data.categories : [],
       featured: (data?.featured || []).map(normalizeRetailProduct),
-      new_products: (data?.new_products || []).map(normalizeRetailProduct),
       sections: (data?.sections || []).map((section) => ({ ...section, products: (section.products || []).map(normalizeRetailProduct) }))
     }
   }
-  if (!isMissingV2(error)) throw error
+  if (!isMissingRpc(error)) throw error
+  const legacy = await supabase.rpc('get_retail_home_v2')
+  if (!legacy.error) return { banner: null, categories: legacy.data?.categories || [], featured: (legacy.data?.featured || []).map(normalizeRetailProduct), sections: (legacy.data?.sections || []).map((section) => ({ ...section, products: (section.products || []).map(normalizeRetailProduct) })) }
   const products = await getRetailProducts()
-  return { categories: [], featured: products.filter((item) => item.is_featured).slice(0, 12), new_products: products.slice(0, 12), sections: [] }
+  return { banner: null, categories: [], featured: products.filter((item) => item.is_featured).slice(0, 12), sections: [] }
 }
 
 export async function getRetailCategories() {
   requireStore()
-  const { data, error } = await supabase.rpc('get_retail_categories_v2')
+  const { data, error } = await supabase.rpc('get_retail_categories_v3')
   if (error) {
-    if (isMissingV2(error)) return []
+    if (isMissingRpc(error)) {
+      const legacy = await supabase.rpc('get_retail_categories_v2')
+      if (!legacy.error) return Array.isArray(legacy.data) ? legacy.data : []
+      return []
+    }
     throw error
   }
   return Array.isArray(data) ? data : []
@@ -92,9 +105,11 @@ export async function getRetailProducts(filters = {}) {
     p_available_only: Boolean(filters.availableOnly),
     p_order: filters.order || 'relevant'
   }
-  const { data, error } = await supabase.rpc('get_retail_catalog_v2', params)
+  const { data, error } = await supabase.rpc('get_retail_catalog_v3', params)
   if (!error) return (Array.isArray(data) ? data : []).map(normalizeRetailProduct)
-  if (!isMissingV2(error)) throw error
+  if (!isMissingRpc(error)) throw error
+  const v2 = await supabase.rpc('get_retail_catalog_v2', params)
+  if (!v2.error) return (v2.data || []).map(normalizeRetailProduct)
   const legacy = await supabase.rpc('get_retail_catalog')
   if (legacy.error) throw legacy.error
   const term = params.p_search?.toLowerCase()
@@ -103,9 +118,11 @@ export async function getRetailProducts(filters = {}) {
 
 export async function getRetailProductBySlug(slug) {
   requireStore()
-  const { data, error } = await supabase.rpc('get_retail_product_v2', { p_slug: slug })
+  const { data, error } = await supabase.rpc('get_retail_product_v3', { p_slug: slug })
   if (!error) return data?.product ? { product: normalizeRetailProduct(data.product), related: (data.related || []).map(normalizeRetailProduct) } : null
-  if (!isMissingV2(error)) throw error
+  if (!isMissingRpc(error)) throw error
+  const v2 = await supabase.rpc('get_retail_product_v2', { p_slug: slug })
+  if (!v2.error) return v2.data?.product ? { product: normalizeRetailProduct(v2.data.product), related: (v2.data.related || []).map(normalizeRetailProduct) } : null
   const legacy = await supabase.rpc('get_retail_product', { p_slug: slug })
   if (legacy.error) throw legacy.error
   const product = Array.isArray(legacy.data) ? legacy.data[0] : legacy.data

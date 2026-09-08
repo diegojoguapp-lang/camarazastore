@@ -8,7 +8,7 @@ export default defineConfig({
     configureServer(server) {
       server.middlewares.use((req, _res, next) => {
         const path = (req.url || '').split('?')[0]
-        if (path === '/' || path.startsWith('/producto/') || path.startsWith('/categoria/')) req.url = '/storefront.html'
+        if (path === '/' || path === '/productos' || path.startsWith('/producto/') || path.startsWith('/categoria/')) req.url = '/storefront.html'
         next()
       })
     },
@@ -26,7 +26,7 @@ export default defineConfig({
       this.emitFile({
         type: 'asset',
         fileName: 'sitemap.xml',
-        source: '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://www.camarazastore.com/</loc></url><url><loc>https://www.camarazastore.com/categoria/todos</loc></url></urlset>\n'
+        source: '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://www.camarazastore.com/</loc></url><url><loc>https://www.camarazastore.com/productos</loc></url></urlset>\n'
       })
     }
   }],

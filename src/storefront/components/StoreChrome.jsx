@@ -1,6 +1,8 @@
-import { Search, ShoppingBag } from 'lucide-react'
+import { Search, ShoppingBag, X } from 'lucide-react'
+import { useRef } from 'react'
 import { Link } from 'react-router-dom'
 import { getDisplayImageUrl, imageFallback } from '../../lib/utils'
+import { STORE_COPY } from '../config'
 
 export function StoreHeader({ cartCount, onOpenCart }) {
   return (
@@ -19,22 +21,29 @@ export function StoreHeader({ cartCount, onOpenCart }) {
   )
 }
 
-export function StoreSearch({ value, onChange, onSubmit, loading = false }) {
+export function StoreSearch({ value, onChange, onSubmit, onClear, loading = false }) {
+  const inputRef = useRef(null)
+  const clear = () => {
+    onChange('')
+    onClear?.()
+    requestAnimationFrame(() => inputRef.current?.focus())
+  }
   return (
     <form className="sf-search" onSubmit={onSubmit} role="search">
       <Search size={19} aria-hidden="true" />
-      <input value={value} onChange={(event) => onChange(event.target.value)} placeholder="¿Qué estás buscando?" maxLength="80" aria-label="Buscar productos" />
-      {loading && <span className="sf-search-loader" aria-label="Buscando" />}
+      <input ref={inputRef} value={value} onChange={(event) => onChange(event.target.value)} placeholder="¿Qué estás buscando?" maxLength="80" aria-label="Buscar productos" />
+      {value && <button className="sf-search-clear" type="button" onClick={clear} aria-label="Limpiar búsqueda"><X size={18} /></button>}
+      {loading && !value && <span className="sf-search-loader" aria-label="Buscando" />}
     </form>
   )
 }
 
 export function CategoryRail({ categories }) {
   const visible = categories?.filter((item) => Number(item.product_count || 0) > 0)
-  if (!visible?.length) return null
   return (
     <nav className="sf-category-rail" aria-label="Categorías">
-      {visible.map((category) => (
+      <Link className="sf-category-all" to="/productos"><span><strong>Todos</strong></span><strong>Todos</strong></Link>
+      {(visible || []).map((category) => (
         <Link key={category.id || category.slug} to={`/categoria/${category.slug}`}>
           <span><img src={getDisplayImageUrl(category.image_url, { width: 144, height: 144, resize: 'contain' })} alt="" width="72" height="72" loading="lazy" decoding="async" onError={imageFallback} /></span>
           <strong>{category.name}</strong>
@@ -52,8 +61,8 @@ export function StoreFooter() {
         <p>Electronica, tecnologia y mas.</p>
       </div>
       <div>
-        <span>Delivery y forma de pago a coordinar por WhatsApp.</span>
-        <span>Garantia segun cada producto.</span>
+        <span>{STORE_COPY.delivery}.</span>
+        <span>{STORE_COPY.defaultWarranty}.</span>
       </div>
       <small>© {new Date().getFullYear()} Camaraza Store</small>
     </footer>
@@ -63,4 +72,3 @@ export function StoreFooter() {
 export function StoreSkeleton({ cards = 4 }) {
   return <div className="sf-skeleton-grid" aria-label="Cargando">{Array.from({ length: cards }, (_, index) => <span key={index} />)}</div>
 }
-

@@ -3,7 +3,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom'
 import { AdminPageHeader, MoneyCell, StickySummary } from '../../components/AdminUX'
 import { createProduct, getProductById, updateProduct } from '../../lib/api'
 import { createInventoryMovement, getProductAdminDetails, getSuppliers, saveProductAdminDetails, saveSupplier } from '../../lib/adminInventoryApi'
-import { getAdminRetailCategories } from '../../lib/adminRetailApi'
+import { getAdminRetailCategories, getRetailProductCategoryIds, saveRetailProductCategories } from '../../lib/adminRetailApi'
 import { calculateProfit, formatGs, imageFallback, slugify } from '../../lib/utils'
 
 const initial = {
@@ -100,6 +100,7 @@ export function ProductForm() {
   const [imageReplacements, setImageReplacements] = useState({})
   const [suppliers, setSuppliers] = useState([])
   const [retailCategories, setRetailCategories] = useState([])
+  const [retailCategoryIds, setRetailCategoryIds] = useState([])
   const [adminDetails, setAdminDetails] = useState(emptyAdminDetails)
   const [supplierModalOpen, setSupplierModalOpen] = useState(false)
   const [supplierForm, setSupplierForm] = useState({ name: '', contact_name: '', phone: '', email: '', city: '' })
@@ -139,6 +140,7 @@ export function ProductForm() {
           retail_compare_at_price: details.retail_compare_at_price ?? '',
           retail_sort_order: details.retail_sort_order ?? 0
         })
+        setRetailCategoryIds(await getRetailProductCategoryIds(id, details.retail_category_id))
         setFaqs(parseFaqs(data.product.reseller_group_text))
         setExistingImages(data.images || [])
       } catch (err) {
@@ -269,10 +271,12 @@ export function ProductForm() {
       if (!editing) payload.stock_quantity = 0
       const replacements = Object.entries(imageReplacements).map(([imageId, file]) => ({ id: imageId, file }))
       let savedProduct
+      const detailsPayload = { ...adminDetails, retail_category_id: retailCategoryIds[0] || '' }
       if (editing) {
         savedProduct = await updateProduct(id, payload, { main: mainFile, gallery: galleryFiles }, deleteImages, replacements)
         try {
-          await saveProductAdminDetails(id, adminDetails)
+          await saveProductAdminDetails(id, detailsPayload)
+          await saveRetailProductCategories(id, retailCategoryIds)
         } catch {
           setError(internalDetailsError)
           window.alert(internalDetailsError)
@@ -281,7 +285,8 @@ export function ProductForm() {
       } else {
         savedProduct = await createProduct(payload, { main: mainFile, gallery: galleryFiles })
         try {
-          await saveProductAdminDetails(savedProduct.id, adminDetails)
+          await saveProductAdminDetails(savedProduct.id, detailsPayload)
+          await saveRetailProductCategories(savedProduct.id, retailCategoryIds)
         } catch {
           setError(internalDetailsError)
           window.alert(internalDetailsError)
@@ -509,15 +514,17 @@ export function ProductForm() {
             <div className="warning-box compact-notice">Este producto no se vera en ningun catalogo publico.</div>
           )}
           <div className="form-grid retail-product-settings">
-            <label>Categoria de Camaraza Store
-              <select value={adminDetails.retail_category_id} onChange={(event) => setAdminField('retail_category_id', event.target.value)}>
-                <option value="">Otros / sin clasificar</option>
-                {retailCategories.filter((item) => item.is_active).map((item) => {
+            <fieldset className="retail-category-multiselect">
+              <legend>Categorias de Camaraza Store</legend>
+              <div>
+                {retailCategories.filter((item) => item.is_active || retailCategoryIds.includes(item.id)).map((item) => {
                   const parent = retailCategories.find((row) => row.id === item.parent_id)
-                  return <option key={item.id} value={item.id}>{parent ? parent.name + ' / ' : ''}{item.name}</option>
+                  return <label key={item.id}><input type="checkbox" checked={retailCategoryIds.includes(item.id)} onChange={(event) => setRetailCategoryIds((current) => event.target.checked ? [...current, item.id] : current.filter((id) => id !== item.id))} /><span>{parent ? parent.name + ' / ' : ''}{item.name}</span></label>
                 })}
-              </select>
-            </label>
+                {!retailCategories.length && <small>No hay categorias creadas.</small>}
+              </div>
+              <small>Puede pertenecer a varias categorias. El orden por carrusel se gestiona desde Categorias tienda.</small>
+            </fieldset>
             <OptionalPriceInput label="Precio anterior retail" value={adminDetails.retail_compare_at_price} onChange={(value) => setAdminField('retail_compare_at_price', value)} />
             <label>Orden retail<input type="number" step="1" value={adminDetails.retail_sort_order} onChange={(event) => setAdminField('retail_sort_order', event.target.value)} /></label>
             <label className="checkbox-label"><input type="checkbox" checked={Boolean(adminDetails.retail_featured)} onChange={(event) => setAdminField('retail_featured', event.target.checked)} /> Destacado en Camaraza Store</label>

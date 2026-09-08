@@ -53,6 +53,7 @@ export function ProductPage({ onAdd, onOpenCart }) {
     }
   }
   const buyNow = async () => {
+    if (!canAdd(product, quantity)) { setNotice('Este producto esta sin stock.'); return }
     setBuying(true); setNotice('')
     try {
       const [current] = await validateRetailCart([{ ...product, quantity }])
@@ -76,9 +77,9 @@ export function ProductPage({ onAdd, onOpenCart }) {
           {(product.brand || product.model) && <p className="sf-product-meta">{[product.brand, product.model].filter(Boolean).join(' · ')}</p>}
           {compare > product.retail_price && <span className="sf-detail-compare">{formatGs(compare)}</span>}
           <strong className="sf-detail-price">{formatGs(product.retail_price)}</strong>
-          <span className="sf-detail-stock">{stockText(product)}</span>
-          <div className="sf-buy-controls"><div className="sf-quantity"><button type="button" aria-label="Disminuir" onClick={() => setQuantity((value) => Math.max(1, value - 1))}><Minus size={17} /></button><span>{quantity}</span><button type="button" aria-label="Aumentar" onClick={() => setQuantity((value) => canAdd(product, value + 1) ? value + 1 : value)}><Plus size={17} /></button></div><button className="sf-primary-button" type="button" onClick={() => onAdd(product, quantity)}>Agregar al carrito</button></div>
-          <button className="sf-whatsapp-button" type="button" disabled={buying} onClick={buyNow}>{buying ? 'Verificando...' : 'Comprar por WhatsApp'}</button>
+          {stockText(product) && <span className="sf-detail-stock is-out">{stockText(product)}</span>}
+          <div className="sf-buy-controls"><div className="sf-quantity"><button type="button" disabled={!canAdd(product)} aria-label="Disminuir" onClick={() => setQuantity((value) => Math.max(1, value - 1))}><Minus size={17} /></button><span>{quantity}</span><button type="button" disabled={!canAdd(product)} aria-label="Aumentar" onClick={() => setQuantity((value) => canAdd(product, value + 1) ? value + 1 : value)}><Plus size={17} /></button></div><button className="sf-primary-button" type="button" disabled={!canAdd(product, quantity)} onClick={() => onAdd(product, quantity)}>Agregar al carrito</button></div>
+          <button className="sf-whatsapp-button" type="button" disabled={buying || !canAdd(product, quantity)} onClick={buyNow}>{buying ? 'Verificando...' : 'Comprar por WhatsApp'}</button>
           {notice && <div className="sf-notice is-warning" role="status">{notice}</div>}
           <div className="sf-trust-grid"><div><strong>Garantia</strong><span>{product.warranty || STORE_COPY.defaultWarranty}</span></div><div><strong>Delivery</strong><span>{product.delivery_included ? 'Incluido' : STORE_COPY.delivery}{product.delivery_time ? ` · ${product.delivery_time}` : ''}</span></div><div><strong>Pago</strong><span>{STORE_COPY.payment}</span></div></div>
         </section>
@@ -86,7 +87,7 @@ export function ProductPage({ onAdd, onOpenCart }) {
       <Description text={product.public_description} />
       <ProductRail title="Tambien te puede interesar" slug={product.category_slug} products={data.related} onAdd={onAdd} />
     </main>
-    <div className="sf-mobile-buy"><strong>{formatGs(product.retail_price)}</strong><button type="button" onClick={() => { onAdd(product, quantity); onOpenCart() }}>Comprar</button></div>
+    <div className="sf-mobile-buy"><strong>{formatGs(product.retail_price)}</strong><button type="button" disabled={!canAdd(product, quantity)} onClick={() => { if (onAdd(product, quantity)) onOpenCart() }}>{canAdd(product, quantity) ? 'Comprar' : 'Sin stock'}</button></div>
     <StoreFooter />
   </>
 }

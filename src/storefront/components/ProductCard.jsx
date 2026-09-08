@@ -3,11 +3,10 @@ import { Link } from 'react-router-dom'
 import { formatGs, getDisplayImageUrl, imageFallback } from '../../lib/utils'
 
 export function stockText(product) {
-  if (product.track_inventory === false) return 'Disponible'
+  if (product.track_inventory === false) return ''
   const amount = Number(product.available_stock_quantity || 0)
-  if (amount <= 0) return 'Agotado'
-  if (amount <= 5) return `Solo ${amount} disponibles`
-  return 'Disponible'
+  if (amount <= 0) return 'Sin stock'
+  return ''
 }
 
 export function canAdd(product, quantity = 1) {
@@ -27,7 +26,7 @@ export function ProductCard({ product, onAdd, compact = false }) {
           <span className="sf-product-title">{product.name}</span>
           {hasCompare && <span className="sf-compare-price">{formatGs(compare)}</span>}
           <strong>{formatGs(product.retail_price)}</strong>
-          <span className={`sf-stock${Number(product.available_stock_quantity) <= 5 ? ' is-low' : ''}`}>{stockText(product)}</span>
+          {stockText(product) && <span className="sf-stock is-out">{stockText(product)}</span>}
         </span>
       </Link>
       <button className="sf-quick-add" type="button" aria-label={`Agregar ${product.name} al carrito`} disabled={!canAdd(product)} onClick={() => onAdd(product)}>
@@ -51,4 +50,3 @@ export function ProductRail({ title, slug, products, onAdd }) {
     </section>
   )
 }
-

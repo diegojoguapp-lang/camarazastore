@@ -1,6 +1,7 @@
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import {
   BarChart3,
+  GalleryHorizontal,
   Boxes,
   Tags,
   Building2,
@@ -112,6 +113,7 @@ export function AdminLayout({ children }) {
       ['/admin/reportes', 'Reportes', ClipboardList]
     ]],
     ['Contenido', [
+      ['/admin/banners-retail', 'Banners tienda', GalleryHorizontal],
       ['/admin/videos', 'Videos', FileVideo],
       ['/admin/redes', 'Redes', Share2]
     ]],
