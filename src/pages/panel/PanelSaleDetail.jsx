@@ -3,10 +3,11 @@ import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
 import { OrderTimeline, StatusBadge } from '../../components/ResellerUX'
-import { commissionState, getMySales } from '../../lib/resellerSalesApi'
+import { commissionState } from '../../lib/resellerSalesApi'
+import { operationRpc } from '../../lib/operationApi'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
-import { shortOrderId } from '../../lib/resellerDisplay'
+import { orderCode } from '../../lib/operationDates'
 
 export function PanelSaleDetail() {
   const { id } = useParams()
@@ -15,10 +16,13 @@ export function PanelSaleDetail() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    getMySales({ limit: 100 })
-      .then((rows) => setSale(rows.find((item) => item.id === id || item.sale_id === id) || null))
+    let active = true
+    setLoading(true)
+    operationRpc('get_my_operation_sales_v2', { p_id: id })
+      .then((result) => { if (active) setSale(result.rows[0] || null) })
       .catch((err) => setError(err.message || 'No se pudo cargar el pedido.'))
-      .finally(() => setLoading(false))
+      .finally(() => { if (active) setLoading(false) })
+    return () => { active = false }
   }, [id])
 
   if (loading) return <ResellerPanelLayout><div className="rx-page"><div className="rx-empty">Cargando pedido...</div></div></ResellerPanelLayout>
@@ -34,7 +38,7 @@ export function PanelSaleDetail() {
           <>
             <section className="rx-detail-hero">
               <div>
-                <span>Orden {shortOrderId(sale.id)}</span>
+                <span>{orderCode(sale)}</span>
                 <h1>{sale.product_name_snapshot}</h1>
                 <p>{sale.customer_name} {sale.customer_phone_masked ? `- ${sale.customer_phone_masked}` : ''}</p>
               </div>

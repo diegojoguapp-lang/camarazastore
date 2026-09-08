@@ -39,6 +39,7 @@ const SocialLinksAdmin = lazyNamed(() => import('./pages/admin/SocialLinksAdmin'
 const ResellersAdmin = lazyNamed(() => import('./pages/admin/ResellersAdmin'), 'ResellersAdmin')
 const AdminSecurity = lazyNamed(() => import('./pages/admin/AdminSecurity'), 'AdminSecurity')
 const SalesAdmin = lazyNamed(() => import('./pages/admin/SalesAdmin'), 'SalesAdmin')
+const DailyOperations = lazyNamed(() => import('./pages/admin/DailyOperations'), 'DailyOperations')
 const SaleForm = lazyNamed(() => import('./pages/admin/SaleForm'), 'SaleForm')
 const SaleDetail = lazyNamed(() => import('./pages/admin/SaleDetail'), 'SaleDetail')
 const CustomersAdmin = lazyNamed(() => import('./pages/admin/CustomersAdmin'), 'CustomersAdmin')
@@ -47,6 +48,7 @@ const CommissionsAdmin = lazyNamed(() => import('./pages/admin/CommissionsAdmin'
 const CommissionBatchDetail = lazyNamed(() => import('./pages/admin/CommissionBatchDetail'), 'CommissionBatchDetail')
 const CommissionPaymentForm = lazyNamed(() => import('./pages/admin/CommissionPaymentForm'), 'CommissionPaymentForm')
 const CommissionPaymentDetail = lazyNamed(() => import('./pages/admin/CommissionPaymentDetail'), 'CommissionPaymentDetail')
+const CommissionPayments = lazyNamed(() => import('./pages/admin/CommissionPayments'), 'CommissionPayments')
 
 const PanelHome = lazyNamed(() => import('./pages/panel/PanelHome'), 'PanelHome')
 const PanelSales = lazyNamed(() => import('./pages/panel/PanelSales'), 'PanelSales')
@@ -116,6 +118,7 @@ export default function App() {
           <Route path="/admin/compras/:id" element={<Admin><PurchaseDetail /></Admin>} />
           <Route path="/admin/reportes" element={<Admin><ReportsAdmin /></Admin>} />
           <Route path="/admin/ventas" element={<Admin><SalesAdmin /></Admin>} />
+          <Route path="/admin/operacion" element={<Admin><DailyOperations /></Admin>} />
           <Route path="/admin/ventas/nueva" element={<Admin><SaleForm /></Admin>} />
           <Route path="/admin/ventas/:id" element={<Admin><SaleDetail /></Admin>} />
           <Route path="/admin/ventas/:id/editar" element={<Admin><SaleForm /></Admin>} />
@@ -125,6 +128,7 @@ export default function App() {
           <Route path="/admin/comisiones/:id" element={<Admin><CommissionBatchDetail /></Admin>} />
           <Route path="/admin/comisiones/:batchId/pagar/:resellerId" element={<Admin><CommissionPaymentForm /></Admin>} />
           <Route path="/admin/comisiones/pagos/:id" element={<Admin><CommissionPaymentDetail /></Admin>} />
+          <Route path="/admin/comisiones/pagos" element={<Admin><CommissionPayments /></Admin>} />
           <Route path="/admin/videos" element={<Admin><HelpVideosAdmin /></Admin>} />
           <Route path="/admin/redes" element={<Admin><SocialLinksAdmin /></Admin>} />
           <Route path="/admin/revendedores" element={<Admin><ResellersAdmin /></Admin>} />

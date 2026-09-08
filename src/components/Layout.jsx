@@ -90,6 +90,7 @@ export function AdminLayout({ children }) {
   const navGroups = [
     ['Operacion', [
       ['/admin', 'Dashboard', LayoutDashboard],
+      ['/admin/operacion', 'Operacion de hoy', ShoppingCart],
       ['/admin/ventas', 'Ventas', ShoppingCart],
       ['/admin/clientes', 'Clientes', Users],
       ['/admin/inventario', 'Inventario', Package]

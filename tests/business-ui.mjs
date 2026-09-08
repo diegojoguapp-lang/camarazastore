@@ -87,7 +87,7 @@ try {
   await wait("document.querySelector('.sf-cart-controls span')?.textContent === '3'")
   await evaluate("(()=>{const input=document.querySelector('.sf-customer-fields input');Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,'Diego');input.dispatchEvent(new Event('input',{bubbles:true}))})()")
   await click('Comprar por WhatsApp')
-  await wait("document.body.innerText.includes('Solo quedan 2 unidades')")
+  await wait("document.body.innerText.includes('Ajustamos la cantidad disponible')")
   assert.equal(await evaluate("document.querySelector('.sf-cart-controls span').textContent"),'2')
   assert.match(await evaluate('location.href'),/127\.0\.0\.1/)
   assert.deepEqual(errors,[])

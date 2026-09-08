@@ -8,6 +8,7 @@ const data = {business_date:'2026-09-06',settings:{daily_delivered_goal:10,weekl
 window.__testStock = 7;
 export const supabase = {
 rpc:async(name,p={})=>{
+  if(['get_retail_home_v3','get_retail_categories_v3','get_retail_catalog_v3','get_retail_product_v3'].includes(name)) name=name.replace('_v3','_v2');
   if(name==='get_admin_business_dashboard') return {data:structuredClone(data),error:null};
   if(name==='admin_save_business_goals') {data.settings={daily_delivered_goal:p.p_daily,weekly_delivered_goal:p.p_weekly,monthly_delivered_goal:p.p_monthly};return {data:data.settings};}
   if(name==='admin_close_business_day') {data.closure={business_date:p.p_date,goal:data.settings.daily_delivered_goal,snapshot:today,closed_at:'2026-09-06T21:00:00Z'};data.closures=[data.closure];return {data:data.closure};}

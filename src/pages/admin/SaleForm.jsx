@@ -4,12 +4,15 @@ import { ArrowLeft, Check, Plus, Save, Trash2, X } from 'lucide-react'
 import { MoneyInput } from '../../components/MoneyInput'
 import { AdminModal, AdminPageHeader, AdminStatusBadge } from '../../components/AdminUX'
 import { createCustomer, getCustomerByPhone } from '../../lib/customerApi'
-import { getInventoryProducts } from '../../lib/adminInventoryApi'
-import { createSale, getAdminSaleById, updateSale } from '../../lib/adminSalesApi'
+import { getAdminSaleById } from '../../lib/adminSalesApi'
+import { getFinancialAccounts } from '../../lib/adminFinanceApi'
+import { getCollectionSettings, operationRpc, saveOperationSale } from '../../lib/operationApi'
+import { businessDate, shiftDate, changeDue } from '../../lib/operationDates'
 import { getResellers } from '../../lib/resellerApi'
 import { saleStatusLabel } from '../../lib/salesConstants'
 import { formatGs } from '../../lib/utils'
 import { CancellationFields } from '../../components/CancellationFields'
+import './saleOperations.css'
 
 const emptyCustomer = { id: '', full_name: '', phone: '', city: '', customer_document: '', shipping_carrier_name: '' }
 const emptySale = {
@@ -46,9 +49,6 @@ function normalizeFulfillment(value) {
 }
 function resellerSearchText(reseller) {
   return [reseller.reseller_code, reseller.full_name, reseller.phone, reseller.whatsapp, reseller.city].filter(Boolean).join(' ')
-}
-function productSearchText(product) {
-  return [product.admin_details?.sku, product.name, product.brand, product.model].filter(Boolean).join(' ')
 }
 function productCode(product) {
   return product.admin_details?.sku || product.id?.slice(0, 8) || '-'
@@ -162,9 +162,12 @@ export function SaleForm() {
   const navigate = useNavigate()
   const editing = Boolean(id)
   const [products, setProducts] = useState([])
+  const [accounts, setAccounts] = useState([])
+  const [defaults, setDefaults] = useState({})
+  const [searching, setSearching] = useState(false)
   const [resellers, setResellers] = useState([])
   const [customerForm, setCustomerForm] = useState(emptyCustomer)
-  const [saleForm, setSaleForm] = useState(emptySale)
+  const [saleForm, setSaleForm] = useState(() => ({ ...emptySale, operation_date: businessDate(), financial_account_id: '', cash_tendered_amount: null }))
   const [resellerQuery, setResellerQuery] = useState('')
   const [productQuery, setProductQuery] = useState('')
   const [selectedProductId, setSelectedProductId] = useState('')
@@ -185,9 +188,9 @@ export function SaleForm() {
   }, [resellerQuery, resellers])
   const productResults = useMemo(() => {
     const query = productQuery.trim()
-    if (!query) return []
-    return products.filter((item) => matchesWords(productSearchText(item), query)).slice(0, 10)
-  }, [productQuery, products])
+    if (query.length < 2 || searching) return []
+    return products.slice(0, 20)
+  }, [productQuery, products, searching])
   const totals = useMemo(() => saleForm.items.reduce((acc, item) => {
     const line = itemTotals(item, saleForm.sale_type)
     acc.subtotal += line.subtotal
@@ -195,15 +198,17 @@ export function SaleForm() {
     acc.commission += line.commission
     return acc
   }, { subtotal: 0, cost: 0, commission: 0 }), [saleForm.items, saleForm.sale_type])
-  const totalCollected = totals.subtotal + numberValue(saleForm.delivery_charged)
+  const totalCollected = totals.subtotal + (saleForm.fulfillment_type === 'pickup' ? 0 : numberValue(saleForm.delivery_charged))
   const netProfit = totals.subtotal - totals.cost - totals.commission
   const totalUnits = saleForm.items.reduce((sum, item) => sum + numberValue(item.quantity), 0)
 
   useEffect(() => {
     async function load() {
       try {
-        const [productRows, resellerRows] = await Promise.all([getInventoryProducts(), getResellers()])
-        setProducts(productRows)
+        const [resellerRows, accountRows, settings] = await Promise.all([getResellers(), getFinancialAccounts(), getCollectionSettings()])
+        setAccounts(accountRows.filter((account) => account.is_active))
+        setDefaults(settings)
+        if (!editing) setSaleForm((prev) => ({ ...prev, financial_account_id: settings.default_cash_account_id || '' }))
         setResellers(resellerRows.filter((item) => item.is_active))
         if (editing) {
           const sale = await getAdminSaleById(id)
@@ -221,6 +226,7 @@ export function SaleForm() {
           setSaleForm({
             ...emptySale,
             ...sale,
+            expected_status: sale.status,
             sale_type: sale.sale_type || 'reseller',
             reseller_id: sale.reseller_id || '',
             customer_id: sale.customer_id || '',
@@ -255,6 +261,20 @@ export function SaleForm() {
     }
     load()
   }, [editing, id])
+
+  useEffect(() => {
+    let active = true
+    if (productQuery.trim().length < 2) { setSearching(false); return }
+    setSearching(true)
+    const timer = setTimeout(async () => {
+      try {
+        const rows = await operationRpc('admin_search_sale_products_v2', { p_search: productQuery.trim() })
+        if (active) setProducts(rows)
+      } catch (err) { if (active) { setProducts([]); setError(err.message) } }
+      finally { if (active) setSearching(false) }
+    }, 300)
+    return () => { active = false; clearTimeout(timer) }
+  }, [productQuery])
 
   const setSale = (field, value) => setSaleForm((prev) => ({ ...prev, [field]: value }))
   const setCustomer = (field, value) => {
@@ -339,6 +359,11 @@ export function SaleForm() {
       if (!customerForm.shipping_carrier_name.trim()) return 'Transportadora es obligatoria para encomienda.'
     }
     if (!saleForm.items.length) return 'Agrega al menos un producto.'
+    if (!saleForm.operation_date) return 'Selecciona la fecha de operacion.'
+    if (!saleForm.financial_account_id) return 'Selecciona una cuenta de cobro.'
+    if (saleForm.payment_method === 'cash') {
+      try { changeDue(totalCollected, saleForm.cash_tendered_amount) } catch (err) { return err.message }
+    }
     if (numberValue(saleForm.delivery_charged) < 0) return 'El envio no puede ser negativo.'
     for (const item of saleForm.items) {
       if (!item.product_id) return 'Todas las filas deben tener producto.'
@@ -400,7 +425,7 @@ export function SaleForm() {
         fulfillment_type: fulfillmentType,
         items: saleForm.items.map((item) => ({ product_id: item.product_id, quantity: Number(item.quantity), unit_sale_price: Number(item.unit_sale_price || 0) }))
       }
-      const result = editing ? await updateSale(id, payload) : await createSale(payload)
+      const result = await saveOperationSale(editing ? id : null, payload)
       setMessage(editing ? 'Venta actualizada.' : 'Venta creada correctamente.')
       navigate(`/admin/ventas/${result.id || id}`)
     } catch (err) {
@@ -479,7 +504,6 @@ export function SaleForm() {
             {saleForm.fulfillment_type === 'delivery' && (
               <>
                 <MoneyInput label="Precio del delivery" value={saleForm.delivery_charged} onChange={(value) => setSale('delivery_charged', value)} />
-                <label>Forma de pago<select value={saleForm.payment_method} onChange={(event) => setSale('payment_method', event.target.value)}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select></label>
               </>
             )}
             {saleForm.fulfillment_type === 'shipping' && (
@@ -510,9 +534,10 @@ export function SaleForm() {
                 }}
                 selected={selectedProduct ? { title: selectedProduct.name, subtitle: `${productCode(selectedProduct)} - Disponible: ${productAvailable(selectedProduct)}` } : null}
                 selectedLabel="Producto seleccionado"
-                emptyText="No hay productos con esa busqueda."
+                emptyText={searching ? 'Buscando...' : 'No hay productos con esa busqueda.'}
                 renderResult={(item) => (
                   <>
+                    <img src={item.main_image_url || '/placeholder.svg'} alt="" width="56" height="56" loading="lazy" decoding="async" style={{ objectFit: 'contain' }} onError={(event) => { event.currentTarget.onerror = null; event.currentTarget.src = '/placeholder.svg' }} />
                     <strong>{productCode(item)}</strong>
                     <span>{item.name}</span>
                     <small>{[item.brand, item.model].filter(Boolean).join(' - ') || 'Sin marca/modelo'} - Disponible: {productAvailable(item)} - {saleForm.sale_type === 'direct' ? formatGs(item.admin_details?.retail_price || item.suggested_price) : formatGs(item.wholesale_price)}</small>
@@ -555,10 +580,26 @@ export function SaleForm() {
           <div className="form-grid ax-dense-grid">
             <label>Estado inicial<select value={saleForm.status} onChange={(event) => setSale('status', event.target.value)}>{visibleStatuses.map((status) => <option key={status} value={status}>{saleStatusLabel(status)}</option>)}</select></label>
             {saleForm.status === 'cancelled' && <><CancellationFields reason={saleForm.cancellation_reason} onChange={(value) => setSale('cancellation_reason', value)} /><label>Nota de cancelacion<textarea value={saleForm.cancellation_note} onChange={(event) => setSale('cancellation_note', event.target.value)} /></label></>}
-            <label>Horario<input type="time" value={saleForm.delivery_schedule || ''} onChange={(event) => setSale('delivery_schedule', event.target.value)} disabled={saleForm.fulfillment_type === 'pickup'} /></label>
+            <label>Fecha de operacion<input type="date" value={saleForm.operation_date || ''} disabled={commercialLocked} onChange={(event) => setSale('operation_date', event.target.value)} required /></label>
+            <div className="ax-quick-filters">{[[businessDate(), 'Hoy'], [shiftDate(businessDate(), 1), 'Manana']].map(([date, label]) => <button key={date} type="button" disabled={commercialLocked} className={saleForm.operation_date === date ? 'active' : ''} onClick={() => setSale('operation_date', date)}>{label}</button>)}</div>
           </div>
           <label>Notas internas<textarea value={saleForm.admin_notes || ''} onChange={(event) => setSale('admin_notes', event.target.value)} /></label>
           <label>Notas visibles para revendedor<textarea value={saleForm.reseller_visible_notes || ''} onChange={(event) => setSale('reseller_visible_notes', event.target.value)} /></label>
+        </section>
+
+        <section className="form-section ax-erp-section">
+          <h2>Cobro</h2>
+          <div className="form-grid ax-dense-grid">
+            <label>Forma de pago<select value={saleForm.payment_method} disabled={commercialLocked} onChange={(event) => {
+              const method = event.target.value
+              setSaleForm((prev) => ({ ...prev, payment_method: method, financial_account_id: (method === 'cash' ? defaults.default_cash_account_id : defaults.default_transfer_account_id) || '', cash_tendered_amount: null }))
+            }}><option value="cash">Efectivo</option><option value="transfer">Transferencia</option></select></label>
+            <label>Cuenta de cobro<select value={saleForm.financial_account_id || ''} disabled={commercialLocked} onChange={(event) => setSale('financial_account_id', event.target.value)} required><option value="">Seleccionar cuenta</option>{accounts.filter((account) => account.account_type === (saleForm.payment_method === 'cash' ? 'cash' : 'bank')).map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}</select></label>
+            {saleForm.payment_method === 'cash' && <>
+              <label className="checkbox-label"><input type="checkbox" disabled={commercialLocked} checked={saleForm.cash_tendered_amount !== null && saleForm.cash_tendered_amount !== undefined} onChange={(event) => setSale('cash_tendered_amount', event.target.checked ? totalCollected : null)} /> Necesita vuelto</label>
+              {saleForm.cash_tendered_amount !== null && saleForm.cash_tendered_amount !== undefined && <><MoneyInput label="Paga con" value={saleForm.cash_tendered_amount} disabled={commercialLocked} onChange={(value) => setSale('cash_tendered_amount', value)} /><p>Vuelto: {Number(saleForm.cash_tendered_amount) >= totalCollected ? formatGs(Number(saleForm.cash_tendered_amount) - totalCollected) : 'El monto no cubre el total'}</p></>}
+            </>}
+          </div>
         </section>
 
         <div className="ax-form-footer">

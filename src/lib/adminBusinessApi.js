@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase'
+import { getAdminCommissionBalances } from './operationApi'
 
 async function call(name, params = {}) {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
@@ -34,7 +35,10 @@ function normalizeBusinessError(error) {
   return normalized
 }
 
-export const getBusinessDashboard = (date = null) => call('get_admin_business_dashboard', { p_date: date })
+export async function getBusinessDashboard(date = null) {
+  const [data, balances] = await Promise.all([call('get_admin_business_dashboard', { p_date: date }), getAdminCommissionBalances()])
+  return { ...data, finance: { ...data.finance, pending_commissions: balances.reduce((total, row) => total + Number(row.available || 0), 0) } }
+}
 export const getBusinessResellers = () => call('get_admin_business_resellers')
 export const getBusinessReport = ({ period = 'month', from = null, to = null } = {}) =>
   call('get_admin_business_report', { p_from: from || null, p_to: to || null, p_period: period })

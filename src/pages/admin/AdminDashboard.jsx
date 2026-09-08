@@ -173,7 +173,7 @@ export function AdminDashboard() {
       ]}/></section>
       <div className="business-columns">
         <section className="business-section"><h2>Cancelaciones del dia</h2><p>Tasa: {today.cancellation_rate || 0}%</p><AdminDataTable rows={today.cancellation_reasons} columns={[{key:'reason',label:'Motivo',render:r=>cancellationLabel(r.reason)},{key:'count',label:'Pedidos'}]} /></section>
-        <section className="business-section"><h2>Inventario y comisiones</h2><dl className="business-facts"><div><dt>Valor inventario</dt><dd>{formatGs(data.finance.inventory_value)}</dd></div><div><dt>Comisiones pendientes</dt><dd>{formatGs(data.finance.pending_commissions)}</dd></div></dl><div className="business-inline"><Link to="/admin/inventario">Inventario</Link><Link to="/admin/comisiones">Comisiones</Link><Link to="/admin/reportes">Reportes</Link></div></section>
+        <section className="business-section"><h2>Inventario y comisiones</h2><dl className="business-facts"><div><dt>Valor inventario</dt><dd>{formatGs(data.finance.inventory_value)}</dd></div><div><dt>Comisiones por pagar</dt><dd>{formatGs(data.finance.pending_commissions)}</dd></div></dl><div className="business-inline"><Link to="/admin/inventario">Inventario</Link><Link to="/admin/comisiones">Comisiones</Link><Link to="/admin/reportes">Reportes</Link></div></section>
       </div>
     </>}
     <AdminModal open={Boolean(goals)} title="Configurar metas" onClose={saving ? undefined : () => setGoals(null)}>

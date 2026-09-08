@@ -42,7 +42,7 @@ export function PanelPerformance() {
               <MetricCard icon={TrendingUp} label="Ultimos 30 dias" value={data.sales_last_30_days || 0} hint="Rendimiento mensual" />
               <MetricCard icon={WalletCards} label="Comision generada" value={formatGs(data.generated_commission)} hint="Ventas entregadas" featured tone="success" />
               <MetricCard icon={WalletCards} label="Comision cobrada" value={formatGs(data.paid_commission)} hint="Pagos depositados" />
-              <MetricCard icon={WalletCards} label="Comision pendiente" value={formatGs(data.pending_commission)} hint="Entregadas no pagadas" />
+              <MetricCard icon={WalletCards} label="Comision disponible" value={formatGs(data.pending_commission)} hint="Pendiente de liquidar" />
               <MetricCard icon={BarChart3} label="Promedio por venta" value={formatGs(data.average_commission)} hint="Comision promedio" />
               <MetricCard icon={PackageCheck} label="Tasa de entrega" value={`${data.success_rate || 0}%`} hint="Entregadas sobre cerradas" />
               <MetricCard icon={TrendingUp} label="Racha actual" value={`${data.current_sales_week_streak || 0} semanas`} hint="Semanas lunes a sabado con ventas" />

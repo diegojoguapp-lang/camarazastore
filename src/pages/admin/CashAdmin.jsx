@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AdminDataTable, AdminMetric, AdminPageHeader, DateCell, MoneyCell } from '../../components/AdminUX'
-import { closeCashSession, getCashSessions, getFinancialAccounts, getFinancialMovements, openCashSession } from '../../lib/adminFinanceApi'
+import { closeCashSession, getCashSessions, openCashSession } from '../../lib/adminFinanceApi'
+import { operationRpc } from '../../lib/operationApi'
+import { businessDate } from '../../lib/operationDates'
+import { formatDatePy } from '../../lib/dateUtils'
 
 const emptyForm = { financial_account_id: '', counted_balance: '', register_difference: false, notes: '' }
 
 export function CashAdmin() {
   const [accounts, setAccounts] = useState([])
   const [sessions, setSessions] = useState([])
-  const [movements, setMovements] = useState([])
+  const [dayAccounts, setDayAccounts] = useState([])
   const [form, setForm] = useState(emptyForm)
   const [closeForm, setCloseForm] = useState({ counted_balance: '', register_difference: false, notes: '' })
   const [error, setError] = useState('')
@@ -18,14 +21,13 @@ export function CashAdmin() {
   const load = async () => {
     try {
       setLoading(true)
-      const [accountRows, sessionRows, movementRows] = await Promise.all([
-        getFinancialAccounts(),
-        getCashSessions(),
-        getFinancialMovements({})
+      const [accountRows, sessionRows] = await Promise.all([
+        operationRpc('admin_cash_day_v2', { p_day: businessDate() }),
+        getCashSessions()
       ])
       setAccounts(accountRows.filter((account) => account.is_active && account.is_cash_account))
       setSessions(sessionRows)
-      setMovements(movementRows)
+      setDayAccounts(accountRows)
     } catch (err) {
       setError(err.message || 'No se pudo cargar caja.')
     } finally {
@@ -43,12 +45,9 @@ export function CashAdmin() {
   const expectedCloseBalance = Number(openSession?.account?.current_balance ?? openSession?.expected_closing_balance ?? 0)
   const countedCloseBalance = Number(closeForm.counted_balance || 0)
   const closeDifference = closeForm.counted_balance === '' ? null : countedCloseBalance - expectedCloseBalance
-  const todayMovements = useMemo(() => {
-    const today = new Date().toISOString().slice(0, 10)
-    return movements.filter((row) => row.occurred_at?.slice(0, 10) === today && (!openSession || row.account_id === openSession.financial_account_id))
-  }, [movements, openSession])
-  const income = todayMovements.filter((row) => row.direction === 'income').reduce((sum, row) => sum + Number(row.amount || 0), 0)
-  const expense = todayMovements.filter((row) => row.direction === 'expense').reduce((sum, row) => sum + Number(row.amount || 0), 0)
+  const cashDay = dayAccounts.filter((a) => a.is_cash_account && (!openSession || a.id === openSession.financial_account_id))
+  const income = cashDay.reduce((sum, a) => sum + Number(a.day_income), 0)
+  const expense = cashDay.reduce((sum, a) => sum + Number(a.day_expense), 0)
 
   const submitOpen = async (event) => {
     event.preventDefault()
@@ -86,15 +85,16 @@ export function CashAdmin() {
 
   return (
     <div className="admin-page ax-page">
-      <AdminPageHeader eyebrow="Finanzas" title="Caja diaria" description="Apertura, cierre y control de efectivo." />
+      <AdminPageHeader eyebrow="Finanzas" title={`Caja diaria · ${formatDatePy(businessDate())}`} />
       {error && <div className="error-box">{error}</div>}
       {message && <div className="toast">{message}</div>}
 
       <div className="ax-metric-grid">
         <AdminMetric label="Estado" value={openSession ? 'Abierta' : 'Cerrada'} featured />
+        <AdminMetric label="Saldo inicial del dia" value={<MoneyCell value={cashDay.reduce((sum, a) => sum + Number(a.day_opening_balance || 0), 0)} />} />
         <AdminMetric label="Ingresos del dia" value={<MoneyCell value={income} />} />
         <AdminMetric label="Egresos del dia" value={<MoneyCell value={expense} />} />
-        <AdminMetric label="Movimientos" value={todayMovements.length} />
+        <AdminMetric label="Movimientos" value={cashDay.reduce((sum, a) => sum + Number(a.day_count), 0)} />
       </div>
 
       <section className="ax-panel">
@@ -126,6 +126,10 @@ export function CashAdmin() {
         )}
       </section>
 
+      <section className="ax-panel"><h2>Bancos · saldo continuo</h2>
+        <div className="ax-account-grid">{dayAccounts.filter((a) => a.account_type === 'bank').map((a) => <article className="ax-account-card" key={a.id}><h3>{a.name}</h3><strong>Saldo actual: <MoneyCell value={a.current_balance} /></strong><span>Recibido hoy: <MoneyCell value={a.day_income} /></span><span>Egresos hoy: <MoneyCell value={a.day_expense} /></span></article>)}</div>
+        {!loading && !dayAccounts.some((a) => a.account_type === 'bank') && <p>Sin cuentas bancarias activas.</p>}
+      </section>
       <AdminDataTable columns={columns} rows={sessions} loading={loading} empty="Todavia no hay sesiones de caja." />
     </div>
   )

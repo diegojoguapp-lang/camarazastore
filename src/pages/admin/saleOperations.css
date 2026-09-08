@@ -1,0 +1,9 @@
+.ax-sale-desktop-page { min-width:0; max-width:100%; }
+.ax-sale-desktop-page .ax-sale-form-full { grid-template-columns:minmax(0,1fr); }
+.ax-sale-desktop-page .form-section { min-width:0; }
+.ax-sale-desktop-page .ax-sale-items-table-pro { overflow-x:auto; max-width:100%; }
+.ax-sale-desktop-page .ax-sale-items-table-pro .ax-sale-items-head,
+.ax-sale-desktop-page .ax-sale-items-table-pro .ax-sale-item-line { min-width:1084px; }
+.ax-sale-desktop-page .ax-section-heading { flex-wrap:wrap; }
+.ax-sale-desktop-page .ax-mini-total { flex-wrap:wrap; border-radius:6px; }
+.ax-sale-desktop-page .ax-autocomplete-menu img { float:left; margin-right:10px; }

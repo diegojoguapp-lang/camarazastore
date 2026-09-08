@@ -5,6 +5,8 @@ import { AdminDataTable, AdminMetric, AdminModal, AdminPageHeader, AdminStatusBa
 import { createCommissionBatch, getCommissionBatches, getResellerCommissionDetail, getResellerCommissionOverview, getSundayCommissionWarnings } from '../../lib/adminCommissionsApi'
 import { getCurrentCommissionPeriod, formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
+import { getAdminCommissionBalances } from '../../lib/operationApi'
+import { CommissionBalances } from '../../components/CommissionBalances'
 
 const emptyFilters = { period: 'this_week', date_from: '', date_to: '' }
 
@@ -60,17 +62,19 @@ export function CommissionsAdmin() {
   const [loading, setLoading] = useState(true)
   const [detailLoading, setDetailLoading] = useState(false)
   const [creating, setCreating] = useState(false)
+  const [balances, setBalances] = useState([])
 
   const load = async (nextFilters = filters) => {
     try {
       setLoading(true)
       setError('')
-      const [overview, batchRows, sundayRows] = await Promise.all([
+      const [overview, batchRows, sundayRows, globalBalances] = await Promise.all([
         getResellerCommissionOverview(nextFilters),
         getCommissionBatches(),
-        getSundayCommissionWarnings()
+        getSundayCommissionWarnings(), getAdminCommissionBalances()
       ])
-      setRows(overview)
+      setBalances(globalBalances)
+      setRows(globalBalances.map((row) => ({ ...overview.find((item) => item.reseller_id === row.reseller_id), ...row, pending_commission: row.available, can_pay: Number(row.available) > 0 && row.has_bank_account })))
       setBatches(batchRows)
       setWarnings(sundayRows)
     } catch (err) {
@@ -82,13 +86,13 @@ export function CommissionsAdmin() {
 
   useEffect(() => { load(emptyFilters) }, [])
 
-  const totals = useMemo(() => rows.reduce((acc, row) => {
-    acc.today += Number(row.today_commission || 0)
-    acc.pending += Number(row.pending_commission || 0)
-    acc.paidMonth += Number(row.paid_month_commission || 0)
+  const totals = useMemo(() => balances.reduce((acc, row) => {
+    acc.today += Number(row.liquidating || 0)
+    acc.pending += Number(row.available || 0)
+    acc.paidMonth += Number(row.paid_month || 0)
     acc.adjustments += Number(row.pending_adjustments || 0)
     return acc
-  }, { today: 0, pending: 0, paidMonth: 0, adjustments: 0 }), [rows])
+  }, { today: 0, pending: 0, paidMonth: 0, adjustments: 0 }), [balances])
 
   const createCurrentBatch = async () => {
     try {
@@ -130,8 +134,11 @@ export function CommissionsAdmin() {
   const columns = [
     { key: 'reseller', label: 'Revendedor', render: (row) => <div className="ax-title-cell"><strong>{row.reseller_name}</strong><span>{row.reseller_code || '-'} - {row.reseller_phone || 'Sin WhatsApp'}</span></div> },
     { key: 'sales', label: 'Ventas del periodo', align: 'right', render: (row) => `${row.period_sales_count || 0} ventas` },
-    { key: 'today', label: 'Comision de hoy', align: 'right', render: (row) => <MoneyCell value={row.today_commission} /> },
-    { key: 'pending', label: 'Comision pendiente', align: 'right', render: (row) => <MoneyCell value={row.pending_commission} /> },
+    { key: 'estimated', label: 'Por confirmar', align: 'right', render: (row) => <MoneyCell value={row.estimated} /> },
+    { key: 'pending', label: 'Disponible', align: 'right', render: (row) => <MoneyCell value={row.available} /> },
+    { key: 'liquidating', label: 'En liquidacion', align: 'right', render: (row) => <MoneyCell value={row.liquidating} /> },
+    { key: 'paid', label: 'Pagado', align: 'right', render: (row) => <MoneyCell value={row.paid} /> },
+    { key: 'adjustments', label: 'Ajustes', align: 'right', render: (row) => <MoneyCell value={row.pending_adjustments} /> },
     { key: 'bank', label: 'Cuenta', render: (row) => row.has_bank_account ? `${row.bank_name || 'Banco'} ${maskAccount(row.bank_alias || row.bank_account_number)}` : <AdminStatusBadge tone="warning">Sin cuenta</AdminStatusBadge> },
     { key: 'actions', label: 'Acciones', render: (row) => <RowActions><button type="button" onClick={() => openDetail(row)}><Eye size={14} /> Ver</button></RowActions> }
   ]
@@ -157,8 +164,8 @@ export function CommissionsAdmin() {
       {warnings.length > 0 && <div className="warning-box">Hay {warnings.length} venta(s) entregadas en domingo. Domingo no pertenece a ningun periodo de comisiones.</div>}
 
       <div className="ax-metric-grid">
-        <AdminMetric label="Comision generada hoy" value={<MoneyCell value={totals.today} />} />
-        <AdminMetric label="Comision pendiente esta semana" value={<MoneyCell value={totals.pending} />} featured />
+        <AdminMetric label="En liquidacion" value={<MoneyCell value={totals.today} />} />
+        <AdminMetric label="Por pagar · saldo global" value={<MoneyCell value={totals.pending} />} featured />
         <AdminMetric label="Comisiones pagadas este mes" value={<MoneyCell value={totals.paidMonth} />} />
         <AdminMetric label="Ajustes pendientes" value={<MoneyCell value={totals.adjustments} />} />
       </div>
@@ -207,6 +214,7 @@ export function CommissionsAdmin() {
       >
         {selected && (
           <div className="ax-commission-detail">
+            <CommissionBalances balances={selected} resellerId={selected.reseller_id} admin />
             <div className="ax-metric-grid">
               <AdminMetric label="Ventas totales" value={selected.period_sales_count || 0} />
               <AdminMetric label="Comision del periodo" value={<MoneyCell value={detailTotal || selected.pending_commission} />} featured />

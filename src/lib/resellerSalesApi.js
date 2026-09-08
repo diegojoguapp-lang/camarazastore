@@ -41,6 +41,7 @@ function statusForFilter(filter) {
 }
 
 export function commissionState(sale) {
+  if ('commission_bucket' in sale) return ({ estimated: 'Por confirmar', available: 'Disponible', liquidating: 'En liquidacion', paid: 'Pagado' })[sale.commission_bucket] || 'No aplica'
   if (sale.commission_paid) return 'Pagada'
   if (sale.status === COMMISSION_CONFIRMED_STATUS) return 'Confirmada pendiente'
   if (COMMISSION_ESTIMATED_STATUSES.includes(sale.status)) return 'Estimada'
@@ -79,6 +80,8 @@ export async function getMySalesSummary() {
   if (dashboardError) throw dashboardError
 
   const dashboard = dashboardRows?.[0] || {}
+  const { data: balances, error: balanceError } = await supabase.rpc('get_my_commission_balances_v2')
+  if (balanceError) throw balanceError
   const pipeline = {
     pending_contact: Number(dashboard.pending_contact_sales || 0),
     confirmed: Number(dashboard.confirmed_sales || 0),
@@ -89,13 +92,14 @@ export async function getMySalesSummary() {
   }
 
   return {
-    estimatedCommission: Number(dashboard.estimated_commission || 0),
-    unpaidConfirmedCommission: Number(dashboard.unpaid_confirmed_commission || 0),
+    balances,
+    estimatedCommission: Number(balances.estimated || 0),
+    unpaidConfirmedCommission: Number(balances.available || 0),
     currentPeriodCommission: Number(dashboard.current_period_commission || 0),
     currentPeriodDeliveredSales: Number(dashboard.current_period_delivered_sales || 0),
     totalDeliveredSales: Number(dashboard.total_delivered_sales || 0),
     totalHistoricalCommission: Number(dashboard.total_historical_commission || 0),
-    totalPaidCommission: Number(dashboard.total_paid_commission || 0),
+    totalPaidCommission: Number(balances.paid || 0),
     totalPendingPayments: Number(dashboard.total_pending_payments || 0),
     nextPaymentDate: dashboard.next_payment_date,
     periodStart: dashboard.current_period_start,

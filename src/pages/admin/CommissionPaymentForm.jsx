@@ -6,12 +6,14 @@ import { getFinancialAccounts } from '../../lib/adminFinanceApi'
 import { createCommissionPayment, getBankAccountForReseller, getCommissionBatch, getCommissionBatchOverview, getCommissionBatchSales } from '../../lib/adminCommissionsApi'
 import { calculateNetPaid } from '../../lib/commissionConstants'
 import { formatDatePy } from '../../lib/dateUtils'
+import { businessDate } from '../../lib/operationDates'
 
 const emptyForm = {
+  prepare_only: true,
   adjustments: 0,
   discounts: 0,
   payment_method: 'transferencia',
-  payment_date: new Date().toISOString().slice(0, 10),
+  payment_date: businessDate(),
   voucher_url: '',
   voucher_number: '',
   financial_account_id: '',
@@ -32,7 +34,7 @@ export function CommissionPaymentForm() {
   const [saving, setSaving] = useState(false)
 
   const gross = useMemo(() => sales.reduce((sum, sale) => sum + Number(sale.reseller_commission || 0), 0), [sales])
-  const net = calculateNetPaid({ gross_commission: gross, adjustments: form.adjustments, discounts: form.discounts })
+  const net = calculateNetPaid({ gross_commission: gross, adjustments: form.adjustments, discounts: Number(form.discounts || 0) + Math.abs(Number(overview?.pending_adjustments || 0)) })
   const reseller = overview ? { full_name: overview.reseller_name, reseller_code: overview.reseller_code } : sales[0]?.reseller
 
   useEffect(() => {
@@ -85,6 +87,7 @@ export function CommissionPaymentForm() {
       })
       navigate(`/admin/comisiones/pagos/${payment.id}`)
     } catch (err) {
+      if (err.paymentId) { navigate(`/admin/comisiones/pagos/${err.paymentId}`); return }
       setError(err.message || 'No se pudo crear el pago.')
     } finally {
       setSaving(false)
@@ -135,13 +138,14 @@ export function CommissionPaymentForm() {
 
           <section className="form-section">
             <h2>Datos del pago</h2>
+            <label className="checkbox-label"><input type="checkbox" checked={form.prepare_only} onChange={(e) => setField('prepare_only', e.target.checked)} /> Preparar liquidacion sin confirmar pago</label>
             <div className="form-grid">
               <label>Ajuste positivo<input type="number" min="0" value={form.adjustments} onChange={(e) => setField('adjustments', e.target.value)} /></label>
               <label>Descuento<input type="number" min="0" value={form.discounts} onChange={(e) => setField('discounts', e.target.value)} /></label>
               <label>Fecha<input type="date" value={form.payment_date} onChange={(e) => setField('payment_date', e.target.value)} /></label>
               <label>Metodo<input value={form.payment_method} onChange={(e) => setField('payment_method', e.target.value)} /></label>
               <label>Cuenta Camaraza *
-                <select value={form.financial_account_id} onChange={(e) => setField('financial_account_id', e.target.value)} required>
+                <select value={form.financial_account_id} onChange={(e) => setField('financial_account_id', e.target.value)} required={!form.prepare_only} disabled={form.prepare_only}>
                   <option value="">Seleccionar cuenta</option>
                   {accounts.map((account) => <option key={account.id} value={account.id}>{account.name}</option>)}
                 </select>
@@ -164,8 +168,8 @@ export function CommissionPaymentForm() {
             { label: 'Neto a pagar', value: <MoneyCell value={net} /> }
           ]}
         >
-          <button className="primary-button big" type="submit" disabled={saving || !sales.length || !bankAccount || !form.financial_account_id}>
-            <Save size={18} /> {saving ? 'Guardando...' : 'Confirmar pago'}
+          <button className="primary-button big" type="submit" disabled={saving || !sales.length || !bankAccount || (!form.prepare_only && !form.financial_account_id)}>
+            <Save size={18} /> {saving ? 'Guardando...' : form.prepare_only ? 'Preparar liquidacion' : 'Confirmar pago'}
           </button>
         </StickySummary>
       </form>

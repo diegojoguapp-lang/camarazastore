@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { getCurrentProfile } from './roles'
+import { operationRpc } from './operationApi'
 
 function requireSupabase() {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
@@ -44,43 +45,25 @@ export async function saveMyBankAccount(payload) {
 
 export async function getMyCommissionPayments() {
   requireSupabase()
-  const { data, error } = await supabase
-    .from('commission_payments')
-    .select('*,batch:commission_batches(period_start,period_end,payment_day,status)')
-    .order('payment_date', { ascending: false })
-  if (error) throw error
-  return data || []
+  const rows = []
+  for (let offset = 0; ; offset += 100) {
+    const page = await operationRpc('get_my_payment_receipts_v2', { p_offset: offset })
+    rows.push(...page)
+    if (page.length < 100) return rows
+  }
 }
 
 export async function getMyCommissionPayment(id) {
   requireSupabase()
-  const { data, error } = await supabase
-    .from('commission_payments')
-    .select('*,batch:commission_batches(period_start,period_end,payment_day,status)')
-    .eq('id', id)
-    .single()
-  if (error) throw error
-  return data
+  const rows = await operationRpc('get_my_payment_receipts_v2', { p_id: id })
+  if (!rows.length) throw new Error('Liquidacion no encontrada.')
+  return rows[0]
 }
 
 export async function getMyCommissionPaymentItems(paymentId) {
-  requireSupabase()
-  const { data, error } = await supabase
-    .from('commission_payment_items')
-    .select('*,sale:sales(id,product_name_snapshot,delivered_at)')
-    .eq('payment_id', paymentId)
-    .order('created_at', { ascending: true })
-  if (error) throw error
-  return data || []
+  return (await getMyCommissionPayment(paymentId)).items
 }
 
 export async function getMyCommissionPaymentAdjustments(paymentId) {
-  requireSupabase()
-  const { data, error } = await supabase
-    .from('commission_payment_adjustments')
-    .select('*,adjustment:commission_adjustments(reason,source_type)')
-    .eq('payment_id', paymentId)
-    .order('created_at', { ascending: true })
-  if (error) throw error
-  return data || []
+  return (await getMyCommissionPayment(paymentId)).applied_adjustments
 }

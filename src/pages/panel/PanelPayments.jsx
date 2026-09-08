@@ -7,6 +7,7 @@ import { getMySalesSummary } from '../../lib/resellerSalesApi'
 import { paymentStatusLabel } from '../../lib/commissionConstants'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
+import { CommissionBalances } from '../../components/CommissionBalances'
 
 export function PanelPayments() {
   const [payments, setPayments] = useState([])
@@ -30,7 +31,7 @@ export function PanelPayments() {
 
   useEffect(() => { load() }, [])
 
-  const lastPayment = useMemo(() => payments.find((payment) => payment.status === 'paid'), [payments])
+  const lastPayment = useMemo(() => payments.filter((payment) => payment.status === 'paid').sort((a, b) => String(b.payment_date).localeCompare(String(a.payment_date)))[0], [payments])
 
   return (
     <ResellerPanelLayout>
@@ -48,6 +49,7 @@ export function PanelPayments() {
 
         {!loading && (
           <>
+            <CommissionBalances balances={summary?.balances} />
             <section className="reseller-metrics-grid payments">
               <article className="reseller-metric-card featured tone-success"><WalletCards size={22} /><span>Pendiente de cobrar</span><strong>{formatGs(summary?.unpaidConfirmedCommission)}</strong><p>Disponible para proximo cierre</p></article>
               <article className="reseller-metric-card"><Banknote size={22} /><span>Total cobrado</span><strong>{formatGs(summary?.totalPaidCommission)}</strong><p>Pagos con estado pagado</p></article>

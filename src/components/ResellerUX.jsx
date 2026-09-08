@@ -2,7 +2,9 @@ import { Link } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import { formatDatePy } from '../lib/dateUtils'
 import { formatGs } from '../lib/utils'
-import { deliveryLine, humanActivity, orderStatusMeta, shortOrderId } from '../lib/resellerDisplay'
+import { deliveryLine, humanActivity, orderStatusMeta } from '../lib/resellerDisplay'
+import { orderCode } from '../lib/operationDates'
+import './operationUX.css'
 
 export function CompactPageHeader({ profile, title = 'Inicio', subtitle, action }) {
   const initials = (profile?.full_name || profile?.email || 'R').slice(0, 2).toUpperCase()
@@ -37,7 +39,8 @@ export function StatusDot({ status }) {
 
 export function StatusBadge({ status }) {
   const meta = orderStatusMeta(status)
-  return <span className={`rx-status-badge tone-${meta.tone}`}><StatusDot status={status} />{meta.label}</span>
+  const label = ({ confirmed: 'Coordinado', out_for_delivery: 'En camino', delivered_paid: 'Entregado' })[status] || meta.label
+  return <span className={`rx-status-badge tone-${meta.tone}`}><StatusDot status={status} />{label}</span>
 }
 
 export function OrderListItem({ sale, to }) {
@@ -45,14 +48,16 @@ export function OrderListItem({ sale, to }) {
   return (
     <Link className="rx-order-row" to={target}>
       <div className="rx-order-top">
-        <span><StatusDot status={sale.status} /> Orden {shortOrderId(sale.id)}</span>
+        <span><StatusDot status={sale.status} /> {orderCode(sale)}</span>
         <strong>{formatGs(sale.total_collected || sale.product_sale_price)}</strong>
       </div>
+      {sale.main_image_url && <img className="ov-order-photo" width="56" height="56" src={sale.main_image_url} alt="" loading="lazy" decoding="async" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = '/placeholder.svg' }} />}
       <h2>{sale.product_name_snapshot}</h2>
+      <p>Comision: {formatGs(sale.reseller_commission)} · {formatDatePy(sale.operation_date)}</p>
       <p>{sale.customer_name || 'Cliente'} {sale.customer_phone_masked ? `- ${sale.customer_phone_masked}` : ''}</p>
       <div className="rx-order-meta">
         <StatusBadge status={sale.status} />
-        <small>{deliveryLine(sale)}</small>
+        <small>{sale.operation_date ? formatDatePy(sale.operation_date) : deliveryLine(sale)}</small>
       </div>
     </Link>
   )
@@ -103,6 +108,8 @@ export function OrderTimeline({ sale }) {
   const currentIndex = statusOrder.indexOf(sale?.status)
   const dates = {
     pending_contact: sale?.created_at,
+    confirmed: sale?.confirmed_at,
+    out_for_delivery: sale?.dispatched_at,
     delivered_paid: sale?.delivered_at
   }
 

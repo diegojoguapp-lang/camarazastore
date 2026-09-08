@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from './supabase'
+import { getMyCommissionBalances } from './operationApi'
 
 function requireSupabase() {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
@@ -43,6 +44,6 @@ export async function getMyPerformance() {
   requireSupabase()
   const { data, error } = await supabase.rpc('get_my_performance')
   if (error) throw error
-  return data || {}
+  const balances = await getMyCommissionBalances()
+  return { ...data, pending_commission: balances.available, paid_commission: balances.paid, liquidating_commission: balances.liquidating }
 }
-

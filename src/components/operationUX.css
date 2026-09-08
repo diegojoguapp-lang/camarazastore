@@ -1,0 +1,27 @@
+.ov-balances { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.ov-balances button { text-align:left; border:1px solid #dae0e4; border-radius:6px; padding:14px; background:#fff; min-width:0; color:#20292f; }
+.ov-balances button.selected { border-color:#178247; background:#edf8f1; }
+.ov-balances span,.ov-balances strong { display:block; overflow-wrap:anywhere; }
+.ov-balances span { font-size:13px; }
+.ov-balances strong { font-size:20px; margin-top:6px; }
+.ov-breakdown { padding:16px 0; min-width:0; }
+.ov-breakdown header { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.ov-breakdown h3 { font-size:16px; }
+.ov-breakdown > a { display:flex; flex-wrap:wrap; align-items:center; gap:10px; padding:12px 0; border-bottom:1px solid #e3e8eb; overflow-wrap:anywhere; }
+.ov-breakdown > a span { flex:1; min-width:100px; }
+.ov-pagination { display:flex; justify-content:flex-end; gap:12px; margin:12px 0; }
+.ov-today-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; margin:12px 0; }
+.ov-today-tabs button { min-width:0; min-height:56px; border:1px solid #dce2e6; background:#fff; border-radius:6px; font-size:12px; overflow-wrap:anywhere; }
+.ov-today-tabs b { display:block; font-size:20px; }
+.ov-today-tabs .active { background:#ecf7f0; border-color:#278654; color:#155f37; }
+.ov-period-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.ov-period-grid h3 { font-size:15px; }
+.ov-period-grid p { font-size:13px; overflow-wrap:anywhere; }
+.ov-order-photo { width:56px; height:56px; object-fit:contain; float:left; margin-right:10px; border-radius:4px; }
+.ov-sale-filters { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
+.ov-sale-filters label { min-width:0; display:grid; gap:4px; }
+.ov-sale-filters input,.ov-sale-filters select { min-width:0; width:100%; box-sizing:border-box; }
+.ov-commissions :focus-visible,.ov-today-tabs :focus-visible { outline:2px solid #197b48; outline-offset:3px; }
+.ov-home .rx-section { border:0; padding:0; box-shadow:none; background:transparent; border-radius:0; }
+@media(min-width:1000px) { .ov-balances { grid-template-columns:repeat(4,minmax(0,1fr)); } }
+@media(prefers-reduced-motion:reduce) { .ov-commissions * { transition:none!important; animation:none!important; } }

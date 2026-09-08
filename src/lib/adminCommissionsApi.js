@@ -1,6 +1,7 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { getCurrentSession } from './roles'
 import { getNextCommissionPayment } from './dateUtils'
+import { businessDate } from './operationDates'
 
 function requireSupabase() {
   if (!isSupabaseConfigured) throw new Error('Supabase no esta configurado.')
@@ -14,7 +15,7 @@ async function currentUserId() {
 }
 
 function toDateOnly(value) {
-  return new Date(value).toISOString().slice(0, 10)
+  return businessDate(value)
 }
 
 export async function getCommissionBatches() {
@@ -204,7 +205,7 @@ export async function getPaymentItems(paymentId) {
   requireSupabase()
   const { data, error } = await supabase
     .from('commission_payment_items')
-    .select('*,sale:sales(id,product_name_snapshot,delivered_at,reseller_commission)')
+    .select('*,sale:sales(id,sale_number,product_name_snapshot,delivered_at,reseller_commission)')
     .eq('payment_id', paymentId)
     .order('created_at', { ascending: true })
   if (error) throw error
@@ -240,6 +241,14 @@ export async function createCommissionPayment({ batchId, resellerId, sales, bank
   })
   if (createError) throw createError
 
+  if (form.prepare_only) return getCommissionPayment(paymentId)
+
+  return confirmCommissionPayment(paymentId, form)
+}
+
+export async function confirmCommissionPayment(paymentId, form) {
+  requireSupabase()
+
   const { data: paidPaymentId, error: paidError } = await supabase.rpc('mark_commission_payment_paid', {
     p_payment_id: paymentId,
     p_payment_date: form.payment_date || toDateOnly(new Date()),
@@ -249,7 +258,11 @@ export async function createCommissionPayment({ batchId, resellerId, sales, bank
     p_notes: form.notes?.trim() || null,
     p_financial_account_id: form.financial_account_id || null
   })
-  if (paidError) throw paidError
+  if (paidError) {
+    const error = new Error(`${paidError.message}. La liquidacion ${paymentId} sigue pendiente; completala desde su detalle.`)
+    error.paymentId = paymentId
+    throw error
+  }
 
   return getCommissionPayment(paidPaymentId)
 }

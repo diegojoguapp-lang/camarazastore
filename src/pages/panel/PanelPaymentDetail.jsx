@@ -2,10 +2,11 @@ import { useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft } from 'lucide-react'
 import { ResellerPanelLayout } from '../../components/ResellerPanelLayout'
-import { getMyCommissionPayment, getMyCommissionPaymentAdjustments, getMyCommissionPaymentItems } from '../../lib/resellerCommissionsApi'
+import { getMyCommissionPayment } from '../../lib/resellerCommissionsApi'
 import { paymentStatusLabel } from '../../lib/commissionConstants'
 import { formatDatePy } from '../../lib/dateUtils'
 import { formatGs } from '../../lib/utils'
+import { orderCode } from '../../lib/operationDates'
 
 export function PanelPaymentDetail() {
   const { id } = useParams()
@@ -16,11 +17,11 @@ export function PanelPaymentDetail() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    Promise.all([getMyCommissionPayment(id), getMyCommissionPaymentItems(id), getMyCommissionPaymentAdjustments(id)])
-      .then(([paymentData, itemRows, adjustmentRows]) => {
+    getMyCommissionPayment(id)
+      .then((paymentData) => {
         setPayment(paymentData)
-        setItems(itemRows)
-        setAdjustments(adjustmentRows)
+        setItems(paymentData.items)
+        setAdjustments(paymentData.applied_adjustments)
       })
       .catch((err) => setError(err.message || 'No se pudo cargar el pago.'))
       .finally(() => setLoading(false))
@@ -41,6 +42,9 @@ export function PanelPaymentDetail() {
           <div className="profile-summary">
             <div><span>Banco</span><strong>{payment.bank_name_snapshot || '-'}</strong></div>
             <div><span>Alias</span><strong>{payment.bank_alias_snapshot || '-'}</strong></div>
+            <div><span>Titular</span><strong>{payment.bank_holder_snapshot || '-'}</strong></div>
+            <div><span>Comision bruta</span><strong>{formatGs(payment.gross_commission)}</strong></div>
+            <div><span>Ajustes positivos</span><strong>{formatGs(payment.adjustments)}</strong></div>
             <div><span>Periodo</span><strong>{formatDatePy(payment.batch?.period_start)} al {formatDatePy(payment.batch?.period_end)}</strong></div>
             <div><span>Descuentos</span><strong>{formatGs(payment.discounts || 0)}</strong></div>
             <div><span>Comprobante</span><strong>{payment.voucher_url ? <a href={payment.voucher_url} target="_blank" rel="noreferrer">Ver</a> : '-'}</strong></div>
@@ -51,7 +55,7 @@ export function PanelPaymentDetail() {
           <div className="commission-items-list">
             {items.map((item) => (
               <div key={item.id}>
-                <span>{formatDatePy(item.sale?.delivered_at)} - {item.sale?.product_name_snapshot}</span>
+                <span>{orderCode(item.sale || {})} · {formatDatePy(item.sale?.delivered_at)} - {item.sale?.product_name_snapshot}</span>
                 <strong>{formatGs(item.commission_amount_snapshot)}</strong>
               </div>
             ))}
