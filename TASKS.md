@@ -19,3 +19,14 @@
 | Auditoría independiente | Auditor | Pendiente |
 
 El detalle privado de hallazgos de seguridad, identificadores y datos de prueba no se publica en este repositorio. No abrir ni fusionar PR a main para este ciclo.
+
+## Ciclo 02 — 2026-11-25
+
+| Tarea | Estado |
+| --- | --- |
+| Compras, inventario, gastos, caja y transferencias | Hecho (SQL reversible) |
+| Controles negativos de inventario y reintentos secuenciales | Hecho |
+| Limpieza posterior | Hecho |
+| Política de saldos negativos | Decisión comercial pendiente |
+| Almacenamiento oficial, dos revendedores y pruebas navegador | Bloqueado por acceso operativo |
+| Concurrencia real y auditoría independiente | Pendiente |

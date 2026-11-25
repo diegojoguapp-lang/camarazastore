@@ -22,3 +22,10 @@
 ## Etapa 4: revisión de entrega
 - Documentar rollback, backup, migraciones y criterios de aceptación.
 - No autorizar producción hasta que todos los bloqueos relevantes estén cerrados y exista autorización específica.
+
+## Progreso ciclo 02
+- [x] Compra, ingreso y pago con reintento secuencial.
+- [x] Controles de stock negativo y reservado.
+- [x] Gasto, anulación, transferencia y cierre de caja.
+- [ ] Validar política de fondos disponibles.
+- [ ] Repetir flujos desde navegador, con cuentas QA y concurrencia real.

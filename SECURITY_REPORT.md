@@ -11,3 +11,8 @@ Estado: revisión parcial; no aprobación de producción.
 - No guardar datos de clientes, contraseñas, tokens, claves privadas, archivos de entorno ni evidencia sensible en Git.
 - Los hallazgos técnicos y recomendaciones detallados se gestionan privadamente con el propietario. No publicar información que permita explotar vulnerabilidades.
 - Auditoría independiente: pendiente.
+
+## Ciclo 02
+- Controles de integridad de inventario y reintentos secuenciales financieros probados en SQL reversible.
+- Limpieza comprobada; no se otorgaron nuevos permisos ni accesos.
+- Pendientes aislamiento real entre revendedores, archivos, autenticación integral y auditoría independiente.

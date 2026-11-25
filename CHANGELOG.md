@@ -13,3 +13,10 @@
 - Exclusión de despliegues automáticos para esta rama, manteniendo la configuración existente de rutas.
 
 Sin modificaciones a main ni producción. Los permisos aplicados en el entorno de pruebas aún deben conciliarse con una migración revisada y reproducible. No se ha realizado una auditoría independiente.
+
+## 2026-11-25 — ciclo 02
+
+- Pruebas reversibles de compras, controles de inventario, gastos, transferencias y caja.
+- Verificación posterior de limpieza y stock original.
+- Registro de decisión comercial pendiente sobre disponibilidad de fondos.
+- Sin cambios de lógica comercial ni despliegues; solo documentación QA.
