@@ -30,3 +30,18 @@ El detalle privado de hallazgos de seguridad, identificadores y datos de prueba 
 | Política de saldos negativos | Decisión comercial pendiente |
 | Almacenamiento oficial, dos revendedores y pruebas navegador | Bloqueado por acceso operativo |
 | Concurrencia real y auditoría independiente | Pendiente |
+
+
+## Continuación del ciclo 02 — 2026-11-25
+
+| Tarea | Estado |
+| --- | --- |
+| Revalidar rama recibida y estado comercial actual de Staging | Hecho, solo lectura |
+| Corregir desbordamiento al agregar imágenes de galería | Hecho en código QA, no desplegado |
+| Regresión local y compilaciones | 44/44 pruebas y dos builds aprobados |
+| Revisar cambios mediante agentes independientes | Revisión parcial real; no auditoría integral |
+| Lint | Bloqueado por configuración faltante |
+| Permiso del detalle de comisiones | Fallo confirmado en Staging, pendiente conciliación y pruebas de roles |
+| Buckets e identidades QA | Confirmados ausentes; necesitan flujo oficial |
+| Pruebas navegador | Bloqueadas por acceso al alojamiento |
+| Carga, concurrencia y sesiones de dos revendedores | Pendiente; no acreditado por pruebas locales |

@@ -131,10 +131,21 @@ export async function updateProduct(id, payload, imageFiles = [], imagesToDelete
     }
   }
   if (imageFiles.gallery?.length) {
+    const { data: lastImages, error: orderError } = await supabase
+      .from('product_images')
+      .select('sort_order')
+      .eq('product_id', id)
+      .order('sort_order', { ascending: false, nullsFirst: false })
+      .limit(1)
+    if (orderError) throw orderError
+    const nextOrder = Math.max(-1, lastImages?.[0]?.sort_order ?? -1) + 1
+    if (nextOrder + imageFiles.gallery.length - 1 > 2147483647) {
+      throw new Error('No se pueden agregar más imágenes: se alcanzó el límite de orden de la galería.')
+    }
     const rows = []
     for (let index = 0; index < imageFiles.gallery.length; index += 1) {
       const url = await uploadImage(imageFiles.gallery[index], 'gallery')
-      rows.push({ product_id: id, image_url: url, sort_order: Date.now() + index })
+      rows.push({ product_id: id, image_url: url, sort_order: nextOrder + index })
     }
     const { error: imageError } = await supabase.from('product_images').insert(rows)
     if (imageError) throw imageError

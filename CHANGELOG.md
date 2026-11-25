@@ -20,3 +20,13 @@ Sin modificaciones a main ni producción. Los permisos aplicados en el entorno d
 - Verificación posterior de limpieza y stock original.
 - Registro de decisión comercial pendiente sobre disponibilidad de fondos.
 - Sin cambios de lógica comercial ni despliegues; solo documentación QA.
+
+
+## 2026-11-25 — continuación del ciclo 02
+
+- Corregido el desbordamiento del orden de galería al agregar imágenes en edición de productos, preservando órdenes existentes y contemplando valores nulos.
+- Agregadas ocho pruebas de regresión del API con transporte simulado; total local 44/44, ambas compilaciones aprobadas.
+- Revalidado el estado comercial original y comprobada la ausencia de buckets y revendedores QA en el entorno autorizado.
+- Registrados bloqueos de lint, permisos de detalle de comisiones y acceso web al alojamiento.
+- Revisión independiente parcial de frontend y seguridad ejecutada por agentes reales.
+- Sin despliegues, ampliación de permisos ni cambios persistentes de base de datos. La política comercial de saldos negativos no cambia.
