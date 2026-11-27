@@ -1,5 +1,4 @@
 import { Link } from 'react-router-dom'
-import { STORE } from '../config/site'
 import { waLink } from '../lib/utils'
 
 export default function Home() {

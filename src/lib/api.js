@@ -37,7 +37,8 @@ export async function getProductBySlug(slug) {
   const product = Array.isArray(data) ? data[0] : data
   if (!product) return null
   const images = Array.isArray(product.images) ? product.images : []
-  const { images: _images, ...cleanProduct } = product
+  const cleanProduct = { ...product }
+  delete cleanProduct.images
   return { product: cleanProduct, images }
 }
 

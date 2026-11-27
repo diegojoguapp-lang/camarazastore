@@ -98,7 +98,7 @@ export default function ProductForm() {
       const url = await uploadImage(file)
       set('main_image_url', url)
       toast('Imagen principal lista')
-    } catch (e) {
+    } catch {
       toast('Error al subir la imagen')
     }
   }
@@ -118,7 +118,7 @@ export default function ProductForm() {
         setImages((prev) => [...prev, row])
       }
       toast('Fotos agregadas')
-    } catch (e) {
+    } catch {
       toast('Error al subir fotos')
     }
   }

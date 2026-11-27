@@ -59,3 +59,19 @@ El detalle privado de hallazgos de seguridad, identificadores y datos de prueba 
 | Sesiones y fixtures bancarios desechables | Sesiones cerradas y fixtures retirados; cuentas A/B preservadas |
 | Imágenes, comisiones con ventas, UI reseller, carga y concurrencia | Pendientes |
 | Lint, revocación con sesión previa y auditoría final | Pendientes |
+
+## Continuación: banco, comisiones y archivos — 2026-11-27
+
+| Tarea | Estado |
+| --- | --- |
+| Comisiones, entregas, liquidaciones, reintentos y recibos con ventas distintas | 8 grupos aprobados SQL reversible; API/UI aún pendiente |
+| Formulario bancario sin permisos de escritura | Corregido solo en Staging; migración revisada y versionada |
+| Restricción de banco a propietario activo, incluso sesión existente | 26 comprobaciones API aprobadas, incluida desactivación/reactivación |
+| Storage: negar cargas de revendedores y anónimo | 8 comprobaciones API aprobadas |
+| Carga positiva y eliminación de imágenes | Ruta local recibida; selector bloqueado por permiso de archivos de la extensión |
+| Guard de limpieza de recursos retail | Corregido en código QA, 8 pruebas locales nuevas; no desplegado |
+| Lint | Ejecutable, 0 errores; 16 advertencias hooks pendientes |
+| Regresión y builds | 52/52 pruebas locales y ambas compilaciones aprobadas |
+| Lecturas concurrentes acotadas | 24 consultas medidas +3 de calentamiento, sin errores; latencia p95 alta por investigar |
+| Limpieza de datos/sesiones | Verificada; stock10/0/10; sin nuevas operaciones persistentes |
+| E2E, concurrencia de escritura, escala y auditoría final | Pendientes |

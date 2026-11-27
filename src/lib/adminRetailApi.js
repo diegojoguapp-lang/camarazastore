@@ -34,18 +34,22 @@ function extensionFor(file) {
 }
 
 function ownedAssetPath(url, folder) {
-  if (!url) return ''
+  if (!url || !['categories', 'banners'].includes(folder)) return ''
   try {
     const marker = `/storage/v1/object/public/${ASSET_BUCKET}/`
     const parsed = new URL(url)
-    const index = parsed.pathname.indexOf(marker)
-    if (index < 0) return ''
-    const path = decodeURIComponent(parsed.pathname.slice(index + marker.length))
+    const { data } = supabase.storage.from(ASSET_BUCKET).getPublicUrl('')
+    const configured = new URL(data.publicUrl)
+    if (parsed.origin !== configured.origin || !parsed.pathname.startsWith(marker)) return ''
+    const rawPath = String(url).match(/^[a-z][a-z\d+.-]*:\/\/[^/?#]*([^?#]*)/i)?.[1]
+    if (rawPath === undefined || decodeURIComponent(rawPath).replaceAll('\\', '/').split('/').some((segment) => segment === '.' || segment === '..')) return ''
+    const path = decodeURIComponent(parsed.pathname.slice(marker.length))
+    if (path.split('/').some((segment) => segment === '.' || segment === '..')) return ''
     return path.startsWith(`${folder}/`) ? path : ''
   } catch { return '' }
 }
 
-export async function uploadRetailAsset(file, folder, previousUrl = '') {
+export async function uploadRetailAsset(file, folder) {
   requireSupabase()
   await validateImage(file)
   if (!['categories', 'banners'].includes(folder)) throw new Error('Destino de imagen invalido.')

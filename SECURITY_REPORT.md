@@ -38,3 +38,13 @@ Estado: revisión parcial; no aprobación de producción.
 - Buckets públicos limitados a imágenes JPEG/PNG/WebP de hasta 5 MB, exclusivamente catálogo ficticio. Carga, eliminación y negativas de archivos siguen pendientes.
 - Las sesiones del ejecutor se cerraron; limpieza SQL confirmó cero sesiones QA y cero filas de fixture. No se tocaron las cuentas de prueba ni la sesión administrativa del navegador.
 - Asesor consultado antes/después del permiso específico; advertencias previas y auditoría integral siguen pendientes. Sin credenciales en archivos, informes o Git.
+
+## Continuación: banco y archivos — 2026-11-27
+
+- Reparación bancaria revisada independientemente: permisos limitados a INSERT/UPDATE del API existente, con políticas de propietario activo antes de habilitar las operaciones. Administradores conservan sus controles; sin DELETE ni acceso anónimo.
+- Auth/API real verificó separación de filas y bloqueo inmediato de una sesión existente al desactivar el perfil ficticio. Reactivación recuperó únicamente su acceso propio. No es una prueba de revocación del token de Auth.
+- Se cerraron sesiones y retiraron filas de prueba; cero operaciones financieras persistentes y ambos perfiles ficticios activos al finalizar.
+- Seis cargas PNG por revendedores/anónimo rechazadas en los dos buckets, con autenticación real. No prueba la carga positiva del administrador, ni validación funcional de MIME/tamaño bajo ese rol.
+- Guard de limpieza de recursos restringido al origen y rutas propios, cubierto con ocho pruebas de transporte simulado. Implementación por `frontend_qa`, diff revisado por principal; aún no desplegado.
+- Permisos y limpieza de archivos de productos siguen pendientes. No se ampliaron políticas de Storage como sustituto de pruebas.
+- Advierten todavía los asesores previamente documentados y 16 avisos de hooks. No hay auditoría integral ni aprobación de producción. No se publican credenciales ni detalles explotables.

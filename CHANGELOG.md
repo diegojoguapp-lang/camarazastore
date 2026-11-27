@@ -39,3 +39,12 @@ Sin modificaciones a main ni producción. Los permisos aplicados en el entorno d
 - Agregado ejecutor opt-in de Auth y API real con credenciales stdin, clave publicable, identidad fija de Staging y sesiones en memoria.
 - Aprobadas 20 comprobaciones API, matriz SQL reversible y 44 pruebas locales. Retirados fixtures propios y cerradas las sesiones del ejecutor.
 - Sin despliegues ni modificaciones de main/producción. Carga de imágenes, UI reseller, comisiones completas y pruebas de carga siguen pendientes.
+
+## 2026-11-27 — banco, ciclo de comisión y regresión
+
+- Restauradas solo las escrituras bancarias previstas por la aplicación, reforzadas con propietario activo; migración aplicada exclusivamente en Staging y revisada independientemente.
+- Aprobadas 26 comprobaciones bancarias API, 8 comprobaciones Storage y 8 grupos SQL reversibles de comisiones. Datos de prueba limpiados y sesiones cerradas.
+- Ejecutores opt-in con destino fijado a Staging, credenciales stdin y salida filtrada; PNG sintético versionado para pruebas.
+- Corregida la aceptación de URLs ajenas en limpieza de recursos retail, con ocho pruebas locales nuevas. No se desplegó el frontend.
+- Configurado ESLint9 con dependencia fijada y corregidos los errores existentes; quedan 16 advertencias de hooks. Regresión 52/52 y builds aprobados.
+- Registradas dos muestras acotadas de lecturas; picos de API requieren investigación, sin afirmar capacidad de producción.

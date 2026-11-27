@@ -15,7 +15,7 @@ function Description({ text }) {
   if (!blocks.length) return null
   return <section className="sf-description"><h2>Descripcion</h2>{blocks.map((block, index) => {
     const lines = block.split('\n').map((line) => line.trim()).filter(Boolean)
-    if (lines.length > 1) return <ul key={index}>{lines.map((line, item) => <li key={item}>{line.replace(/^[•✓✅📌📦\-]+\s*/, '')}</li>)}</ul>
+    if (lines.length > 1) return <ul key={index}>{lines.map((line, item) => <li key={item}>{line.replace(/^[•✓✅📌📦-]+\s*/u, '')}</li>)}</ul>
     return <p key={index}>{block}</p>
   })}</section>
 }

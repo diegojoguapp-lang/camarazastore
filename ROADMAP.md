@@ -29,3 +29,13 @@
 - [x] Gasto, anulación, transferencia y cierre de caja.
 - [ ] Validar política de fondos disponibles.
 - [ ] Repetir flujos desde navegador, con cuentas QA y concurrencia real.
+
+## Continuación 2026-11-27
+- [x] Comisión, liquidación y reintentos con ventas diferentes, SQL reversible.
+- [x] Permisos de banco conciliados y restringidos a propietarios activos.
+- [x] Banco con Auth/API real, separación entre revendedores y sesión existente durante desactivación.
+- [x] Negativas de carga en ambos buckets por API real.
+- [x] Lint operativo y regresión local ampliada a 52 pruebas.
+- [x] Muestra pequeña de lecturas concurrentes; sin aprobación de rendimiento.
+- [ ] Carga positiva y limpieza de imágenes en UI, ciclo E2E/API de comisiones y últimas unidades concurrentes.
+- [ ] Investigar picos de latencia y probar volumen representativo.

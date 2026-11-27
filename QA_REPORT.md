@@ -104,3 +104,68 @@ La migración `supabase/migrations/20261127164733_qa_restore_commission_detail_e
 No se publican identificadores privados ni evidencia sensible. Las filas de prueba representaron datos bancarios ficticios en la aplicación, sin abrir cuentas financieras ni mover dinero. Las pruebas de desactivación son SQL reversible; no acreditan revocación de un JWT previo en uso.
 
 Pendientes: carga/visualización/eliminación real de imágenes y sus permisos; comisiones con ventas ficticias distintas, liquidación y reintentos; navegación y flujos E2E de los revendedores; cuentas desactivadas con sesión previa; concurrencia y carga representativa; lint y auditoría final. La corrección anterior de galería todavía no se desplegó. Sin cambios de main, producción ni política de fondos negativos.
+
+## Ciclo 02 — banco, comisiones y Storage (continuación, 2026-11-27)
+
+Base recibida: `f7d55e4`. Se agregó primero un PNG sintético de 16 × 16 píxeles, sin datos personales (`101062c`), para pruebas de archivos. Identidad de Staging nuevamente comprobada antes de operar. No se alteraron destinos comerciales.
+
+### Comisiones con datos distintos — SQL reversible
+
+Ejecutor: `review_security`; revisión de evidencia y consulta por el agente principal. Archivo reproducible: `tests/staging-commission.sql`. Se usaron procedimientos desplegados con rol SQL authenticated e identidades simuladas; esto NO sustituye la ejecución por Auth/API o navegador. La provisión de metadatos bancarios ficticios se hizo como operador dentro de la misma transacción, por el permiso faltante detectado antes de esta corrección.
+
+| Escenario | Esperado y obtenido | Estado |
+| --- | --- | --- |
+| Cálculo y reserva | A: 1 × 150000, comisión 50000; B: 2 × 170000, comisión 140000; físico 10, reservado 3, disponible 7 | PASS SQL |
+| Precio bajo mayorista | Precio 99999 rechazado, sin tercera venta | PASS SQL |
+| Entrega y repetición | Físico 7, reservado 0; solo 2 ingresos, total 490000 | PASS SQL |
+| Aislamiento con ventas presentes | Cada revendedor ve su venta y monto; ID ajeno rechazado en ambos sentidos | PASS SQL |
+| Liquidación cruzada inválida | Venta de B rechazada en liquidación de A; sin pago creado | PASS SQL |
+| Pagos pendientes | Pagos 50000/140000; A disponible 0 y en liquidación 50000 | PASS SQL |
+| Pago y repetición | Solo 2 egresos, total 190000; saldo de caja 300000; no duplicación al reconfirmar | PASS SQL |
+| Comprobantes propios | Un comprobante propio por cuenta; ajeno invisible; pagado A 50000/B 140000 | PASS SQL |
+
+ROLLBACK y verificación posterior: stock 10/0/10 y sin ventas, clientes, pagos, bancos ficticios ni movimientos financieros adicionales. Las secuencias pueden avanzar aunque se revierta la transacción. El saldo de caja de la prueba no se presenta como ganancia neta.
+
+### Banco y permisos — API real
+
+Se reprodujo el fallo del formulario: authenticated tenía SELECT pero carecía de INSERT/UPDATE en bank_accounts. Se revisaron políticas, trigger y ausencia de recursión antes de corregirlo. La migración `20261127171841_qa_restore_bank_writes_active_profiles.sql`, aplicada solo a Staging y alineada con su historial, restaura únicamente INSERT/UPDATE y restringe las tres políticas propias al revendedor activo. Mantiene las políticas administrativas, sin conceder DELETE ni acceso anónimo.
+
+Ejecutor: agente principal; revisor de migración y prueba: `review_security`. `tests/staging-bank-api.mjs` recibe credenciales en la primera línea de stdin y comandos de sincronización posteriores; fija Staging, usa clave publicable, memoria y salida filtrada. El operador desactiva/reactiva únicamente el perfil ficticio A entre fases, sin extraer ni reemplazar su token.
+
+| Prueba | Esperado | Obtenido / evidencia |
+| --- | --- | --- |
+| Dos logins, crear y editar datos propios | Éxito y persistencia correcta | PASS API real |
+| Leer/editar/insertar datos ajenos, reasignar propietario | Sin lectura ni cambios cruzados | PASS API real; estado confirmado |
+| DELETE propio y operaciones anónimas | Denegados | PASS API real |
+| Token existente tras desactivar A | Sin lectura, edición ni inserción propia; B sigue operativa | PASS API real |
+| Reactivar A sin renovar su token | Lectura y edición propias recuperadas; datos previos intactos | PASS API real |
+
+**26/26 comprobaciones API aprobadas.** El primer intento del ejecutor se detuvo porque exigía exclusivamente el código RLS para una inserción ajena; el trigger existente la rechazó antes. Se verificó el texto exacto del guard, se ajustó la expectativa a los dos rechazos legítimos y se limpiaron sus fixtures antes de la ejecución completa. No se modificó el servidor para cambiar ese rechazo.
+
+La prueba acredita actualización inmediata de la autorización de datos, no revocación de Auth. Las sesiones usadas se cerraron. No se certifica inmutabilidad de todos los campos de auditoría de la fila.
+
+### Archivos y regresión
+
+- **8/8 comprobaciones de Storage por API real** (`tests/staging-storage-api.mjs`): dos logins y seis intentos de subir PNG válido (A, B y anónimo en ambos buckets), todos rechazados con 403. La ejecución final usa carpetas legítimas main/categories. No se crearon objetos; sesiones cerradas.
+- La carga/visualización/eliminación positiva por administrador sigue pendiente. El PNG se visualizó desde GitHub y el propietario proporcionó su ruta local. Se abrió el selector real de imagen principal, pero la extensión de Chrome rechazó setFiles porque falta Allow access to file URLs. No se cambió ese permiso; se verificó placeholder original, main_image_url nulo y cero objetos tras el intento. La descarga automática previa también había fallado.
+- Sigue pendiente conciliar el borrado administrativo de product-images y la limpieza de archivos huérfanos en flujos de producto/cancelación. No se crearon políticas de Storage adicionales sin prueba positiva.
+- Se corrigió el guard de limpieza de retail-assets para aceptar únicamente origen, bucket y carpeta propios, rechazando rutas ajenas o con traversal. **8 pruebas nuevas locales**, ejecutando el API real con transporte simulado; no equivalen a borrado real de Storage.
+- Se agregó configuración ESLint 9 y dependencia explícita fijada; corregidos 16 errores existentes sin desactivar reglas. **Lint: 0 errores, 16 advertencias de hooks aún visibles**. No se cambiaron hooks en esta pasada.
+- **Regresión local: 52/52 aprobadas.** Ambas compilaciones aprobadas; build administrativo repetido tras el guard de archivos. Salidas generadas no incluidas en Git. Ejecutor de código/configuración: `frontend_qa`; revisión del diff por el agente principal.
+
+### Muestra acotada de lecturas
+
+`tests/staging-read-load.mjs` limita el destino a Staging y solo consulta el catálogo anónimo. Datos: un producto ficticio; 3 peticiones simultáneas. Tiempos de API medidos desde el ejecutor, incluyendo red:
+
+| Muestra | Consultas medidas | Calentamiento separado | Errores | p50 | p95 |
+| --- | --- | --- | --- | --- | --- |
+| Inicial | 12 | 0 | 0 | 126 ms | 7640 ms |
+| Posterior | 12 | 3 | 0 | 118 ms | 6274 ms |
+
+Una ejecución directa de EXPLAIN ANALYZE del catálogo registró 2,617 ms de ejecución y 0,068 ms de planificación. No alcanza para atribuir los picos de API a una capa específica. Investigar latencia de cola/red/servicio; no aprobar rendimiento ni extrapolar capacidad a miles de usuarios con esta muestra. No se probó todavía concurrencia de escrituras o últimas unidades.
+
+### Estado al limpiar y pendientes
+
+Verificación final: físico 10, reservado 0, disponible 10; ambas cuentas QA activas; 0 sesiones QA, bancos ficticios, ventas, clientes, lotes/pagos de comisión, movimientos financieros y objetos de Storage. Se preservó el movimiento inicial de inventario preexistente.
+
+Pendientes: permiso de archivos de la extensión para prueba positiva de imágenes, archivos huérfanos/borrado administrativo, sesiones web de revendedores y flujos E2E, ciclo de comisiones por API/navegador, concurrencia de escrituras, carga representativa y análisis de latencia, advertencias de hooks y auditoría final. Las correcciones frontend no se desplegaron; solo la migración bancaria se aplicó a Staging. Main, producción y política comercial de fondos negativos intactos.

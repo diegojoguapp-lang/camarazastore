@@ -22,7 +22,7 @@ export default function ProductList() {
       await updateProduct(p.id, { internal_status })
       toast('Estado actualizado')
       load()
-    } catch (e) {
+    } catch {
       toast('Error al actualizar')
     }
   }
@@ -33,7 +33,7 @@ export default function ProductList() {
       await deleteProduct(p.id)
       toast('Producto eliminado')
       load()
-    } catch (e) {
+    } catch {
       toast('Error al eliminar')
     }
   }
