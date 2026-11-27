@@ -45,3 +45,17 @@ El detalle privado de hallazgos de seguridad, identificadores y datos de prueba 
 | Buckets e identidades QA | Confirmados ausentes; necesitan flujo oficial |
 | Pruebas navegador | Bloqueadas por acceso al alojamiento |
 | Carga, concurrencia y sesiones de dos revendedores | Pendiente; no acreditado por pruebas locales |
+
+## Continuación del ciclo 02 — 2026-11-27
+
+| Tarea | Estado |
+| --- | --- |
+| Acceso web administrativo de Staging | Desbloqueado y comprobado en Chrome |
+| Alta de dos cuentas ficticias por flujo oficial | Completada por el propietario; verificada |
+| Buckets públicos de imágenes con límites | Creados por el agente desde Dashboard oficial; 0 objetos |
+| Permiso específico del detalle de comisiones | Corregido, revisado independientemente y versionado en migración |
+| Auth real y aislamiento entre A/B | 20/20 comprobaciones API aprobadas |
+| Negativas de roles, admin, helpers e inactivo | SQL reversible aprobado; parte comprobada también por API real |
+| Sesiones y fixtures bancarios desechables | Sesiones cerradas y fixtures retirados; cuentas A/B preservadas |
+| Imágenes, comisiones con ventas, UI reseller, carga y concurrencia | Pendientes |
+| Lint, revocación con sesión previa y auditoría final | Pendientes |

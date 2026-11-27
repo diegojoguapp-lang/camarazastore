@@ -76,3 +76,31 @@ La corrección está en código de QA, sin despliegue a Staging. Las operaciones
 - Completar los puntos de la revisión parcial de seguridad y auditoría final. El asesor mantiene advertencias sobre funciones privilegiadas y protección de contraseñas; las advertencias no se contabilizan automáticamente como vulnerabilidades confirmadas.
 
 No se repitieron las compras/caja históricas; se verificó el estado actual documentado. No hubo escrituras persistentes en la base de datos, cuentas creadas ni objetos de Storage agregados. La política comercial de saldos negativos permanece sin cambios. No se modificó main ni producción.
+
+## Ciclo 02 — cuentas oficiales y API real (2026-11-27)
+
+Base de código: `254fbf4`. Ejecutor: agente principal. Revisor independiente del permiso, definiciones desplegadas y código de prueba: `review_security` (no ejecutó Auth ni modificó datos). Se verificó de nuevo la identidad exacta del proyecto de Staging antes de escribir. Las entradas anteriores describen sus fechas respectivas; los bloqueos de acceso y creación de cuentas/buckets quedaron superados en esta continuación.
+
+| Prueba | Esperado | Obtenido | Estado / evidencia |
+| --- | --- | --- | --- |
+| Panel web administrativo | Sesión válida y sección Revendedores accesible | Dashboard y lista accesibles desde Chrome conectado | PASS navegador; no equivale a E2E completo |
+| Alta oficial de dos revendedores ficticios | Perfiles activos vinculados a Auth | El propietario creó A/B desde el formulario; ambos activos y confirmados | PASS navegador + SQL, sin crear cuentas por SQL |
+| Buckets de catálogo ficticio | Dos públicos con límites de imágenes | Ambos creados desde el Dashboard oficial, JPEG/PNG/WebP y 5242880 bytes | PASS configuración navegador + SQL; 0 objetos, carga aún pendiente |
+| Detalle de comisiones | Wrapper invocable por clientes autorizados | Concedido únicamente EXECUTE de la firma revisada; anon y helpers siguen restringidos | PASS SQL antes/después; migración versionada |
+| Matriz SQL de roles | A/B consultan lo propio; se deniega otro revendedor, admin e inactivos | Coincide, con rol authenticated efectivo; desactivación temporal revertida | PASS SQL simulado, separado de Auth real |
+| Login real de A y B | Auth acepta las credenciales y getUser valida cada identidad | Dos identidades distintas verificadas | PASS API real, 2 comprobaciones |
+| Perfiles propios y ajenos | Propio activo visible; ajeno invisible | Coincide para A y B | PASS API real, 4 comprobaciones |
+| Datos bancarios ficticios distintos | Cada uno ve su fila; el otro no | Filas ficticias sembradas visibles solo al propietario | PASS API real, 4 comprobaciones; evita prueba vacía |
+| Comisiones | Consulta propia y saldo permitidos; otro ID y admin denegados | Coincide para A y B | PASS API real, 8 comprobaciones; aún sin ventas/liquidaciones de comisión |
+| Helpers internos | Sin ejecución directa de clientes | Denegados en ambas identidades | PASS API real, 2 comprobaciones |
+| Cierre de sesiones QA | Revocar solo las sesiones creadas por esta ejecución | SignOut local exitoso; 0 sesiones QA restantes | PASS API + SQL; sesión administrativa de Chrome conservada |
+| Limpieza | Retirar solo fixtures creados, preservar cuentas oficiales | 0 filas bancarias de prueba, stock 10/reservado 0, 0 ventas/compras/gastos/movimientos, 0 objetos | PASS SQL posterior; cuentas A/B siguen activas |
+| Regresión local | Mantener pruebas anteriores sin fallos | 44/44 aprobadas | PASS local; no se repitieron builds sin cambio del código de aplicación |
+
+**API real: 20/20 comprobaciones aprobadas.** El ejecutor usó SDK oficial, clave publicable y sesiones independientes en memoria; no usó service_role ni sesiones extraídas del navegador. El script opt-in `tests/staging-reseller-api.mjs` recibe configuración y credenciales por stdin, fija la identidad de Staging mediante huella, rechaza claves privilegiadas y oculta errores/secretos en salida. Las credenciales no forman parte del repositorio ni de este informe.
+
+La migración `supabase/migrations/20261127164733_qa_restore_commission_detail_execute.sql` coincide con la versión registrada en Staging. Restaura el permiso específico ya previsto en la migración de Operación Comercial V2; no modifica las funciones ni abre sus helpers. Se volvió a consultar el asesor de seguridad tras el cambio; continúa pendiente la revisión funcional completa de las advertencias previas. La conciliación de otras diferencias históricas de Staging sigue pendiente.
+
+No se publican identificadores privados ni evidencia sensible. Las filas de prueba representaron datos bancarios ficticios en la aplicación, sin abrir cuentas financieras ni mover dinero. Las pruebas de desactivación son SQL reversible; no acreditan revocación de un JWT previo en uso.
+
+Pendientes: carga/visualización/eliminación real de imágenes y sus permisos; comisiones con ventas ficticias distintas, liquidación y reintentos; navegación y flujos E2E de los revendedores; cuentas desactivadas con sesión previa; concurrencia y carga representativa; lint y auditoría final. La corrección anterior de galería todavía no se desplegó. Sin cambios de main, producción ni política de fondos negativos.

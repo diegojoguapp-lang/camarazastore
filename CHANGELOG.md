@@ -30,3 +30,12 @@ Sin modificaciones a main ni producción. Los permisos aplicados en el entorno d
 - Registrados bloqueos de lint, permisos de detalle de comisiones y acceso web al alojamiento.
 - Revisión independiente parcial de frontend y seguridad ejecutada por agentes reales.
 - Sin despliegues, ampliación de permisos ni cambios persistentes de base de datos. La política comercial de saldos negativos no cambia.
+
+## 2026-11-27 — cuentas oficiales y aislamiento por API
+
+- Verificadas las dos cuentas ficticias creadas por el propietario mediante el formulario administrativo de Staging.
+- Creados los dos buckets públicos desde el Dashboard oficial, limitados a JPEG/PNG/WebP y 5 MB; aún sin objetos.
+- Conciliado y versionado el permiso exacto del detalle de comisiones con revisión independiente; helpers y acceso anónimo siguen restringidos.
+- Agregado ejecutor opt-in de Auth y API real con credenciales stdin, clave publicable, identidad fija de Staging y sesiones en memoria.
+- Aprobadas 20 comprobaciones API, matriz SQL reversible y 44 pruebas locales. Retirados fixtures propios y cerradas las sesiones del ejecutor.
+- Sin despliegues ni modificaciones de main/producción. Carga de imágenes, UI reseller, comisiones completas y pruebas de carga siguen pendientes.

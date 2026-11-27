@@ -28,3 +28,13 @@ Estado: revisión parcial; no aprobación de producción.
 - Asesor de seguridad consultado: requiere revisión funcional de funciones privilegiadas y configuración de protección de contraseñas. Referencias: https://supabase.com/docs/guides/database/database-linter?lint=0029_authenticated_security_definer_function_executable y https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection
 - El navegador no obtuvo acceso al control del alojamiento. No se intentó eludir la protección ni se expusieron credenciales.
 - Sin cambios de RLS, permisos, cuentas ni Storage durante esta continuación. Hallazgos detallados no publicados.
+
+## Cuentas y API real — 2026-11-27
+
+- Cuentas oficiales ficticias creadas por el propietario; validación de Auth y perfiles mediante sesiones reales separadas, con clave publicable y sin persistencia de tokens.
+- Aislamiento de perfiles y filas bancarias ficticias distintas comprobado por API; acceso cruzado a comisiones y acceso a funciones administrativas/internas rechazados en ambas identidades.
+- Restaurado solo el permiso específico del wrapper de detalle de comisiones, tras revisión independiente de sus controles de identidad/propiedad y pruebas negativas. Funciones internas y acceso anónimo permanecen restringidos. Migración registrada y versionada.
+- Cuenta inactiva rechazada en SQL reversible; todavía no se verificó un JWT real previo a desactivación. No dar por resueltos los hallazgos de revocación anteriores.
+- Buckets públicos limitados a imágenes JPEG/PNG/WebP de hasta 5 MB, exclusivamente catálogo ficticio. Carga, eliminación y negativas de archivos siguen pendientes.
+- Las sesiones del ejecutor se cerraron; limpieza SQL confirmó cero sesiones QA y cero filas de fixture. No se tocaron las cuentas de prueba ni la sesión administrativa del navegador.
+- Asesor consultado antes/después del permiso específico; advertencias previas y auditoría integral siguen pendientes. Sin credenciales en archivos, informes o Git.

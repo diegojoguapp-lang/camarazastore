@@ -5,11 +5,11 @@
 - [x] Compilación web de prueba y control de acceso.
 - [x] Inicio de sesión administrativo de prueba comprobado.
 - [x] Venta directa V2, reserva, cobro, reintento y devolución probados transaccionalmente.
-- [ ] Revisar configuración de almacenamiento y crear contenedores de imágenes usando el servicio oficial.
+- [x] Revisar configuración de almacenamiento y crear contenedores de imágenes usando el servicio oficial (2026-11-27; prueba de objetos pendiente).
 - [ ] Completar matriz de permisos por operación y pruebas de separación de roles.
 
 ## Etapa 2: flujos de extremo a extremo
-- Crear dos revendedores ficticios por el flujo oficial y confirmar aislamiento.
+- [x] Crear dos revendedores ficticios por el flujo oficial y confirmar aislamiento por API real (2026-11-27; E2E UI y ventas de comisión aún pendientes).
 - Crear y editar producto, cargar imágenes, alta de cliente, compra, venta, caja, comisión, devolución, reportes y cierre de sesión.
 - Probar concurrencia: últimas unidades, doble envío, cobro repetido, edición desactualizada.
 - Verificar ambos entornos web (admin/reventa y minorista) sin contactar números reales.
