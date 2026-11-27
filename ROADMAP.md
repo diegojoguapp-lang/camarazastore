@@ -39,3 +39,10 @@
 - [x] Muestra pequeña de lecturas concurrentes; sin aprobación de rendimiento.
 - [ ] Carga positiva y limpieza de imágenes en UI, ciclo E2E/API de comisiones y últimas unidades concurrentes.
 - [ ] Investigar picos de latencia y probar volumen representativo.
+
+
+## Imágenes — avance 2026-11-27
+- [x] Carga administrativa positiva en ambos buckets y lectura pública del PNG ficticio.
+- [x] Retirar imagen retail guardada y comprobar borrado de su archivo.
+- [ ] Cerrar limpieza del registro ficticio de categoría; confirmar borrado desde interfaz.
+- [ ] Corregir limpieza automática de archivos de productos; validar galerías y banners.

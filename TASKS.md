@@ -75,3 +75,15 @@ El detalle privado de hallazgos de seguridad, identificadores y datos de prueba 
 | Lecturas concurrentes acotadas | 24 consultas medidas +3 de calentamiento, sin errores; latencia p95 alta por investigar |
 | Limpieza de datos/sesiones | Verificada; stock10/0/10; sin nuevas operaciones persistentes |
 | E2E, concurrencia de escritura, escala y auditoría final | Pendientes |
+
+
+## Imágenes desde Chrome — 2026-11-27
+
+| Tarea | Estado |
+| --- | --- |
+| Selector local y carga administrativa en ambos buckets | Aprobado en navegador |
+| Imagen de producto en catálogo y categoría al reabrir editor | Aprobado en navegador |
+| Quitar imagen de categoría y limpiar su archivo | Aprobado navegador + SQL |
+| Quitar imagen de producto y limpiar su archivo automáticamente | Falla confirmada; archivo retirado por Dashboard |
+| Archivos de prueba en Storage | 0 objetos al verificar |
+| Registro de categoría ficticia sin imagen | Pendiente retiro manual y verificación; confirmación nativa bloqueó control |

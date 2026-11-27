@@ -48,3 +48,11 @@ Estado: revisión parcial; no aprobación de producción.
 - Guard de limpieza de recursos restringido al origen y rutas propios, cubierto con ocho pruebas de transporte simulado. Implementación por `frontend_qa`, diff revisado por principal; aún no desplegado.
 - Permisos y limpieza de archivos de productos siguen pendientes. No se ampliaron políticas de Storage como sustituto de pruebas.
 - Advierten todavía los asesores previamente documentados y 16 avisos de hooks. No hay auditoría integral ni aprobación de producción. No se publican credenciales ni detalles explotables.
+
+
+## Imágenes positivas — 2026-11-27
+
+- PNG sintético seleccionado desde Chrome y cargado por el administrador en ambos buckets del proyecto Staging verificado. Lectura pública y persistencia comprobadas; sin datos personales.
+- No se ampliaron políticas de Storage. Quitar y guardar imagen de categoría retiró su objeto; quitar imagen de producto dejó un archivo huérfano, limpiado por Dashboard oficial.
+- Storage quedó vacío. Resta retirar el registro de categoría ficticia sin imagen: el diálogo nativo bloqueó la automatización y la limpieza SQL no llegó a ejecutarse. No se declara limpieza total ni borrado E2E validado.
+- Los cambios locales previos del guard no se desplegaron y no se presentan como acreditados por estas pruebas.

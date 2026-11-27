@@ -48,3 +48,11 @@ Sin modificaciones a main ni producción. Los permisos aplicados en el entorno d
 - Corregida la aceptación de URLs ajenas en limpieza de recursos retail, con ocho pruebas locales nuevas. No se desplegó el frontend.
 - Configurado ESLint9 con dependencia fijada y corregidos los errores existentes; quedan 16 advertencias de hooks. Regresión 52/52 y builds aprobados.
 - Registradas dos muestras acotadas de lecturas; picos de API requieren investigación, sin afirmar capacidad de producción.
+
+
+## 2026-11-27 — verificación positiva de imágenes
+
+- Verificadas cargas administrativas reales del PNG sintético en ambos buckets, persistencia y visualización pública en el catálogo de reventa.
+- Restaurada la referencia de imagen del producto; confirmado archivo huérfano tras quitarla y retirado desde Dashboard.
+- Verificada eliminación automática del archivo al quitar la imagen de una categoría y guardar; Storage vacío.
+- El registro ficticio de categoría sin imagen sigue pendiente de retiro, por bloqueo del diálogo nativo en el control de Chrome. Sin despliegues ni cambios de main/producción.

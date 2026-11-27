@@ -169,3 +169,24 @@ Una ejecución directa de EXPLAIN ANALYZE del catálogo registró 2,617 ms de ej
 Verificación final: físico 10, reservado 0, disponible 10; ambas cuentas QA activas; 0 sesiones QA, bancos ficticios, ventas, clientes, lotes/pagos de comisión, movimientos financieros y objetos de Storage. Se preservó el movimiento inicial de inventario preexistente.
 
 Pendientes: permiso de archivos de la extensión para prueba positiva de imágenes, archivos huérfanos/borrado administrativo, sesiones web de revendedores y flujos E2E, ciclo de comisiones por API/navegador, concurrencia de escrituras, carga representativa y análisis de latencia, advertencias de hooks y auditoría final. Las correcciones frontend no se desplegaron; solo la migración bancaria se aplicó a Staging. Main, producción y política comercial de fondos negativos intactos.
+
+
+## Ciclo 02 — imágenes reales desde Chrome (2026-11-27)
+
+Base de código: `fa27e46`. Ejecutor: agente principal. Proyecto Staging comprobado nuevamente por su identidad y estado saludable. El propietario habilitó el acceso de la extensión a archivos locales; el selector pudo usar el PNG sintético versionado. No se desplegaron cambios de frontend. `review_security` revisó la coherencia de esta evidencia narrada; no observó el navegador de forma independiente.
+
+| Prueba | Esperado | Obtenido | Estado / evidencia |
+| --- | --- | --- | --- |
+| Selección de PNG principal | Vista previa válida | Imagen completa de 16 × 16 píxeles desde el archivo local | PASS navegador |
+| Guardar producto y cargar imagen pública | Persistencia y lectura pública | Imagen completa 16 × 16 en lista administrativa y catálogo público, incluida URL de transformación de imagen | PASS navegador; URL del bucket de Staging |
+| Retirar imagen principal | Restaurar referencia original | Guardado sin imagen; main_image_url nulo y catálogo con placeholder | PASS navegador + SQL |
+| Limpieza automática de imagen de producto | Archivo retirado al quitar referencia | El PNG permaneció en Storage | FALLA funcional observada; limpiado mediante Dashboard oficial |
+| Categoría ficticia con imagen | Carga y persistencia | Creada; tras cerrar y reabrir el editor, la imagen pública seguía completa en 16 × 16 | PASS navegador; bucket retail-assets |
+| Quitar imagen y guardar categoría | Referencia y objeto retirados | Mensaje de actualización exitosa, image_url nulo y objeto ausente en SQL | PASS navegador + SQL; código desplegado existente |
+| Borrar categoría ficticia desde interfaz | Retirar solo el fixture | El diálogo nativo de confirmación bloqueó el control de Chrome; no se completó la operación | BLOQUEADO por control de navegador; no acredita fallo del servidor |
+
+El PNG de producto y el marcador de carpeta vacío agregado por el Dashboard se retiraron con la API oficial de Storage a través de su interfaz. Verificación posterior: **0 objetos en Storage**. No se borraron metadatos de storage.objects mediante SQL. La prueba confirma cargas administrativas positivas en ambos buckets; no certifica galerías, banners, límites MIME/tamaño ni el guard nuevo de limpieza, que sigue sin desplegarse.
+
+**Limpieza pendiente:** quedó únicamente el registro de la categoría ficticia `QA C02 imagen temporal` (slug `qa-c02-imagen-temporal`), sin imagen ni productos asociados. Los intentos de limpieza SQL solicitaban confirmación y no se ejecutaron; la fila sigue presente. No declarar limpieza total hasta verificar su retiro. Stock físico 10, reservado 0, disponible 10; producto nuevamente sin imagen. La edición actualiza su marca temporal normal.
+
+La limitación anterior del selector de archivos está resuelta. Sigue pendiente la limpieza automática de productos, el borrado E2E de categoría, las sesiones web de revendedores y comisiones por API/navegador, concurrencia, carga representativa y auditoría integral. Main, producción y política comercial de fondos negativos permanecen sin cambios.
