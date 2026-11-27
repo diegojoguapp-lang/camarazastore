@@ -44,5 +44,5 @@
 ## Imágenes — avance 2026-11-27
 - [x] Carga administrativa positiva en ambos buckets y lectura pública del PNG ficticio.
 - [x] Retirar imagen retail guardada y comprobar borrado de su archivo.
-- [ ] Cerrar limpieza del registro ficticio de categoría; confirmar borrado desde interfaz.
+- [x] Cerrar limpieza del registro ficticio de categoría: borrado manual por propietario y ausencia verificada por SQL.
 - [ ] Corregir limpieza automática de archivos de productos; validar galerías y banners.

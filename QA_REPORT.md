@@ -190,3 +190,27 @@ El PNG de producto y el marcador de carpeta vacío agregado por el Dashboard se 
 **Limpieza pendiente:** quedó únicamente el registro de la categoría ficticia `QA C02 imagen temporal` (slug `qa-c02-imagen-temporal`), sin imagen ni productos asociados. Los intentos de limpieza SQL solicitaban confirmación y no se ejecutaron; la fila sigue presente. No declarar limpieza total hasta verificar su retiro. Stock físico 10, reservado 0, disponible 10; producto nuevamente sin imagen. La edición actualiza su marca temporal normal.
 
 La limitación anterior del selector de archivos está resuelta. Sigue pendiente la limpieza automática de productos, el borrado E2E de categoría, las sesiones web de revendedores y comisiones por API/navegador, concurrencia, carga representativa y auditoría integral. Main, producción y política comercial de fondos negativos permanecen sin cambios.
+
+
+## Cierre de limpieza de imágenes — 2026-11-27
+
+El propietario confirmó el borrado manual de la categoría ficticia desde Chrome. El agente principal verificó después mediante SQL de solo lectura: 0 categorías (incluido el slug de prueba), 0 objetos de Storage, producto sin imagen principal, stock físico 10 / reservado 0 / disponible 10; 0 ventas, clientes, bancos y movimientos financieros; ambos perfiles QA activos. Queda cerrado el residuo indicado en la entrada anterior. Esto acredita el resultado tras intervención manual, no la automatización del diálogo de confirmación.
+
+
+## Imagen principal — corrección preparada en código QA (2026-11-27)
+
+El fallo observado en la prueba anterior motivó una corrección acotada al retiro o reemplazo de la imagen principal. Implementación: `frontend_qa`; revisión independiente de fuente y pruebas: `review_security`; integración y documentación: agente principal.
+
+- El API lee la referencia anterior cuando se cambia la imagen, guarda el producto y completa las operaciones de galería antes de intentar retirar el archivo anterior. Si el campo de imagen se omite, se conserva.
+- Solo se considera para borrado una URL pública canónica del bucket y carpeta propios, verificada contra la URL generada por el SDK. URLs externas, otros buckets/carpetas, referencias ambiguas o rutas normalizadas se conservan.
+- Antes de retirar el archivo se comprueban referencias principales y de galería en páginas ordenadas; se usan recuentos exactos para detectar resultados truncados o incompletos. Los alias públicos reconocidos de un mismo objeto se conservan.
+- Si falla la lectura o limpieza, o Storage devuelve una lista vacía sin confirmar el archivo retirado, el resultado incluye una advertencia segura de que el producto ya está guardado. El formulario muestra esa advertencia después de guardar los otros detalles y evita presentar el caso como un guardado fallido que deba repetirse.
+
+**Límite de despliegue:** el código no se desplegó. La política actual de Storage sigue sin permitir DELETE administrativo para product-images; no se modificaron permisos. Por ello no se acredita aún el borrado positivo del producto con esta implementación.
+
+La propuesta exploratoria `docs/qa/product-main-image-cleanup-policy.proposed.sql` no está en las migraciones ni se aplicó. Sus **20/20 casos de expresión SQL de solo lectura** coinciden con lo esperado; no son pruebas de RLS desplegado, autenticación ni API. La propuesta puede conservar demasiados archivos si existe una URL desconocida y no resuelve asignaciones concurrentes de referencias. No se recomienda aplicarla automáticamente. Hace falta acordar el contrato de referencias y la sincronización antes de habilitar el borrado.
+
+Siguen fuera de alcance la limpieza general de galerías, archivos subidos cuando falla el guardado, cancelaciones y eliminación completa del producto. No se promete atomicidad entre base de datos y Storage ni reconocimiento de redirecciones o mapeos CDN arbitrarios. La limpieza manual confirmada al inicio de esta continuación permanece cerrada. Sin cambios de base de datos, permisos, main, producción o política de saldos negativos en esta pasada.
+
+
+Validación final de esta corrección: **13/13 pruebas nuevas** del API con transporte simulado (cambio y retiro, fallo al guardar, campo omitido, candidatos ajenos/ambiguos, referencias compartidas y alias, paginación >500, límite del servidor de 100 filas, recuento ausente, fallos de lectura y respuesta vacía/error de borrado). `review_security` repitió estas 13 pruebas y aprobó el alcance de fuente; la ampliación de orígenes solo conserva más referencias, sin ampliar candidatos de borrado. **Regresión local 65/65**, lint **0 errores / 16 advertencias de hooks previas**, build administrativo aprobado (2,35 s; salida temporal fuera de Git). La tienda minorista no importa estos módulos; no se repitió su build. Diff sin errores de formato. Estas verificaciones locales no sustituyen el flujo desplegado.

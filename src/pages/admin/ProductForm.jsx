@@ -5,6 +5,7 @@ import { createProduct, getProductById, updateProduct } from '../../lib/api'
 import { createInventoryMovement, getProductAdminDetails, getSuppliers, saveProductAdminDetails, saveSupplier } from '../../lib/adminInventoryApi'
 import { getAdminRetailCategories, getRetailProductCategoryIds, saveRetailProductCategories } from '../../lib/adminRetailApi'
 import { calculateProfit, formatGs, imageFallback, slugify } from '../../lib/utils'
+import { MAIN_IMAGE_CLEANUP_WARNING } from '../../lib/productMainImageCleanup'
 
 const initial = {
   name: '', slug: '', brand: '', model: '', category: '',
@@ -315,6 +316,11 @@ export function ProductForm() {
             return
           }
         }
+      }
+      if (savedProduct.mainImageCleanupWarning?.code === MAIN_IMAGE_CLEANUP_WARNING.code) {
+        window.alert(MAIN_IMAGE_CLEANUP_WARNING.message)
+        navigate('/admin/productos')
+        return
       }
       const imageWasReplaced = editing && (Boolean(mainFile) || replacements.length > 0)
       window.alert(editing

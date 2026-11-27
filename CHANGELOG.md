@@ -56,3 +56,12 @@ Sin modificaciones a main ni producción. Los permisos aplicados en el entorno d
 - Restaurada la referencia de imagen del producto; confirmado archivo huérfano tras quitarla y retirado desde Dashboard.
 - Verificada eliminación automática del archivo al quitar la imagen de una categoría y guardar; Storage vacío.
 - El registro ficticio de categoría sin imagen sigue pendiente de retiro, por bloqueo del diálogo nativo en el control de Chrome. Sin despliegues ni cambios de main/producción.
+
+
+## 2026-11-27 — cierre de limpieza de imágenes
+- Confirmado por SQL el retiro manual de la categoría ficticia; cero categorías y objetos restantes. Stock 10/0/10 y cuentas QA preservadas.
+
+- Preparada limpieza acotada de imagen principal posterior al guardado, con conservación de referencias compartidas reconocidas y advertencia cuando el borrado no se confirma. No desplegada.
+- Documentada propuesta exploratoria de política y 20 casos de expresión SQL; sin aplicar permisos ni migraciones nuevas.
+
+- Regresión ampliada a 65 pruebas aprobadas; 13 casos de limpieza repetidos por revisor independiente. Lint 0 errores/16 advertencias existentes y build administrativo aprobado.

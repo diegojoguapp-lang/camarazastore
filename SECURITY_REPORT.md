@@ -56,3 +56,13 @@ Estado: revisión parcial; no aprobación de producción.
 - No se ampliaron políticas de Storage. Quitar y guardar imagen de categoría retiró su objeto; quitar imagen de producto dejó un archivo huérfano, limpiado por Dashboard oficial.
 - Storage quedó vacío. Resta retirar el registro de categoría ficticia sin imagen: el diálogo nativo bloqueó la automatización y la limpieza SQL no llegó a ejecutarse. No se declara limpieza total ni borrado E2E validado.
 - Los cambios locales previos del guard no se desplegaron y no se presentan como acreditados por estas pruebas.
+
+
+## Limpieza cerrada — 2026-11-27
+- El propietario retiró la categoría ficticia por la interfaz; la verificación posterior de solo lectura confirmó cero categorías y objetos, producto sin imagen y stock 10/0/10. No se requirió ampliar permisos para esa limpieza.
+
+
+## Revisión de limpieza principal — código sin desplegar
+- Candidato limitado a URL pública canónica propia; referencias reconocidas comprobadas en ambas tablas con paginación y recuentos exactos. Sin borrar a partir de URLs externas o respuestas incompletas.
+- Los errores de limpieza y respuestas vacías de Storage producen una advertencia fija de producto ya guardado, sin detalles sensibles del backend.
+- No hay nueva política ni concesión activa. La propuesta conservadora queda fuera de migraciones y no se recomienda su aplicación automática: no serializa referencias concurrentes y sobrepreserva ante URLs desconocidas. No se acredita atomicidad ni resolución de alias/CDN arbitrarios.

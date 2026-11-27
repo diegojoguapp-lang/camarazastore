@@ -87,3 +87,16 @@ El detalle privado de hallazgos de seguridad, identificadores y datos de prueba 
 | Quitar imagen de producto y limpiar su archivo automáticamente | Falla confirmada; archivo retirado por Dashboard |
 | Archivos de prueba en Storage | 0 objetos al verificar |
 | Registro de categoría ficticia sin imagen | Pendiente retiro manual y verificación; confirmación nativa bloqueó control |
+
+
+## Cierre de limpieza — 2026-11-27
+- [x] Categoría ficticia retirada por el propietario; ausencia verificada por SQL.
+- [x] Storage vacío y stock 10/0/10, sin operaciones comerciales adicionales.
+
+
+## Imagen principal — código QA
+- [x] Preparar limpieza posterior al guardado, comprobación de referencias y advertencia de guardado exitoso con limpieza incompleta.
+- [ ] Acordar referencias y concurrencia antes de habilitar borrado de main en Storage; propuesta exploratoria no aplicada.
+- [ ] Desplegar a Staging y probar el flujo positivo corregido cuando el diseño y los permisos estén validados.
+
+- [x] Regresión 65/65, 13 casos nuevos repetidos por revisor independiente, lint 0 errores/16 avisos previos y build administrativo aprobado.

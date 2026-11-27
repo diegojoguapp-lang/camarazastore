@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { demoProduct, isLikelyImageUrl, slugify } from './utils'
+import { MAIN_IMAGE_CLEANUP_WARNING, removeUnusedMainImage } from './productMainImageCleanup'
 
 const BUCKET = 'product-images'
 const PRODUCT_LIST_FIELDS = 'id,name,slug,category,internal_status,public_stock_status,wholesale_price,suggested_price,main_image_url,is_featured,sort_priority,created_at,available_stock_quantity'
@@ -98,6 +99,18 @@ export async function createProduct(payload, imageFiles = []) {
 
 export async function updateProduct(id, payload, imageFiles = [], imagesToDelete = [], imageReplacements = []) {
   if (!isSupabaseConfigured) throw new Error('Supabase no está configurado.')
+  const changesMainImage = Boolean(imageFiles.main) || Object.hasOwn(payload, 'main_image_url')
+  let previousMainImage
+  let previousImageReadFailed = false
+  if (changesMainImage) {
+    try {
+      const { data: previous, error: previousError } = await supabase.from('products').select('main_image_url').eq('id', id).single()
+      if (previousError) throw previousError
+      previousMainImage = previous.main_image_url
+    } catch {
+      previousImageReadFailed = true
+    }
+  }
   let mainImage = payload.main_image_url
   if (imageFiles.main) {
     try {
@@ -108,7 +121,7 @@ export async function updateProduct(id, payload, imageFiles = [], imagesToDelete
   }
   const productPayload = {
     ...payload,
-    main_image_url: isLikelyImageUrl(mainImage) ? mainImage : null,
+    ...(changesMainImage ? { main_image_url: isLikelyImageUrl(mainImage) ? mainImage : null } : {}),
     slug: payload.slug || slugify(payload.name),
     updated_at: new Date().toISOString()
   }
@@ -150,6 +163,14 @@ export async function updateProduct(id, payload, imageFiles = [], imagesToDelete
     }
     const { error: imageError } = await supabase.from('product_images').insert(rows)
     if (imageError) throw imageError
+  }
+  if (changesMainImage) {
+    if (previousImageReadFailed) return { ...data, mainImageCleanupWarning: { ...MAIN_IMAGE_CLEANUP_WARNING } }
+    try {
+      await removeUnusedMainImage(previousMainImage, data.main_image_url)
+    } catch {
+      return { ...data, mainImageCleanupWarning: { ...MAIN_IMAGE_CLEANUP_WARNING } }
+    }
   }
   return data
 }
